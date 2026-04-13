@@ -33,10 +33,8 @@ public sealed class StoneBlock : BlockBase
 
     /// <summary>
     /// Approximate stone mid-tone sampled from the vanilla palette.
-    /// The Engine uses this until the full material/mesh pipeline is in place.
     /// </summary>
-    public static readonly Raylib_cs.Color RenderColor =
-        new(125, 125, 125, 255);   // R G B A
+    public override Raylib_cs.Color RenderColor => new(125, 125, 125, 255);
 
     // ── Tick logic ────────────────────────────────────────────────────────────
 

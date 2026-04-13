@@ -1,0 +1,31 @@
+# Build output
+bin/
+obj/
+
+# IDE
+.vs/
+.vscode/
+.idea/
+*.user
+*.suo
+
+# OS noise
+.DS_Store
+Thumbs.db
+
+# Game assets — never committed
+*.jar
+Assets/extracted/
+
+# Mod runtime files — user-supplied JARs and compiled plugins (never committed)
+mods/*.jar
+mods/compiled/
+
+# Decompiler output — contains third-party code, never committed
+temp/
+
+# Java build temp
+Tools/.build-tmp/
+
+# Published AOT output
+publish/

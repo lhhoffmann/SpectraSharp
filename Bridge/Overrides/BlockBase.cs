@@ -33,6 +33,14 @@ public abstract class BlockBase : BridgeStubBase
     /// </summary>
     public string TextureKey => $"block_{TextureIndex}";
 
+    // ── Rendering ─────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Flat colour used by the Engine's DrawCube pass until a full material
+    /// pipeline exists.  Override in concrete blocks to match the vanilla palette.
+    /// </summary>
+    public virtual Raylib_cs.Color RenderColor => new(200, 200, 200, 255);
+
     // ── World state ───────────────────────────────────────────────────────────
 
     /// <summary>Block's position in world space (block-grid coordinates).</summary>

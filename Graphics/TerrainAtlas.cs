@@ -16,33 +16,28 @@ public static class TerrainAtlas
     public const int TilesPerRow = 16;
 
     /// <summary>
-    /// Crops tile <paramref name="index"/> from the full atlas image, uploads it
+    /// Crops tile <paramref name="index"/> from a pre-loaded atlas image, uploads it
     /// to the GPU, and registers the result in <paramref name="registry"/> under
     /// <paramref name="key"/>.
+    /// The caller owns <paramref name="atlas"/> and must unload it after all tiles are extracted.
     /// </summary>
     public static void ExtractAndRegister(
         int             index,
-        AssetData       atlasData,
+        Image           atlas,
         TextureRegistry registry,
         string          key)
     {
         int col = index % TilesPerRow;
         int row = index / TilesPerRow;
 
-        Image full = Raylib.LoadImageFromMemory(".png", atlasData.Memory.ToArray());
+        // ImageCrop modifies in place — work on a copy so the atlas stays intact
+        Image tile = Raylib.ImageCopy(atlas);
+        Raylib.ImageCrop(ref tile, new Rectangle(col * TileSize, row * TileSize, TileSize, TileSize));
 
-        Rectangle rect = new(
-            col * TileSize,
-            row * TileSize,
-            TileSize,
-            TileSize);
+        Texture2D tex = Raylib.LoadTextureFromImage(tile);
+        Raylib.UnloadImage(tile);
 
-        Raylib.ImageCrop(ref full, rect);
-
-        Texture2D tile = Raylib.LoadTextureFromImage(full);
-        Raylib.UnloadImage(full);
-
-        registry.Register(key, tile);
-        Console.WriteLine($"[TerrainAtlas] Extracted tile {index} (col={col}, row={row}) → \"{key}\"");
+        registry.Register(key, tex);
+        Console.WriteLine($"[TerrainAtlas] tile {index,3} (col={col}, row={row}) → \"{key}\"");
     }
 }

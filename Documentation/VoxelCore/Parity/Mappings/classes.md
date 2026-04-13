@@ -1,0 +1,128 @@
+# Class Name Mappings — Minecraft 1.0
+
+Obfuscated name (as found in `temp/decompiled/`) → MCP/human-readable name.
+
+> Source: inferred from class structure analysis. Not derived from any MCP release.
+
+## Utility Classes
+
+| Obfuscated | Human name | Notes |
+|---|---|---|
+| `me` | `MathHelper` | Static trig/numeric utilities; sine table (65536 entries); floor, sqrt, clamp, abs, floor-div, RNG range |
+
+## Core Game Classes
+
+| Obfuscated | Human name | Notes |
+|---|---|---|
+| `yy` | `Block` | Base class + static block registry (IDs 1–122) |
+| `acr` | `RenderBlocks` | Per-face OpenGL renderer, 5064 lines |
+| `wu` | `Material` | Block material (stone, wood, cloth, …) |
+| `zx` | `Chunk` | 16×16×128 chunk data |
+| `ry` | `World` | World/level root object |
+| `gy` | `ChunkLoader` | Reads/writes chunk `.dat` files |
+
+## Block Subclasses
+
+| Obfuscated | Human name | Block name string |
+|---|---|---|
+| `gm` | `BlockStone` | `"stone"` |
+| `jb` | `BlockGrass` | `"grass"` |
+| `agd` | `BlockDirt` | `"dirt"` |
+| `aet` | `BlockSapling` | `"sapling"` |
+| `ahx` | `BlockFluid` | `"water"` / `"lava"` (flowing) |
+| `add` | `BlockStationary` | `"water"` / `"lava"` (still) |
+| `cj` | `BlockSand` | `"sand"` |
+| `kb` | `BlockGravel` | `"gravel"` |
+| `v` | `BlockOre` | Gold/Iron/Coal/Diamond/Lapis/Redstone ore |
+| `aip` | `BlockLog` | `"log"` |
+| `qo` | `BlockLeaves` | `"leaves"` |
+| `aho` | `BlockGlass` | `"glass"` |
+| `ahh` | `BlockStairs` | Stair variants |
+| `xs` | `BlockSlab` | `"stoneSlab"` |
+| `abm` | `BlockTNT` | `"tnt"` |
+| `bg` | `BlockTorch` | `"torch"` |
+| `wj` | `BlockFire` | `"fire"` |
+| `kk` | `BlockMobSpawner` | `"mobSpawner"` |
+| `au` | `BlockChest` | `"chest"` |
+| `kw` | `BlockRedstoneWire` | `"redstoneDust"` |
+| `aha` | `BlockCrops` | `"crops"` |
+| `ni` | `BlockFarmland` | `"farmland"` |
+| `eu` | `BlockFurnace` | `"furnace"` |
+| `afr` | `BlockRail` | `"rail"` / `"goldenRail"` |
+| `ags` | `BlockDetectorRail` | `"detectorRail"` |
+| `abr` | `BlockPiston` | `"pistonBase"` / `"pistonStickyBase"` |
+| `acu` | `BlockPistonMoving` | piston arm |
+| `fr` | `BlockCloth` | `"cloth"` (wool) |
+| `wg` | `BlockFlower` | `"flower"` / `"rose"` |
+| `js` | `BlockMushroom` | mushrooms |
+| `rs` | `BlockMetalBlock` | Gold/Iron/Diamond block |
+| `nz` | `BlockFence` | `"fence"` / `"netherFence"` |
+| `nf` | `BlockPumpkin` | `"pumpkin"` / `"litpumpkin"` |
+| `et` | `BlockNetherrack` | `"hellrock"` |
+| `mq` | `BlockSoulSand` | `"hellsand"` |
+| `sk` | `BlockGlowstone` | `"lightgem"` |
+| `sc` | `BlockPortal` | `"portal"` |
+| `aem` | `BlockCake` | `"cake"` |
+| `mz` | `BlockRedstoneDiode` | `"diode"` |
+| `aif` | `BlockSnow` | `"snow"` (layer) |
+| `jk` | `BlockSnowBlock` | `"snow"` (block) |
+| `ahq` | `BlockIce` | `"ice"` |
+| `ow` | `BlockCactus` | `"cactus"` |
+| `pc` | `BlockClay` | `"clay"` |
+| `md` | `BlockReed` | `"reeds"` |
+| `abl` | `BlockJukebox` | `"jukebox"` |
+| `wd` | `BlockMushroomCap` | mushroom cap |
+| `uh` | `BlockPane` | iron fence / thin glass |
+| `of` | `BlockMelon` | `"melon"` |
+| `pu` | `BlockStem` | pumpkin/melon stem |
+| `ahl` | `BlockVine` | `"vine"` |
+| `fp` | `BlockFenceGate` | `"fenceGate"` |
+| `ez` | `BlockMycelium` | `"mycel"` |
+| `qi` | `BlockLilyPad` | `"waterlily"` |
+| `vy` | `BlockNetherWart` | `"netherStalk"` |
+| `sy` | `BlockEnchantmentTable` | `"enchantmentTable"` |
+| `ahp` | `BlockBrewingStand` | `"brewingStand"` |
+| `ic` | `BlockCauldron` | `"cauldron"` |
+| `aid` | `BlockEndPortal` | end portal (invisible) |
+| `rl` | `BlockEndPortalFrame` | `"endPortalFrame"` |
+| `aci` | `BlockDragonEgg` | `"dragonEgg"` |
+| `jh` | `BlockStoneBrick` | `"stonebricksmooth"` |
+| `vf` | `BlockSilverfish` | silverfish block |
+| `mf` | `BlockTrapDoor` | `"trapdoor"` |
+| `vj` | `BlockLockedChest` | `"lockedchest"` |
+| `uc` | `BlockDoor` | `"doorWood"` / `"doorIron"` |
+| `afu` | `BlockLadder` | `"ladder"` |
+| `aaa` | `BlockLever` | `"lever"` |
+| `oc` | `BlockOreRedstone` | `"oreRedstone"` |
+| `ku` | `BlockRedstoneTorch` | `"notGate"` |
+| `mf` | `BlockButton` | pressure plate / button |
+| `cu` | `BlockDispenser` | `"dispenser"` |
+| `aat` | `BlockSandStone` | `"sandStone"` |
+| `yq` | `BlockNote` | `"musicBlock"` |
+| `aab` | `BlockBed` | `"bed"` |
+| `kv` | `BlockTallGrass` | `"tallgrass"` |
+| `jl` | `BlockDeadBush` | `"deadbush"` |
+| `ay` | `BlockBookshelf` | `"bookshelf"` |
+| `ain` | `BlockObsidian` | `"obsidian"` |
+| `rn` | `BlockWorkbench` | `"workbench"` |
+| `mr` | `BlockSign` | `"sign"` |
+
+## Material Classes
+
+| Obfuscated | Human name | String key |
+|---|---|---|
+| `wu` | `Material` | base class |
+| `bj` | `MaterialLiquid` | used for water |
+| `aeg` | `MaterialLogic` | used for sand (gravity) |
+
+## World / Level Classes
+
+| Obfuscated | Human name | Notes |
+|---|---|---|
+| `ry` | `World` | 2788 lines |
+| `zx` | `Chunk` | 781 lines |
+| `gy` | `ChunkLoader` | file-based chunk persistence |
+
+---
+
+*Add new mappings as classes are analyzed. Keep alphabetical by obfuscated name within each section.*

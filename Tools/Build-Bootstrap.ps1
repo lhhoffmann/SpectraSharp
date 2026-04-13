@@ -14,14 +14,14 @@
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
-# ── Paths ─────────────────────────────────────────────────────────────────────
+# -- Paths ---------------------------------------------------------------------
 $ScriptDir   = $PSScriptRoot
 $LauncherDir = Join-Path $ScriptDir 'launcher'
 $JavaSrc     = Join-Path $LauncherDir 'Bootstrap.java'
 $OutJar      = Join-Path $LauncherDir 'SpectraSharp-1.0.jar'
 $TmpDir      = Join-Path $ScriptDir  '.build-tmp'
 
-# ── Locate javac ──────────────────────────────────────────────────────────────
+# -- Locate javac --------------------------------------------------------------
 function Find-Javac {
     # 1. Check PATH first
     $found = Get-Command javac -ErrorAction SilentlyContinue
@@ -64,25 +64,41 @@ Install a JDK (e.g. Eclipse Temurin) and either:
 
 Write-Host "[Build-Bootstrap] Using javac: $javac"
 
-# ── Clean temp directory ──────────────────────────────────────────────────────
+# -- Clean temp directory ------------------------------------------------------
 if (Test-Path $TmpDir) { Remove-Item $TmpDir -Recurse -Force }
 New-Item -ItemType Directory -Path $TmpDir | Out-Null
 
-# ── Compile ───────────────────────────────────────────────────────────────────
+# -- Compile -------------------------------------------------------------------
 Write-Host '[Build-Bootstrap] Compiling Bootstrap.java...'
 & $javac --release 8 -d $TmpDir $JavaSrc
 if ($LASTEXITCODE -ne 0) {
-    Write-Error '[Build-Bootstrap] javac failed — see errors above.'
+    Write-Error '[Build-Bootstrap] javac failed - see errors above.'
     exit 1
 }
 
-# ── Package JAR (JAR = ZIP, use .NET compression to avoid jar.exe dependency) ─
+# -- Package JAR with forward-slash entry names (Java requires /, not \) ------
 Write-Host "[Build-Bootstrap] Packaging $OutJar..."
 if (Test-Path $OutJar) { Remove-Item $OutJar -Force }
+Add-Type -Assembly 'System.IO.Compression'
 Add-Type -Assembly 'System.IO.Compression.FileSystem'
-[System.IO.Compression.ZipFile]::CreateFromDirectory($TmpDir, $OutJar)
 
-# ── Cleanup ───────────────────────────────────────────────────────────────────
+$stream = [System.IO.File]::Open($OutJar, [System.IO.FileMode]::Create)
+$zip    = New-Object System.IO.Compression.ZipArchive($stream, [System.IO.Compression.ZipArchiveMode]::Create)
+
+Get-ChildItem -Path $TmpDir -Recurse -File | ForEach-Object {
+    $entryName = $_.FullName.Substring($TmpDir.Length).TrimStart('\', '/').Replace('\', '/')
+    $entry     = $zip.CreateEntry($entryName)
+    $dst       = $entry.Open()
+    $src       = $_.OpenRead()
+    $src.CopyTo($dst)
+    $src.Close()
+    $dst.Close()
+}
+
+$zip.Dispose()
+$stream.Close()
+
+# -- Cleanup -------------------------------------------------------------------
 Remove-Item $TmpDir -Recurse -Force
 
 Write-Host ''
