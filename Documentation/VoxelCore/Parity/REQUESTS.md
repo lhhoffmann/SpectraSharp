@@ -79,7 +79,7 @@ The analysis AI works through this list and creates the corresponding file in `S
 - Java class name: `net.minecraft.src.EnumMovingObjectType`? (obf: `bo`)
 
 ## StepSound
-[STATUS:PROVIDED]
+[STATUS:IMPLEMENTED]
 **Needed for:** `Core/StepSound.cs` — step sound groups used by Block constructor and getLightOpacity
 **Questions:**
 - Fields: name string? pitch/volume floats? Which fields exist?
@@ -89,7 +89,7 @@ The analysis AI works through this list and creates the corresponding file in `S
 - Java class name: `net.minecraft.src.StepSound`? (obf: `p`)
 
 ## Material
-[STATUS:PROVIDED]
+[STATUS:IMPLEMENTED]
 **Needed for:** `Core/Material.cs` — block material type used by Block.bX field
 **Questions:**
 - Fields: any instance state beyond type identity?
@@ -99,14 +99,108 @@ The analysis AI works through this list and creates the corresponding file in `S
 - Java class name: `net.minecraft.src.Material`? (obf: `wu`)
 
 ## IBlockAccess
-[STATUS:PROVIDED]
+[STATUS:IMPLEMENTED]
 **Needed for:** `Core/IBlockAccess.cs` — read-only world view used by Block rendering and bounds queries
 **Questions:**
 - Full method list: `a(x,y,z)` getBlockId, `d(x,y,z)` getBlockMetadata, `e(x,y,z)` getMaterial, `f(x,y,z)` isOpaqueCube, `g(x,y,z)` isWet, `b(x,y,z,int)` getBrightness — all confirmed?
 - Any additional methods?
 - Java class name / interface: `net.minecraft.src.IBlockAccess`? (obf: `kq`)
 
+## Chunk
+[STATUS:IMPLEMENTED]
+**Needed for:** `Core/Chunk.cs` — stores block IDs, light data, and height map for one 16×128×16 column
+**Questions:**
+- Storage layout: single byte[] for block IDs (16×128×16 = 32768 bytes)? Or nibble arrays?
+- Light data: is sky-light and block-light stored as nibble arrays (4-bit per block)?
+- Height map: int[] of 256 values (one per XZ column), what does each value represent (top solid Y)?
+- Dirty flags: does Chunk track isDirty, isLightPopulated, isTerrainPopulated as separate booleans?
+- Neighbour references: does Chunk hold direct references to adjacent chunks?
+- Any ChunkSection (16×16×16 sub-chunk) structure, or is it one flat 16×128×16 array?
+- Java class name / obf name of Chunk?
+
+## World
+[STATUS:IMPLEMENTED]
+**Needed for:** `Core/IWorld.cs` + `Core/World.cs` — implements IBlockAccess; manages chunks and tick loop
+**Questions:**
+- Does World implement `kq` (IBlockAccess) directly?
+- Key fields: chunk map (HashMap<long, Chunk>?), worldRandom (JavaRandom), isClientSide (boolean I), worldTime (long), spawn coords?
+- `a(x,y,z)` → int : getBlockId — does it delegate to Chunk.getBlockId?
+- `e(x,y,z)` → Material : getBlockMaterial — does it look up Block.blocksList[id].bZ?
+- `spawnEntityInWorld` — signature?
+- `scheduleBlockUpdate(x,y,z,blockId,delay)` — does this exist?
+- Random tick logic: how are random ticks distributed per chunk per tick?
+- Java class name / obf name of World?
+
+## Entity
+[STATUS:IMPLEMENTED]
+**Needed for:** `Core/Entity.cs` — base class for all entities; required to un-stub World entity management,
+Chunk entity buckets, and Block.dropBlockAsItemWithChance (EntityItem spawn).
+**Questions:**
+- Obfuscated class name of Entity base class? (suspected `ia`)
+- Position fields: `s`=posX (double), `t`=posY (double), `u`=posZ (double)?
+  Or different field names? Are prevPos fields also present (`q`, `r`, `p`)?
+- Velocity fields: `H`=motionX, `I`=motionY, `J`=motionZ (double)?
+- AABB: `C` field = AxisAlignedBB (`c`)? How is it sized/positioned?
+- Chunk tracking fields: `ah`=addedToChunk, `ai`=chunkCoordX, `aj`=chunkCoordY (bucket), `ak`=chunkCoordZ?
+- Dead flag: `K`=isDead (boolean)?
+- Entity tick: `a()` — main tick method, called by World per tick?
+- Mount/rider: `ab()` returns rider entity? How is mount link stored?
+- `v()` — marks entity as dead?
+- Is `ia` abstract or concrete? Any subclasses needed immediately (EntityItem `ih`, Player `vi`)?
+
+## WorldProvider
+[STATUS:IMPLEMENTED]
+**Needed for:** `Core/WorldProvider.cs` — dimension rules used by World and Chunk; required to
+un-stub `GetBrightness`, `GetLightValue`, sky-light propagation, and weather.
+**Questions:**
+- Obfuscated class name? (suspected `k`)
+- `e` field: boolean — is this dimension the Nether (no sky-light)?
+- `b` field: WorldChunkManager (`vh`) — needed for `IBlockAccess.GetContextObject()`?
+- `f[]` field: float[] sky-brightness lookup table (length 16) — maps light level 0–15 to
+  brightness float 0.0–1.0? What are the actual values?
+- `a(ry)` method: `registerWorld(world)` — what does it do?
+- Any other fields/methods called directly by World or Chunk?
+- Is WorldProvider abstract with subclasses for Overworld / Nether / End?
+
 ## JavaRandom
 [STATUS:IMPLEMENTED]
 **Needed for:** `Core/JavaRandom.cs`
 **Notes:** Implemented from Java SE public specification (LCG algorithm is normative). No decompiled source consulted.
+
+## ItemStack
+[STATUS:REQUIRED]
+**Needed for:** `Core/ItemStack.cs` — item + count + damage container; used by EntityItem, Block drop methods, and inventory
+**Questions:**
+- Obfuscated class name? (suspected `dk`)
+- Fields: item reference (zx?), count (int), itemDamage (int)? Any other fields?
+- `b()` → int : stackSize / item count?
+- `a()` → Item : the item type?
+- Static factory or constructor: `new dk(int itemId, int count, int damage)`?
+- Is ItemStack mutable (setters) or immutable?
+- Java class name: `net.minecraft.src.ItemStack`?
+
+## EntityItem
+[STATUS:REQUIRED]
+**Needed for:** `Core/EntityItem.cs` — dropped item entity; spawned by `Block.DropBlockAsItemWithChance`
+and by World block-break logic
+**Questions:**
+- Obfuscated class name? (suspected `ih`)
+- Does it extend Entity (`ia`) directly?
+- Constructor: `new ih(ry world, double x, double y, double z, dk itemStack)`?
+- Fields: itemStack (dk), age (int), delayBeforePickup (int), thrower (string)?
+- Tick behaviour: despawn at age 6000? Gravity + bounce physics?
+- `a(dk)` — setEntityItemStack? `b()` — getEntityItemStack?
+- Java class name: `net.minecraft.src.EntityItem`?
+
+## DataWatcher
+[STATUS:REQUIRED]
+**Needed for:** `Core/DataWatcher.cs` — per-entity synchronized data store; currently inlined as
+`_entityFlags` (byte, index 0) and `_airSupply` (short, index 1) stubs in `Core/Entity.cs`.
+**Questions:**
+- Obfuscated class name? (suspected `cr`)
+- How are entries registered? `addObject(int id, Object value)` with type code?
+- How are entries read/written? `getWatchableObjectByte(int id)` / `updateObject(int id, Object)`?
+- Is the underlying storage an ArrayList or HashMap?
+- Which data types are supported? (byte, short, int, float, string, ItemStack, ChunkCoordinates?)
+- How does the dirty flag work for network sync?
+- Java class name: `net.minecraft.src.DataWatcher`?

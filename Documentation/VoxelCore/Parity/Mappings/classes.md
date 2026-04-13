@@ -133,9 +133,14 @@ Obfuscated name (as found in `temp/decompiled/`) → MCP/human-readable name.
 
 | Obfuscated | Human name | Notes |
 |---|---|---|
-| `ry` | `World` | 2788 lines |
-| `zx` | `Chunk` | 781 lines |
+| `ry` | `World` | 2788 lines; implements `kq`; root game object — chunks, entities, TEs, tick schedule |
+| `zx` | `Chunk` | 781 lines; 16×128×16 block/light/entity column; block index `x<<11|z<<7|y` |
 | `gy` | `ChunkLoader` | file-based chunk persistence |
+| `ia` | `Entity` | 1214 lines; abstract base for all in-world objects; fields s/t/u=pos, v/w/x=motion, K=isDead |
+| `k` | `WorldProvider` | 120 lines; abstract; dimension rules; f[16]=brightness table; e=isNether; subclasses ix/aau/ol |
+| `ix` | `WorldProviderSurface` | Overworld (dim 0) |
+| `aau` | `WorldProviderHell` | Nether (dim −1) |
+| `ol` | `WorldProviderEnd` | End (dim 1) |
 
 ---
 

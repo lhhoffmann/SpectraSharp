@@ -13,8 +13,9 @@ Update this table manually when a billing period ends or a charge appears.
 |------------|-----------------------|--------|
 | 2026-04-13 | Claude Pro (monthly)  | 20 EUR |
 | 2026-04-13 | Extra usage           | 13 EUR |
+| 2026-04-13 | Extra usage           |  9 EUR |
 
-**Running total: 33 EUR**
+**Running total: 42 EUR**
 
 ---
 
