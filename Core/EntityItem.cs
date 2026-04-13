@@ -138,6 +138,9 @@ public class EntityItem : Entity
 
     // ── Visual accessor ───────────────────────────────────────────────────────
 
+    /// <summary>Ticks alive — drives the despawn counter and can be displayed in debug UIs.</summary>
+    public int Age => _age;
+
     /// <summary>Initial rotation for renderer bobbing. Spec: field <c>d</c>.</summary>
     public float GetInitialRotation() => _rotation;
 

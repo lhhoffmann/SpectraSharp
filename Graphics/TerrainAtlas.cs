@@ -34,6 +34,10 @@ public static class TerrainAtlas
         Image tile = Raylib.ImageCopy(atlas);
         Raylib.ImageCrop(ref tile, new Rectangle(col * TileSize, row * TileSize, TileSize, TileSize));
 
+        // Raylib uploads image rows top-down but OpenGL expects bottom-up UV origin —
+        // flip vertically so textures appear right-side up on cube faces.
+        Raylib.ImageFlipVertical(ref tile);
+
         Texture2D tex = Raylib.LoadTextureFromImage(tile);
         Raylib.UnloadImage(tile);
 

@@ -349,7 +349,15 @@ public class World : IWorld
         {
             int id = GetBlockId(bx, by, bz);
             if (id == 0) continue;
-            Block.BlocksList[id]?.AddCollisionBoxesToList(this, bx, by, bz, box, list);
+            var blk = Block.BlocksList[id];
+            if (blk != null)
+                blk.AddCollisionBoxesToList(this, bx, by, bz, box, list);
+            else
+            {
+                // Block ID is set but no Core.Block instance registered — default to solid 1×1×1 cube
+                var fallback = AxisAlignedBB.GetFromPool(bx, by, bz, bx + 1, by + 1, bz + 1);
+                if (box.Intersects(fallback)) list.Add(fallback);
+            }
         }
 
         return list;

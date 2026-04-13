@@ -159,24 +159,32 @@ public sealed class Engine(AssetManager assets, TextureRegistry textures, Bridge
             }
         }
 
-        // ── Core world ground blocks (16×16 at Y=0, rendered at Z+WorldOffsetZ) ─
+        // ── Core world surface blocks (grass at Y=1, rendered at Z+WorldOffsetZ) ─
+        // Reuse bridge-block texture keys so the already-loaded textured models are used.
         if (_world != null)
         {
             for (int bx = 0; bx < 16; bx++)
             for (int bz = 0; bz < 16; bz++)
             {
-                int id = _world.GetBlockId(bx, 0, bz);
+                int id = _world.GetBlockId(bx, 1, bz); // grass layer
+                if (id == 0) id = _world.GetBlockId(bx, 0, bz); // fall back to stone
+
                 if (id == 0) continue;
 
-                Color col = id == 2
-                    ? new Color(60,  140,  40, 255)   // grass = green
-                    : new Color(120, 120, 120, 255);   // stone = gray
+                // Block center: block at world-Y occupies [Y, Y+1], so render center = Y+0.5
+                int   worldY   = _world.GetBlockId(bx, 1, bz) != 0 ? 1 : 0;
+                float renderY  = worldY + 0.5f;
+
+                // Reuse bridge block texture models (already loaded in SetupMaterials)
+                string texKey      = id == 2 ? "block_3" : "block_1"; // grass-side or stone
+                string javaClass   = id == 2 ? "net.minecraft.src.BlockGrass"
+                                             : "net.minecraft.src.BlockStone";
 
                 blocks.Add(new BlockRenderData(
-                    new Vector3(bx, 0f, bz + WorldOffsetZ),
-                    col,
-                    $"world_{id}",     // no model → falls to DrawCube
-                    id == 2 ? "net.minecraft.src.BlockGrass" : "net.minecraft.src.BlockStone",
+                    new Vector3(bx, renderY, bz + WorldOffsetZ),
+                    new Color(200, 200, 200, 255),
+                    texKey,
+                    javaClass,
                     totalTicks));
             }
         }
@@ -188,38 +196,34 @@ public sealed class Engine(AssetManager assets, TextureRegistry textures, Bridge
             if (entity.IsDead) continue;
             string label;
             Color  col;
+
             if (entity is EntityItem item)
             {
-                label = $"Item  age={item.GetType().GetField("_age",
-                    System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)
-                    ?.GetValue(item) ?? "?"}";
-                col = new Color(255, 220, 50, 255); // gold
+                label = $"Item  age={item.Age}";
+                col   = new Color(255, 220, 50, 255); // gold
+            }
+            else if (entity is LivingEntity mob)
+            {
+                label = $"Mob  HP={mob.GetHealth()}/{mob.GetMaxHealth()}";
+                col   = new Color(220, 80, 80, 255);  // red
             }
             else
             {
-                label = entity.ToString();
-                col   = new Color(220, 80, 80, 255);
+                label = entity.GetType().Name;
+                col   = new Color(180, 180, 255, 255);
             }
+
             entities.Add(new EntityRenderData(
                 new Vector3((float)entity.PosX, (float)entity.PosY, (float)entity.PosZ + WorldOffsetZ),
                 col, label));
         }
 
-        if (_debugMob != null && !_debugMob.IsDead)
-        {
-            entities.Add(new EntityRenderData(
-                new Vector3((float)_debugMob.PosX, (float)_debugMob.PosY,
-                            (float)_debugMob.PosZ + WorldOffsetZ),
-                new Color(220, 80, 80, 255),
-                $"Mob  HP={_debugMob.GetHealth()}/{_debugMob.GetMaxHealth()}"));
-        }
-
         // ── World stats ───────────────────────────────────────────────────────
-        long  worldTime       = _world?.WorldTime ?? 0;
+        long  worldTime        = _world?.WorldTime ?? 0;
         float brightnessSample = _worldProvider?.BrightnessTable[15] ?? 1.0f;
-        int   mobHp           = _debugMob?.GetHealth() ?? 20;
-        int   mobMax          = _debugMob?.GetMaxHealth() ?? 20;
-        int   liveCount       = _entities.Count(e => !e.IsDead);
+        int   mobHp            = _debugMob is { IsDead: false } ? _debugMob.GetHealth()    : 0;
+        int   mobMax           = _debugMob?.GetMaxHealth() ?? 20;
+        int   liveCount        = _entities.Count(e => !e.IsDead);
 
         return new WorldSnapshot(blocks, entities, totalTicks,
                                  worldTime, brightnessSample, mobHp, mobMax, liveCount);
@@ -388,14 +392,16 @@ public sealed class Engine(AssetManager assets, TextureRegistry textures, Bridge
             Raylib.DrawModelEx(model, block.Position, Vector3.UnitY, 0f, Vector3.One, Color.White);
         else
             Raylib.DrawCube(block.Position, 1f, 1f, 1f, block.RenderColor);
-
-        Raylib.DrawCubeWires(block.Position, 1f, 1f, 1f, Color.Black);
     }
 
     private static void DrawEntity(EntityRenderData entity)
     {
-        Raylib.DrawCube(entity.Position, 0.3f, 0.3f, 0.3f, entity.RenderColor);
-        Raylib.DrawCubeWires(entity.Position, 0.3f, 0.3f, 0.3f, Color.White);
+        bool isMob = entity.Label.StartsWith("Mob");
+        float w = isMob ? 0.6f : 0.3f;
+        float h = isMob ? 1.8f : 0.3f;
+        // Position is entity feet (PosY = MinY of AABB) — render center is half-height up
+        var center = entity.Position with { Y = entity.Position.Y + h / 2f };
+        Raylib.DrawCube(center, w, h, w, entity.RenderColor);
     }
 
     // ── HUD ───────────────────────────────────────────────────────────────────
@@ -412,28 +418,41 @@ public sealed class Engine(AssetManager assets, TextureRegistry textures, Bridge
         int sw = Raylib.GetScreenWidth();
         int sh = Raylib.GetScreenHeight();
 
-        // ── top-left: Bridge block info ───────────────────────────────────────
-        const int px = 10, py = 10, pw = 380, lh = 22, pad = 10;
-        BlockRenderData? first = snap.Blocks.Count > 0 ? snap.Blocks[0] : null;
-        int rows = first is not null ? 5 : 2;
-        int ph   = pad * 2 + rows * lh;
+        // ── top-left: Bridge block list ───────────────────────────────────────
+        const int px = 10, py = 10, pw = 380, lh = 18, pad = 8;
+
+        // Collect only bridge stubs (TextureKey starts with "block_")
+        var bridgeBlocks = snap.Blocks
+            .Where(b => b.TextureKey.StartsWith("block_"))
+            .ToList();
+
+        int listRows = bridgeBlocks.Count + 2; // header + tick row
+        int ph       = pad * 2 + listRows * lh;
 
         Raylib.DrawRectangle(px, py, pw, ph, PanelBg);
         Raylib.DrawRectangleLines(px, py, pw, ph, Accent);
-        Raylib.DrawText("Bridge Blocks", px + pad, py + pad, 18, Accent);
+        Raylib.DrawText($"Bridge Blocks ({bridgeBlocks.Count})", px + pad, py + pad, 16, Accent);
 
-        if (first is not null)
+        int by2 = py + pad + lh + 2;
+        foreach (var b in bridgeBlocks)
         {
-            int y = py + pad + lh + 4;
-            HudRow("Texture",  first.TextureKey,              px + pad, y); y += lh;
-            HudRow("Parity",   first.JavaClassName,            px + pad, y); y += lh;
-            HudRow("Tick",     $"{first.TickCount}",           px + pad, y); y += lh;
-            HudRow("Elapsed",  $"{first.TickCount / 20.0:F1} s", px + pad, y);
+            // Extract short class name: "net.minecraft.src.BlockGrass" → "BlockGrass"
+            string shortName = b.JavaClassName.Contains('.')
+                ? b.JavaClassName[(b.JavaClassName.LastIndexOf('.') + 1)..]
+                : b.JavaClassName;
+            HudRow(shortName, b.TextureKey, px + pad, by2);
+            by2 += lh;
+        }
+        if (bridgeBlocks.Count > 0)
+        {
+            long ticks = bridgeBlocks[0].TickCount;
+            Raylib.DrawText($"  Ticks: {ticks}  ({ticks / 20.0:F1} s)",
+                            px + pad, by2, 14, Dim);
         }
 
         // ── top-left below: Core world stats ─────────────────────────────────
         int py2 = py + ph + 6;
-        const int ph2 = pad * 2 + 6 * lh;
+        int ph2 = pad * 2 + 7 * lh + 4; // header + 6 rows + HP bar extra
 
         Raylib.DrawRectangle(px, py2, pw, ph2, PanelBg);
         Raylib.DrawRectangleLines(px, py2, pw, ph2, GreenColor);
@@ -449,7 +468,6 @@ public sealed class Engine(AssetManager assets, TextureRegistry textures, Bridge
         int barY = y2 + 2;
         float pct = snap.MobMaxHealth > 0 ? (float)snap.MobHealth / snap.MobMaxHealth : 0f;
         int barW  = pw - pad * 2;
-        int barFill = (int)(barW * pct);
         Raylib.DrawText("Mob HP:", barX, barY, 16, Dim);
         Raylib.DrawRectangle(barX + 70, barY, barW - 70, 14, new Color(60, 0, 0, 200));
         Raylib.DrawRectangle(barX + 70, barY, (int)((barW - 70) * pct), 14,
