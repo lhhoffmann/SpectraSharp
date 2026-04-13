@@ -175,13 +175,31 @@ Smelting:
 
 Save to: `Documentation/Mods/Specs/<ModName>.md`
 
+**Every mod spec MUST begin with the standard header** (same as vanilla specs).
+See `Documentation/VoxelCore/Protocols/SPEC_HEADER_TEMPLATE.md`.
+
 Use this structure:
 
 ```markdown
+<!--
+  SpectraSharp Parity Documentation
+  Copyright © 2026 lhhoffmann / SpectraSharp Contributors
+  Licensed under CC BY 4.0 — https://creativecommons.org/licenses/by/4.0/
+  See Documentation/LICENSE.md for full terms.
+
+  CLEAN-ROOM NOTICE: This document contains no decompiled source code.
+  All descriptions are original work derived from behavioural observation
+  and structural analysis. Mathematical constants are functional facts
+  and are not subject to copyright.
+-->
+
 # <ModName> — Mod Spec
-Source JAR: `mods/<ModName>.jar`
-Decompiled: `temp/mods/<ModName>/`
-Analyst date: <YYYY-MM-DD>
+**Source JAR:** `mods/<ModName>.jar`
+**Decompiled:** `temp/mods/<ModName>/`
+**Analyst:** lhhoffmann
+**Date:** <YYYY-MM-DD>
+**Status:** `DRAFT`
+**License:** [CC BY 4.0](../../LICENSE.md)
 
 ## 1. Overview
 One paragraph: what does this mod add/change?

@@ -44,9 +44,25 @@ Before writing a single line of the spec, understand:
 ### Step 3 — Write the spec file
 Save to `Documentation/VoxelCore/Parity/Specs/<SystemName>_Spec.md`.
 
+**Every spec file MUST begin with the standard header.**
+See `Documentation/VoxelCore/Protocols/SPEC_HEADER_TEMPLATE.md` for the exact block to copy.
+Omitting the header is not permitted — it is the project's copyright and clean-room record.
+
 #### Mandatory spec sections:
 
 ```
+<!--
+  SpectraSharp Parity Documentation
+  Copyright © 2026 lhhoffmann / SpectraSharp Contributors
+  Licensed under CC BY 4.0 — https://creativecommons.org/licenses/by/4.0/
+  See Documentation/LICENSE.md for full terms.
+
+  CLEAN-ROOM NOTICE: This document contains no decompiled source code.
+  All descriptions are original work derived from behavioural observation
+  and structural analysis. Mathematical constants are functional facts
+  and are not subject to copyright.
+-->
+
 # <Human Class Name> Spec
 Source class: `<obfuscated>.java`
 Superclass: `<obfuscated>` (= `<HumanName>`)

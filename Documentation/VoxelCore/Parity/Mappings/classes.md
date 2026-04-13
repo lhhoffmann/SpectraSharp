@@ -8,6 +8,11 @@ Obfuscated name (as found in `temp/decompiled/`) → MCP/human-readable name.
 
 | Obfuscated | Human name | Notes |
 |---|---|---|
+| `c` | `AxisAlignedBB` | Axis-aligned bounding box; 6 double fields; static object pool; sweep collision; ray trace |
+| `bo` | `EnumMovingObjectType` | Java enum; two constants: `a`=TILE (0), `b`=ENTITY (1) |
+| `fb` | `Vec3` | 3D double vector; static object pool; geometric ops; segment-plane intersection |
+| `gv` | `MovingObjectPosition` | Ray-cast result; block-hit or entity-hit constructor; face ID 0–5 |
+| `yy` | `Block` | Block base class; static registry k[256]; 8 parallel arrays; builder pattern; virtual behaviour |
 | `me` | `MathHelper` | Static trig/numeric utilities; sine table (65536 entries); floor, sqrt, clamp, abs, floor-div, RNG range |
 
 ## Core Game Classes
