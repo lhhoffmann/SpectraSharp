@@ -19,9 +19,8 @@ namespace SpectraSharp.Core;
 ///   7. DataWatcher flag writes are non-atomic (read-modify-write on the flags byte).
 ///
 /// Stubs (specs pending):
-///   - DataWatcher (cr): flags byte (index 0) and air supply short (index 1) inlined.
 ///   - NBT read/write (ik spec pending): abstract hooks remain but use object.
-///   - EntityItem (ih) / ItemStack (dk) drop methods: return null stub.
+///   - EntityItem (ih) drop helper: uses ItemStack now; DropEntityItem stub.
 ///   - DamageSource (pm) fire/lava damage: no-op.
 ///
 /// Source spec: Documentation/VoxelCore/Parity/Specs/Entity_Spec.md
@@ -116,14 +115,11 @@ public abstract class Entity
     public int  ChunkCoordY;  // obf: aj — entity bucket = floor(posY / 16)
     public int  ChunkCoordZ;  // obf: ak
 
-    // ── DataWatcher (stub — cr spec pending) ─────────────────────────────────
+    // ── DataWatcher (spec §6 / cr) ───────────────────────────────────────────
 
-    // DataWatcher index 0: entity flags byte (bits: 0=onFire,1=sneaking,2=riding,3=sprinting,4=eating)
-    // DataWatcher index 1: air supply short (default 300)
-    private byte  _entityFlags;             // obf: ag[0]
-#pragma warning disable CS0414
-    private short _airSupply = 300;         // obf: ag[1]
-#pragma warning restore CS0414
+    // Index 0: entity flags byte (bits: 0=onFire,1=sneaking,2=riding,3=sprinting,4=eating)
+    // Index 1: air supply short (default 300)
+    protected readonly DataWatcher DataWatcher = new DataWatcher(); // obf: ag (cr)
 
     // ── Entity's own random ───────────────────────────────────────────────────
 
@@ -139,6 +135,8 @@ public abstract class Entity
     {
         EntityId = _nextEntityId++;
         World    = world;
+        DataWatcher.Register(0, (byte)0);    // entity flags bit field
+        DataWatcher.Register(1, (short)300); // air supply (default 300)
         SetPosition(0.0, 0.0, 0.0); // d(0,0,0) — sizes AABB from default M/N (quirk 3)
         EntityInit();
     }
@@ -480,12 +478,18 @@ public abstract class Entity
 
     // ── DataWatcher flag helpers (spec §6) ────────────────────────────────────
 
-    protected bool GetFlagBit(int bit) => (_entityFlags & (1 << bit)) != 0;
+    protected bool GetFlagBit(int bit)
+    {
+        return (DataWatcher.GetByte(0) & (1 << bit)) != 0;
+    }
+
     protected void SetFlagBit(int bit, bool value)
     {
         // Quirk 7: read-modify-write (non-atomic)
-        if (value) _entityFlags |= (byte)(1 << bit);
-        else       _entityFlags &= (byte)~(1 << bit);
+        byte flags = DataWatcher.GetByte(0);
+        if (value) flags |= (byte)(1 << bit);
+        else       flags &= (byte)~(1 << bit);
+        DataWatcher.UpdateObject(0, flags);
     }
 
     // ── toString ──────────────────────────────────────────────────────────────

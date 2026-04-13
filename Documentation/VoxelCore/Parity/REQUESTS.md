@@ -168,7 +168,7 @@ un-stub `GetBrightness`, `GetLightValue`, sky-light propagation, and weather.
 **Notes:** Implemented from Java SE public specification (LCG algorithm is normative). No decompiled source consulted.
 
 ## ItemStack
-[STATUS:REQUIRED]
+[STATUS:IMPLEMENTED]
 **Needed for:** `Core/ItemStack.cs` — item + count + damage container; used by EntityItem, Block drop methods, and inventory
 **Questions:**
 - Obfuscated class name? (suspected `dk`)
@@ -180,7 +180,7 @@ un-stub `GetBrightness`, `GetLightValue`, sky-light propagation, and weather.
 - Java class name: `net.minecraft.src.ItemStack`?
 
 ## EntityItem
-[STATUS:REQUIRED]
+[STATUS:IMPLEMENTED]
 **Needed for:** `Core/EntityItem.cs` — dropped item entity; spawned by `Block.DropBlockAsItemWithChance`
 and by World block-break logic
 **Questions:**
@@ -193,7 +193,7 @@ and by World block-break logic
 - Java class name: `net.minecraft.src.EntityItem`?
 
 ## DataWatcher
-[STATUS:REQUIRED]
+[STATUS:IMPLEMENTED]
 **Needed for:** `Core/DataWatcher.cs` — per-entity synchronized data store; currently inlined as
 `_entityFlags` (byte, index 0) and `_airSupply` (short, index 1) stubs in `Core/Entity.cs`.
 **Questions:**

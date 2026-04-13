@@ -36,9 +36,9 @@ Analysis AI                        Coder AI
 | [Entity_Spec.md](Specs/Entity_Spec.md) | Entity (`ia`) — abstract base; all fields, AABB layout, move/sweep physics, fire, mount/rider, DataWatcher flags, drop items | [STATUS:IMPLEMENTED] `Core/Entity.cs` |
 | [WorldProvider_Spec.md](Specs/WorldProvider_Spec.md) | WorldProvider (`k`) — abstract; brightness table formula, sky colour, sun angle, moon phase, dim factory | [STATUS:IMPLEMENTED] `Core/WorldProvider.cs` |
 
-| *(pending)* | ItemStack (`dk`) — item + count + damage container | [STATUS:REQUIRED] |
-| *(pending)* | EntityItem (`ih`) — dropped-item entity; spawned by Block drop methods | [STATUS:REQUIRED] |
-| *(pending)* | DataWatcher (`cr`) — per-entity synchronized data; currently inlined in Entity | [STATUS:REQUIRED] |
+| [ItemStack_Spec.md](Specs/ItemStack_Spec.md) | ItemStack (`dk`) — item + count + damage container; fields c=itemId/a=stackSize/e=damage; NBT serialisation; Unbreaking check | [STATUS:IMPLEMENTED] `Core/ItemStack.cs` |
+| [EntityItem_Spec.md](Specs/EntityItem_Spec.md) | EntityItem (`ih`) — dropped-item entity; 0.25×0.25 size; gravity/bounce/friction tick; pickup delay; despawn at age 6000 | [STATUS:IMPLEMENTED] `Core/EntityItem.cs` |
+| [DataWatcher_Spec.md](Specs/DataWatcher_Spec.md) | DataWatcher (`cr`) — per-entity synchronized data; 7 types; typeId<<5|entryId wire header; 0x7F terminator | [STATUS:IMPLEMENTED] `Core/DataWatcher.cs` |
 
 ### Mappings
 

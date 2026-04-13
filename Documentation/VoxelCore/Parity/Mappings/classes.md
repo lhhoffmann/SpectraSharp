@@ -137,6 +137,10 @@ Obfuscated name (as found in `temp/decompiled/`) → MCP/human-readable name.
 | `zx` | `Chunk` | 781 lines; 16×128×16 block/light/entity column; block index `x<<11|z<<7|y` |
 | `gy` | `ChunkLoader` | file-based chunk persistence |
 | `ia` | `Entity` | 1214 lines; abstract base for all in-world objects; fields s/t/u=pos, v/w/x=motion, K=isDead |
+| `ih` | `EntityItem` | 147 lines; dropped-item entity; extends ia; fields a=ItemStack, b=age, c=pickupDelay, f=health(5); despawn at age 6000 |
+| `dk` | `ItemStack` | 346 lines; final class; fields c=itemId, a=stackSize, e=itemDamage (non-obvious naming); NBT via ik |
+| `cr` | `DataWatcher` | 167 lines; per-entity sync data; 7 types; wire header typeId<<5|entryId; 0x7F terminator |
+| `afh` | `WatchableObject` | Inner container for DataWatcher entries; fields typeId/entryId/value/dirty |
 | `k` | `WorldProvider` | 120 lines; abstract; dimension rules; f[16]=brightness table; e=isNether; subclasses ix/aau/ol |
 | `ix` | `WorldProviderSurface` | Overworld (dim 0) |
 | `aau` | `WorldProviderHell` | Nether (dim −1) |
