@@ -57,7 +57,7 @@ The analysis AI works through this list and creates the corresponding file in `S
 - Java class name: `net.minecraft.src.MovingObjectPosition`? (obf: `gv`)
 
 ## Block
-[STATUS:PROVIDED]
+[STATUS:IMPLEMENTED]
 **Needed for:** `Core/Block.cs` — base class for all block types; required by Chunk, World, and physics
 **Questions:**
 - Static registry: is there a `Block[] blocksList` array indexed by block ID? What is the max ID (256?)?
@@ -70,13 +70,41 @@ The analysis AI works through this list and creates the corresponding file in `S
 - Java class name: `net.minecraft.src.Block` (obf: `aku`?)
 
 ## EnumMovingObjectType
-[STATUS:PROVIDED]
+[STATUS:IMPLEMENTED]
 **Needed for:** `Core/HitType.cs` — confirm whether `bo` is a Java enum with ordinal or class with static constants
 **Questions:**
 - Is `bo` a Java `enum` type with `bo.a` and `bo.b` as enum constants?
 - Or is it a class with `public static final` int/Object fields?
 - Are there any other values beyond TILE (a) and ENTITY (b)?
 - Java class name: `net.minecraft.src.EnumMovingObjectType`? (obf: `bo`)
+
+## StepSound
+[STATUS:PROVIDED]
+**Needed for:** `Core/StepSound.cs` — step sound groups used by Block constructor and getLightOpacity
+**Questions:**
+- Fields: name string? pitch/volume floats? Which fields exist?
+- `c()` → bool : called in Block constructor as `!stepSound.c()` for canBlockGrass — is this isLiquid?
+- `i()` → bool : called in Block.canReplace — isReplaceable?
+- `l()` → int  : called in Block.getLightOpacity — returns what value?
+- Java class name: `net.minecraft.src.StepSound`? (obf: `p`)
+
+## Material
+[STATUS:PROVIDED]
+**Needed for:** `Core/Material.cs` — block material type used by Block.bX field
+**Questions:**
+- Fields: any instance state beyond type identity?
+- `c()` → bool : called somewhere relating to liquid — isLiquid?
+- `b()` → bool : called in Block.isNormalCube — what does it check?
+- Are Material instances singletons (static finals on Block)?
+- Java class name: `net.minecraft.src.Material`? (obf: `wu`)
+
+## IBlockAccess
+[STATUS:PROVIDED]
+**Needed for:** `Core/IBlockAccess.cs` — read-only world view used by Block rendering and bounds queries
+**Questions:**
+- Full method list: `a(x,y,z)` getBlockId, `d(x,y,z)` getBlockMetadata, `e(x,y,z)` getMaterial, `f(x,y,z)` isOpaqueCube, `g(x,y,z)` isWet, `b(x,y,z,int)` getBrightness — all confirmed?
+- Any additional methods?
+- Java class name / interface: `net.minecraft.src.IBlockAccess`? (obf: `kq`)
 
 ## JavaRandom
 [STATUS:IMPLEMENTED]

@@ -57,7 +57,7 @@ public sealed class AxisAlignedBB
     /// Returns a pooled AABB configured with the given coordinates. Spec: static <c>b(6×double)</c>.
     /// The returned instance is only valid until the next <see cref="ResetPool"/> call.
     /// </summary>
-    private static AxisAlignedBB GetFromPool(
+    public static AxisAlignedBB GetFromPool(
         double minX, double minY, double minZ,
         double maxX, double maxY, double maxZ)
     {

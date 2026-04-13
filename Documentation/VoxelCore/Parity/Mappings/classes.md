@@ -114,11 +114,20 @@ Obfuscated name (as found in `temp/decompiled/`) → MCP/human-readable name.
 
 ## Material Classes
 
+> **Correction:** `wu` is StepSound, not Material. `p` is Material. `bj`/`aeg` extend `wu` (StepSound), not Material.
+
 | Obfuscated | Human name | String key |
 |---|---|---|
-| `wu` | `Material` | base class |
-| `bj` | `MaterialLiquid` | used for water |
-| `aeg` | `MaterialLogic` | used for sand (gravity) |
+| `p` | `Material` | base class — map color, liquid/solid/replaceable/mobility |
+| `sn` | `MaterialLiquid` | extends `p`; `a()` = true (isLiquid) |
+| `mw` | `MaterialLogic`? | extends `p`; subclass with unknown overrides |
+| `br` | Material subclass | extends `p`; unknown overrides |
+| `bk` | Material subclass | extends `p`; unknown overrides |
+| `tx` | Material subclass | extends `p`; unknown overrides |
+| `wu` | `StepSound` | base class — sound name, volume, pitch |
+| `bj` | `StepSoundGlass` | extends `wu`; `a()` = "random.glass" |
+| `aeg` | `StepSoundSand` | extends `wu`; `a()` = "step.gravel" |
+| `aav` | `MapColor` | 14 colour constants, RGB int per entry |
 
 ## World / Level Classes
 

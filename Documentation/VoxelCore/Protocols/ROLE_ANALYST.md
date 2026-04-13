@@ -143,6 +143,22 @@ Reading C# implementation files would bias your specifications. Stay in the dirt
 
 ---
 
+## Session End Checklist
+
+Before closing the session, append one entry to `Documentation/METRICS.md`:
+
+```
+## YYYY-MM-DD — [ANALYST] — <topic>
+
+**Worked on:**
+- <ClassName> — <one-line description of what was analysed>
+
+**Estimated effort:** ~N hours equivalent
+**Notes:** <decisions made, blockers, open questions — omit if none>
+```
+
+---
+
 ## Quality Bar
 
 A spec is complete when a developer who has never played the game and has never seen

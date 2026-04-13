@@ -116,6 +116,22 @@ and add the C# file path in the Notes column.
 
 ---
 
+## Session End Checklist
+
+Before closing the session, append one entry to `Documentation/METRICS.md`:
+
+```
+## YYYY-MM-DD — [CODER] — <topic>
+
+**Worked on:**
+- <ClassName> — <one-line description of what was implemented>
+
+**Estimated effort:** ~N hours equivalent
+**Notes:** <decisions made, blockers, open questions — omit if none>
+```
+
+---
+
 ## Definition of Done
 
 A system is done when:

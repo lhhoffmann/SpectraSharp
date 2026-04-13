@@ -3,7 +3,12 @@
 This folder documents the **Mod Transpiler Pipeline**: the system that automatically
 converts Java-based Minecraft 1.0 mods into native C# plugins for SpectraSharp.
 
-## Pipeline Overview
+> No clean-room protocol applies here. The Mod Transpiler is a compiler —
+> it reads Java by design. Building it is standard software engineering.
+
+---
+
+## How It Works
 
 ```
 User drops mod.jar into /mods/
@@ -12,51 +17,54 @@ User drops mod.jar into /mods/
 [ModWatcher] detects new unprocessed JAR
         │
         ▼
-[Vineflower] decompiles mod.jar → temp/mods/<ModName>/
+[ModTranspilerService.ProcessAsync(jar)]
         │
-        ▼
-[Mod Analyst AI]  reads ROLE_MOD_ANALYST.md
-  - Diffs mod classes against vanilla (Documentation/VoxelCore/Parity/Mappings/)
-  - Identifies: new content, hooks, overrides
-  - Writes: Documentation/Mods/Specs/<ModName>.md
+        ├─ Phase 1: Vineflower decompiles mod.jar → temp/mods/<ModName>/*.java
         │
-        ▼
-[Mod Coder AI]  reads ROLE_MOD_CODER.md
-  - Reads Specs/<ModName>.md ONLY (air-gap maintained)
-  - Writes: Bridge/Mods/<ModName>/
-  - Uses HarmonyLib for runtime injection hooks
+        ├─ Phase 2: ModDiffer tags each class:
+        │           NEW_CONTENT / OVERRIDE / PASSTHROUGH / LIBRARY
         │
-        ▼
-[ModCompiler] dotnet build → mods/compiled/<ModName>.dll
+        ├─ Phase 3: ANTLR4 parses Java AST → ModManifest
+        │           (BlockDescriptor, ItemDescriptor, InjectionDescriptor, ...)
         │
-        ▼
-[ModLoader] AssemblyLoadContext.LoadFromAssemblyPath()
-  Engine is now running the mod natively at AOT speed.
+        ├─ Phase 4: Translator converts ModManifest → C# source strings
+        │           using VanillaApiMap lookup table
+        │
+        ├─ Phase 5: CodeEmitter writes Bridge/Mods/<ModName>/*.cs
+        │
+        └─ Phase 6: Roslyn compiles → mods/compiled/<ModName>.dll
+                │
+                ▼
+        ModLoader.Load(dll)
+        AssemblyLoadContext → HarmonyLib patches active
+        ISpectraMod.OnLoad(engine) → mod is running
 ```
+
+---
+
+## Key Reference Files
+
+| File | Purpose |
+|---|---|
+| [Protocols/MOD_TRANSPILER.md](../VoxelCore/Protocols/MOD_TRANSPILER.md) | Full pipeline architecture |
+| [Protocols/ROLE_MOD_CODER.md](../VoxelCore/Protocols/ROLE_MOD_CODER.md) | How to implement each pipeline phase |
+| [Protocols/MOD_ANALYSIS_INTERNALS.md](../VoxelCore/Protocols/MOD_ANALYSIS_INTERNALS.md) | Internal analysis logic (what the program does) |
+| [Mappings/vanilla_api.md](Mappings/vanilla_api.md) | Java → C# API translation table (source for VanillaApiMap.cs) |
+
+---
 
 ## Mod Registry
 
-| Mod Name | JAR | Spec | Status |
-|---|---|---|---|
-| *(none yet)* | | | |
+| Mod Name | JAR | Status |
+|---|---|---|
+| *(none yet — transpiler not yet built)* | | |
 
 ## Status Legend
 
 | Status | Meaning |
 |---|---|
-| `[DETECTED]` | JAR found, not yet decompiled |
-| `[DECOMPILED]` | Vineflower finished, ready for Analyst |
-| `[SPECCED]` | Analyst wrote the Mod_Spec.md |
-| `[CODED]` | Coder wrote the C# plugin |
+| `[QUEUED]` | JAR in /mods/, transpiler not yet run |
+| `[PROCESSING]` | Transpiler currently running |
 | `[COMPILED]` | DLL built successfully |
 | `[LOADED]` | Plugin active in engine |
-
-## Key Files
-
-| File | Purpose |
-|---|---|
-| [Protocols/ROLE_MOD_ANALYST.md](../VoxelCore/Protocols/ROLE_MOD_ANALYST.md) | Analyst role for mod analysis |
-| [Protocols/ROLE_MOD_CODER.md](../VoxelCore/Protocols/ROLE_MOD_CODER.md) | Coder role for mod implementation |
-| [Protocols/MOD_TRANSPILER.md](../VoxelCore/Protocols/MOD_TRANSPILER.md) | Full pipeline reference |
-| [Mappings/vanilla_api.md](Mappings/vanilla_api.md) | Java → C# API translation table |
-| Specs/ | One `.md` file per mod |
+| `[FAILED]` | Transpiler produced errors — check TODO comments in Bridge/Mods/ |

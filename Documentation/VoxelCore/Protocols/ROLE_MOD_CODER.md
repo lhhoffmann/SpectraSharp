@@ -1,275 +1,320 @@
-# ROLE: Mod Coder (Clean Room — Mod Edition)
+# ROLE: Mod Transpiler Builder
 
-You are the **Mod Coder AI**. You extend the Coder role to implement mod plugins.
-You operate in the Clean Room: your only input is `Documentation/Mods/Specs/<ModName>.md`.
-You never see Java source. You never open `temp/`.
-
-Activate with: `ACT AS MOD CODER for <ModName>`
+> **Activate with:** `ACT AS CODER` — then reference this file for the mod transpiler task.
+> No clean-room protocol. No air-gap. This is standard software engineering.
 
 ---
 
-## AIR-GAP — Non-Negotiable
+## What You Are Building
 
-1. **NEVER open `temp/mods/` or `temp/decompiled/`.**
-2. **NEVER open any `.java` file.**
-3. If you did: STOP, report to user, discard all code written after the violation.
+`Tools/ModTranspiler/` — a standalone C# program that reads a Java mod JAR and outputs
+a compiled C# plugin (.dll) that runs natively in SpectraSharp. No AI involved at runtime.
 
----
-
-## Session Startup
-
-1. Read `Documentation/Mods/Specs/<ModName>.md` — your sole source of truth.
-2. Read `Documentation/Mods/Mappings/vanilla_api.md` — Java→C# API translations.
-3. Read `Documentation/VoxelCore/Parity/INDEX.md` — understand what engine systems exist.
-4. Read `CLAUDE.md` — architecture rules, coding standards.
+This is a **compiler**, similar in concept to Roslyn or ANTLR themselves.
+Reading Java source is the entire point of this program — there is no legal concern.
 
 ---
 
-## Output Structure
+## Project Setup
 
-Create one folder per mod under `Bridge/Mods/`:
-
-```
-Bridge/Mods/<ModName>/
-├── <ModName>Plugin.cs         ← ISpectraMod entry point (always required)
-├── <ModName>Plugin.csproj     ← copy from Bridge/Mods/_Template/ModPlugin.csproj
-├── Blocks/
-│   └── Block<Name>.cs         ← one file per new block (Tier-1 behaviour blocks)
-├── Items/
-│   └── Item<Name>.cs          ← one file per new item
-├── Entities/
-│   └── Entity<Name>.cs        ← one file per new entity
-├── Hooks/
-│   └── <TargetClass>Hooks.cs  ← all HarmonyLib patches for one vanilla class
-├── WorldGen/
-│   └── <ModName>WorldGen.cs   ← IWorldGenHook if the mod adds world gen
-└── Recipes/
-    └── <ModName>Recipes.cs    ← all recipe registrations
+```xml
+<!-- Tools/ModTranspiler/ModTranspiler.csproj -->
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <AssemblyName>ModTranspiler</AssemblyName>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Antlr4.Runtime.Standard" Version="4.13.*" />
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp"  Version="4.*" />
+    <PackageReference Include="Lib.Harmony" Version="2.3.*" />
+    <ProjectReference Include="../../SpectraSharp.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- ANTLR4 Java grammar — MIT licensed -->
+    <Antlr4 Include="Grammar/JavaLexer.g4" />
+    <Antlr4 Include="Grammar/JavaParser.g4" />
+  </ItemGroup>
+</Project>
 ```
 
 ---
 
-## ISpectraMod Entry Point
+## File Structure to Build
 
-Every mod plugin must implement this interface:
+```
+Tools/ModTranspiler/
+├── ModTranspiler.csproj
+├── Program.cs                        ← CLI: ModTranspiler.exe mods/mymod.jar
+├── Grammar/
+│   ├── JavaLexer.g4                  ← ANTLR4 Java lexer grammar (MIT)
+│   └── JavaParser.g4                 ← ANTLR4 Java parser grammar (MIT)
+├── Pipeline/
+│   ├── Decompiler.cs                 ← Phase 1: Vineflower subprocess wrapper
+│   ├── ModDiffer.cs                  ← Phase 2: mod vs vanilla class diff
+│   ├── ManifestBuilder.cs            ← Phase 3: Java AST → ModManifest
+│   ├── Translator.cs                 ← Phase 4: ModManifest → C# source strings
+│   ├── CodeEmitter.cs                ← Phase 5: write .cs files to Bridge/Mods/
+│   └── ModCompiler.cs                ← Phase 6: Roslyn compile → .dll
+├── Model/
+│   ├── ModManifest.cs                ← root output of analysis
+│   ├── BlockDescriptor.cs
+│   ├── ItemDescriptor.cs
+│   ├── EntityDescriptor.cs
+│   ├── InjectionDescriptor.cs
+│   ├── RecipeDescriptor.cs
+│   └── WorldGenDescriptor.cs
+├── Mappings/
+│   ├── VanillaApiMap.cs              ← Java method call → C# equivalent
+│   ├── VanillaClassList.cs           ← all known vanilla obfuscated class names
+│   └── TypeMap.cs                    ← Java type → C# type
+└── Templates/
+    ├── BlockTemplate.cs              ← emits BlockBase subclass source
+    ├── ItemTemplate.cs               ← emits ItemBase subclass source
+    ├── EntityTemplate.cs             ← emits EntityBase subclass source
+    ├── HookTemplate.cs               ← emits [HarmonyPatch] source
+    ├── RecipeTemplate.cs             ← emits recipe registration source
+    └── EntryPointTemplate.cs         ← emits ISpectraMod entry point source
+```
+
+---
+
+## Phase 1 — Decompiler.cs
+
+Wraps Vineflower as a subprocess. Returns the output directory path.
 
 ```csharp
-// Bridge/Mods/<ModName>/<ModName>Plugin.cs
-namespace SpectraSharp.Bridge.Mods.<ModName>;
-
-public sealed class <ModName>Plugin : ISpectraMod
+static class Decompiler
 {
-    public string ModId => "<modname>";
-    public string DisplayName => "<Human Name>";
-    public string Version => "1.0";
-
-    public void OnLoad(IEngine engine)
+    public static string Decompile(string jarPath, string outputRoot)
     {
-        // Register new blocks — BridgeRegistry auto-discovers these,
-        // but explicit registration here allows ordering guarantees.
-        // Register new items.
-        // Register recipes.
-        // Register world gen hooks.
-    }
+        string modName = Path.GetFileNameWithoutExtension(jarPath);
+        string outDir  = Path.Combine(outputRoot, modName);
+        Directory.CreateDirectory(outDir);
 
-    public void OnUnload()
-    {
-        // Clean up any mod-owned resources.
+        var psi = new ProcessStartInfo("java",
+            $"-jar tools/decompiler/vineflower.jar \"{jarPath}\" \"{outDir}\"")
+        {
+            RedirectStandardOutput = true,
+            RedirectStandardError  = true,
+            UseShellExecute        = false,
+        };
+
+        using var proc = Process.Start(psi)!;
+        proc.WaitForExit();
+
+        if (proc.ExitCode != 0)
+            throw new Exception($"Vineflower failed: {proc.StandardError.ReadToEnd()}");
+
+        return outDir;
     }
 }
 ```
 
 ---
 
-## Implementing New Blocks
+## Phase 2 — ModDiffer.cs
 
-Follow `CLAUDE.md` section 7 exactly.
-
-**Tier-1 (behaviour block):**
+Reads class names from the mod JAR (without decompiling) and tags each one.
 
 ```csharp
-// Bridge/Mods/<ModName>/Blocks/Block<Name>.cs
-namespace SpectraSharp.Bridge.Mods.<ModName>;
+enum ClassTag { NewContent, Override, Passthrough, Library }
 
-sealed class Block<Name> : BlockBase
+static class ModDiffer
 {
-    // From spec: "Block ID: <n>"
-    public override int BlockId => <n>;
-
-    // From spec: "Internal name: <string>"
-    public override string JavaClassName => "<modname>.<ClassName>";
-
-    // From spec: "Texture index: <n>"
-    public override int TextureIndex => <n>;
-
-    // From spec: "Hardness: <f>"
-    protected override float Hardness => <f>f;
-
-    // From spec: "Blast resistance: <f>"
-    protected override float BlastResistance => <f>f;
-
-    // From spec: "Tick behaviour / Tick logic"
-    public override void BlockTick(IWorld world, int x, int y, int z, Random rng)
+    public static Dictionary<string, ClassTag> Diff(string jarPath)
     {
-        // Implement exactly as described in spec section "Tick logic"
+        var result = new Dictionary<string, ClassTag>();
+
+        using var zip = ZipFile.OpenRead(jarPath);
+        foreach (var entry in zip.Entries.Where(e => e.Name.EndsWith(".class")))
+        {
+            string className = entry.FullName.Replace('/', '.').Replace(".class", "");
+
+            if (IsLibrary(className))       { result[className] = ClassTag.Library;    continue; }
+            if (!VanillaClassList.Contains(className)) { result[className] = ClassTag.NewContent; continue; }
+
+            // vanilla class exists — check if bytecode differs
+            result[className] = BytecodeDiffers(entry, className)
+                ? ClassTag.Override
+                : ClassTag.Passthrough;
+        }
+        return result;
     }
 
-    // From spec: "Right-click interaction"
-    public override bool OnUse(IWorld world, IPlayer player, int x, int y, int z, Face face)
-    {
-        // Implement exactly as described in spec
-        return false;
-    }
-
-    // From spec: "Drop logic"
-    public override IEnumerable<ItemStack> GetDrops(int meta, Random rng)
-    {
-        // Implement exactly as described in spec
-        yield break;
-    }
+    static bool IsLibrary(string name) =>
+        name.StartsWith("com.jcraft") ||
+        name.StartsWith("paulscode")  ||
+        name.StartsWith("org.lwjgl");
 }
 ```
 
-**Tier-2 (texture-only block):** add one line to `Bridge/Mods/<ModName>/Blocks/SimpleBlocks.cs`.
-
 ---
 
-## Implementing New Items
+## Phase 3 — ManifestBuilder.cs
+
+Walks the ANTLR4 Java AST of each `NewContent` and `Override` class and builds the
+`ModManifest`. See `MOD_ANALYSIS_INTERNALS.md` for the exact fields to extract per class type.
+
+Key pattern for Block detection:
 
 ```csharp
-// Bridge/Mods/<ModName>/Items/Item<Name>.cs
-namespace SpectraSharp.Bridge.Mods.<ModName>;
-
-sealed class Item<Name> : ItemBase
+// In the ANTLR4 visitor:
+public override void EnterClassDeclaration(JavaParser.ClassDeclarationContext ctx)
 {
-    // From spec: "Item ID: <n>"
-    public override int ItemId => <n>;
+    string superClass = ctx.typeType()?.GetText() ?? "";
 
-    public override string JavaClassName => "<modname>.<ClassName>";
-
-    // From spec: "Texture index (items.png): <n>"
-    public override int ItemTextureIndex => <n>;
-
-    // From spec: "Max stack size: <n>"
-    public override int MaxStackSize => <n>;
-
-    // From spec: "Max damage: <n>"
-    public override int MaxDamage => <n>;
-
-    // From spec: "Right-click on block"
-    public override bool OnUseOnBlock(IWorld world, IPlayer player,
-                                       int x, int y, int z, Face face, ItemStack stack)
+    _currentDescriptor = superClass switch
     {
-        // Implement from spec
-        return false;
-    }
-
-    // From spec: "On entity hit"
-    public override float GetAttackDamage() => <f>f;
+        "yy"  => new BlockDescriptor(),   // yy = Block
+        "sr"  => new ItemDescriptor(),    // sr = Item
+        "aef" => new EntityDescriptor(),  // aef = Entity
+        _     => new UnknownDescriptor(),
+    };
 }
 ```
 
 ---
 
-## Implementing Injection Hooks (HarmonyLib)
+## Phase 4 — Translator.cs
 
-One file per vanilla target class. Group all patches for the same class together.
+Converts a `ModManifest` into a list of `(filename, sourceCode)` pairs using the Templates.
 
 ```csharp
-// Bridge/Mods/<ModName>/Hooks/<TargetClass>Hooks.cs
-using HarmonyLib;
-
-namespace SpectraSharp.Bridge.Mods.<ModName>;
-
-// From spec: "INJECT into <TargetClass>.<Method> — APPEND"
-[HarmonyPatch(typeof(<TargetClass>), nameof(<TargetClass>.<Method>))]
-static class <TargetClass>_<Method>_Hook
+static class Translator
 {
-    // APPEND → Postfix (runs after original)
-    static void Postfix(<TargetClass> __instance /*, original params */)
+    public static List<(string File, string Source)> Translate(ModManifest manifest, string modName)
     {
-        // Implement EXACTLY as described in spec "Injection Hooks / Logic"
-        // Do not add logic that is not in the spec.
-    }
-}
+        var output = new List<(string, string)>();
 
-// From spec: "INJECT into <OtherClass>.<Method> — PREPEND"
-[HarmonyPatch(typeof(<OtherClass>), nameof(<OtherClass>.<Method>))]
-static class <OtherClass>_<Method>_Hook
-{
-    // PREPEND → Prefix (runs before original; return false to skip original)
-    static bool Prefix(<OtherClass> __instance)
-    {
-        // Implement from spec
-        return true; // true = continue to original; false = skip original
+        output.Add(EntryPointTemplate.Emit(modName, manifest));
+
+        foreach (var block in manifest.NewBlocks)
+            output.Add(BlockTemplate.Emit(modName, block));
+
+        foreach (var item in manifest.NewItems)
+            output.Add(ItemTemplate.Emit(modName, item));
+
+        foreach (var hook in manifest.Overrides)
+            output.Add(HookTemplate.Emit(modName, hook));
+
+        foreach (var recipe in manifest.NewRecipes)
+            output.Add(RecipeTemplate.Emit(modName, recipe));
+
+        return output;
     }
 }
 ```
 
-**Hook type selection:**
-
-| Spec says | HarmonyLib attribute |
-|---|---|
-| `APPEND` | `[HarmonyPostfix]` / `Postfix` method |
-| `PREPEND` | `[HarmonyPrefix]` / `Prefix` method (return `true` to continue) |
-| `REPLACE_BODY` | `[HarmonyTranspiler]` — avoid unless spec explicitly requires it |
-
 ---
 
-## Implementing Recipes
+## Phase 5 — CodeEmitter.cs
+
+Writes the generated source files to `Bridge/Mods/<ModName>/`.
 
 ```csharp
-// Bridge/Mods/<ModName>/Recipes/<ModName>Recipes.cs
-namespace SpectraSharp.Bridge.Mods.<ModName>;
-
-static class <ModName>Recipes
+static class CodeEmitter
 {
-    public static void Register(ICraftingManager crafting, ISmeltingManager smelting)
+    public static void Emit(string modName, List<(string File, string Source)> sources)
     {
-        // From spec: "Recipe type: SHAPED, Output: Item ID <n>"
-        crafting.AddShapedRecipe(
-            output: new ItemStack(itemId: <n>, count: <n>),
-            pattern: new[]
-            {
-                "A  ",   // from spec grid row 1
-                "AB ",   // row 2
-                "   ",   // row 3
-            },
-            ingredients: new Dictionary<char, int>
-            {
-                ['A'] = <itemOrBlockId>,
-                ['B'] = <itemOrBlockId>,
-            }
-        );
+        string root = Path.Combine("Bridge", "Mods", modName);
+        Directory.CreateDirectory(root);
 
-        // From spec: "Recipe type: SMELTING"
-        smelting.AddSmeltingRecipe(
-            inputId: <n>,
-            output: new ItemStack(itemId: <n>, count: 1),
-            xp: <f>f
-        );
+        foreach (var (file, source) in sources)
+        {
+            string path = Path.Combine(root, file);
+            Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+            File.WriteAllText(path, source);
+        }
     }
 }
 ```
 
 ---
 
-## Compilation & Loading
+## Phase 6 — ModCompiler.cs
 
-After implementing:
+Compiles the generated C# files to a DLL using Roslyn in-process (no dotnet CLI needed).
 
-```bash
-dotnet build Bridge/Mods/<ModName>/<ModName>Plugin.csproj -o mods/compiled/
+```csharp
+static class ModCompiler
+{
+    public static bool Compile(string modName, string sourceRoot, string outputDll)
+    {
+        var sources = Directory.GetFiles(sourceRoot, "*.cs", SearchOption.AllDirectories)
+            .Select(f => CSharpSyntaxTree.ParseText(File.ReadAllText(f)));
+
+        var refs = new[]
+        {
+            MetadataReference.CreateFromFile(typeof(object).Assembly.Location),
+            MetadataReference.CreateFromFile(typeof(ISpectraMod).Assembly.Location),
+            MetadataReference.CreateFromFile(typeof(Harmony).Assembly.Location),
+        };
+
+        var compilation = CSharpCompilation.Create(modName, sources, refs,
+            new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
+
+        using var ms = new MemoryStream();
+        var result = compilation.Emit(ms);
+
+        if (!result.Success)
+        {
+            foreach (var d in result.Diagnostics.Where(d => d.Severity == DiagnosticSeverity.Error))
+                Console.Error.WriteLine(d);
+            return false;
+        }
+
+        File.WriteAllBytes(outputDll, ms.ToArray());
+        return true;
+    }
+}
 ```
 
-The engine's `ModLoader` picks up the DLL automatically on next startup.
+---
+
+## VanillaApiMap — How to Build It
+
+The `VanillaApiMap.cs` is populated directly from `Documentation/Mods/Mappings/vanilla_api.md`.
+Every row in that table becomes one dictionary entry. The map is hardcoded at compile time —
+no file reads at runtime.
+
+The translator uses it like this:
+
+```csharp
+// In the ANTLR4 visitor for method calls:
+string javaCall = $"{receiver}.{methodName}(?,?,?)";  // ? = argument placeholder
+
+if (VanillaApiMap.MethodCalls.TryGetValue(javaCall, out string? csCall))
+    return ReconstructWithArgs(csCall, args);
+else
+    return $"/* TODO: unknown call: {javaCall} */ {originalJava}";
+```
+
+---
+
+## Session End Checklist
+
+Before closing the session, append one entry to `Documentation/METRICS.md`:
+
+```
+## YYYY-MM-DD — [MOD-CODER] — <topic>
+
+**Worked on:**
+- <Phase / class / feature> — <one-line description>
+
+**Estimated effort:** ~N hours equivalent
+**Notes:** <decisions made, blockers, open questions — omit if none>
+```
 
 ---
 
 ## Definition of Done
 
-1. All spec sections are implemented — no gaps, no guesses.
-2. `Bridge/Mods/<ModName>/` compiles with zero warnings.
-3. `Documentation/Mods/INDEX.md` status updated to `[COMPILED]`.
-4. No `.java` file was opened at any point.
-5. No logic was inferred from game knowledge not present in the spec.
+1. `ModTranspiler.exe mods/mymod.jar` runs without error on a simple test mod.
+2. Output `Bridge/Mods/mymod/*.cs` compiles with zero errors.
+3. Generated `mods/compiled/mymod.dll` loads via `AssemblyLoadContext`.
+4. All untranslatable constructs produce `// TODO:` comments, never silent drops.
+5. Program handles missing Vineflower or missing Java gracefully with a clear error message.

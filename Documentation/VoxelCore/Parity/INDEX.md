@@ -26,8 +26,11 @@ Analysis AI                        Coder AI
 | [AxisAlignedBB_Spec.md](Specs/AxisAlignedBB_Spec.md) | Axis-aligned bounding box — fields, object pool, sweep collision (X/Y/Z offset), intersects, isVecInside, ray trace | [STATUS:IMPLEMENTED] `Core/AxisAlignedBB.cs` |
 | [Vec3_Spec.md](Specs/Vec3_Spec.md) | 3D double vector — pool, subtract, normalize, dot, cross, add, distance, segment-plane intersection, in-place rotation | [STATUS:IMPLEMENTED] `Core/Vec3.cs` |
 | [MovingObjectPosition_Spec.md](Specs/MovingObjectPosition_Spec.md) | Ray-cast result container — block hit and entity hit constructors, face ID layout, pooled Vec3 hit position | [STATUS:IMPLEMENTED] `Core/MovingObjectPosition.cs` (Entity typed as object — ia spec pending) |
-| [EnumMovingObjectType_Spec.md](Specs/EnumMovingObjectType_Spec.md) | Two-value enum: TILE (0) and ENTITY (1) | Ready |
-| [Block_Spec.md](Specs/Block_Spec.md) | Block base class — static registry (256 slots), 8 parallel arrays, instance fields, builder pattern, collision/ray-trace/tick/drop/rendering virtual methods | Ready |
+| [EnumMovingObjectType_Spec.md](Specs/EnumMovingObjectType_Spec.md) | Two-value enum: TILE (0) and ENTITY (1) | [STATUS:IMPLEMENTED] `Core/HitType.cs` |
+| [Block_Spec.md](Specs/Block_Spec.md) | Block base class — static registry (256 slots), 8 parallel arrays, instance fields, builder pattern, collision/ray-trace/tick/drop/rendering virtual methods | [STATUS:IMPLEMENTED] `Core/Block.cs` (StepSound/Material/World as placeholders) |
+| [StepSound_Spec.md](Specs/StepSound_Spec.md) | StepSound (`wu`) — sound name + volume/pitch floats; `bj` (glass) and `aeg` (sand) subclasses. **Note: classes.md had wu↔p swapped — corrected.** | Ready |
+| [Material_Spec.md](Specs/Material_Spec.md) | Material (`p`) — map color, liquid/solid/flammable/replaceable/passable flags, mobility (0/1/2); 30 static instances; `sn`/`mw`/`br`/`bk`/`tx` subclasses | Ready |
+| [IBlockAccess_Spec.md](Specs/IBlockAccess_Spec.md) | IBlockAccess (`kq`) interface — 12 methods for world read access; 7 confirmed, 5 uncertain | Ready |
 
 ### Mappings
 
