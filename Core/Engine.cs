@@ -36,11 +36,16 @@ public sealed class Engine(AssetManager assets, TextureRegistry textures, Bridge
     // GPU resources — created after InitWindow, freed before CloseWindow
     private readonly Dictionary<string, Model> _blockModels = [];
 
+    // ── Terrain (single merged mesh — one draw call for the whole 16×16 floor) ──
+    private Model _terrainModel;
+    private bool  _terrainModelReady;
+
     // ── Core world (game thread only — never read directly by render thread) ──
     private World?              _world;
     private WorldProvider?      _worldProvider;
     private readonly List<Entity> _entities = [];
     private DebugMob?           _debugMob;
+
 
     // ── Entry point ───────────────────────────────────────────────────────────
 
@@ -53,6 +58,7 @@ public sealed class Engine(AssetManager assets, TextureRegistry textures, Bridge
         SetWindowIcon();
         LoadAssets();
         SetupMaterials();
+        BuildTerrainModel();
         SetupBridgeBlocks();
         SetupCoreWorld();
         SetupCamera();
@@ -159,35 +165,7 @@ public sealed class Engine(AssetManager assets, TextureRegistry textures, Bridge
             }
         }
 
-        // ── Core world surface blocks (grass at Y=1, rendered at Z+WorldOffsetZ) ─
-        // Reuse bridge-block texture keys so the already-loaded textured models are used.
-        if (_world != null)
-        {
-            for (int bx = 0; bx < 16; bx++)
-            for (int bz = 0; bz < 16; bz++)
-            {
-                int id = _world.GetBlockId(bx, 1, bz); // grass layer
-                if (id == 0) id = _world.GetBlockId(bx, 0, bz); // fall back to stone
-
-                if (id == 0) continue;
-
-                // Block center: block at world-Y occupies [Y, Y+1], so render center = Y+0.5
-                int   worldY   = _world.GetBlockId(bx, 1, bz) != 0 ? 1 : 0;
-                float renderY  = worldY + 0.5f;
-
-                // Reuse bridge block texture models (already loaded in SetupMaterials)
-                string texKey      = id == 2 ? "block_3" : "block_1"; // grass-side or stone
-                string javaClass   = id == 2 ? "net.minecraft.src.BlockGrass"
-                                             : "net.minecraft.src.BlockStone";
-
-                blocks.Add(new BlockRenderData(
-                    new Vector3(bx, renderY, bz + WorldOffsetZ),
-                    new Color(200, 200, 200, 255),
-                    texKey,
-                    javaClass,
-                    totalTicks));
-            }
-        }
+        // Terrain is a single pre-built mesh rendered directly in Render() — not in snapshot.
 
         // ── Entities ─────────────────────────────────────────────────────────
         var entities = new List<EntityRenderData>();
@@ -323,6 +301,97 @@ public sealed class Engine(AssetManager assets, TextureRegistry textures, Bridge
             Raylib.UnloadModel(m);
         }
         _blockModels.Clear();
+
+        if (_terrainModelReady)
+        {
+            _terrainModel.Materials[0].Maps[(int)MaterialMapIndex.Albedo].Texture = new Texture2D();
+            Raylib.UnloadModel(_terrainModel);
+            _terrainModelReady = false;
+        }
+    }
+
+    // ── Terrain mesh (one merged top-face mesh = one draw call for 16×16 floor) ─
+
+    /// <summary>
+    /// Builds a single merged mesh with one top-face quad per block in the 16×16 terrain.
+    /// Result: 1 DrawModel call instead of 256 DrawModelEx calls — massive perf win.
+    /// Uses the grass-top tile ("block_0") which must already be in TextureRegistry.
+    /// Vertex memory is allocated in managed arrays, pinned during UploadMesh, then nulled so
+    /// Raylib's UnloadMesh never calls free() on managed memory.
+    /// </summary>
+    private unsafe void BuildTerrainModel()
+    {
+        Texture2D grassTex = textures.TryGet("block_0") ?? default;
+        if (grassTex.Id == 0)
+        {
+            Console.WriteLine("[Engine] BuildTerrainModel: block_0 texture not ready — skipping.");
+            return;
+        }
+
+        const int gridSize  = 16;
+        const int quadCount = gridSize * gridSize; // 256
+        const float meshY   = 2.0f; // top face of grass block at world-Y=1 (Y=1 block → top at Y=2)
+
+        // Managed arrays — GC-pinned inside fixed{} during UploadMesh, then released
+        var verts = new float[quadCount * 4 * 3]; // xyz per vertex, 4 verts per quad
+        var uvs   = new float[quadCount * 4 * 2]; // uv per vertex
+        var idxs  = new ushort[quadCount * 6];    // 2 triangles × 3 indices per quad
+
+        int vi = 0, ui = 0, ii = 0;
+        ushort bv = 0;
+
+        for (int qz = 0; qz < gridSize; qz++)
+        for (int qx = 0; qx < gridSize; qx++)
+        {
+            float x0 = qx,                x1 = qx + 1f;
+            float z0 = qz + WorldOffsetZ, z1 = qz + 1f + WorldOffsetZ;
+
+            // Top-face quad: 4 corners, CCW winding viewed from above (+Y normal)
+            verts[vi++] = x0; verts[vi++] = meshY; verts[vi++] = z0;
+            verts[vi++] = x1; verts[vi++] = meshY; verts[vi++] = z0;
+            verts[vi++] = x1; verts[vi++] = meshY; verts[vi++] = z1;
+            verts[vi++] = x0; verts[vi++] = meshY; verts[vi++] = z1;
+
+            // Per-quad UV 0..1 (each tile shows the full grass-top texture)
+            // V is NOT flipped here — TerrainAtlas already applied ImageFlipVertical
+            uvs[ui++] = 0f; uvs[ui++] = 0f;
+            uvs[ui++] = 1f; uvs[ui++] = 0f;
+            uvs[ui++] = 1f; uvs[ui++] = 1f;
+            uvs[ui++] = 0f; uvs[ui++] = 1f;
+
+            // Two CCW triangles: (0,2,1) and (0,3,2)
+            idxs[ii++] = bv;                   idxs[ii++] = (ushort)(bv + 2); idxs[ii++] = (ushort)(bv + 1);
+            idxs[ii++] = bv;                   idxs[ii++] = (ushort)(bv + 3); idxs[ii++] = (ushort)(bv + 2);
+            bv += 4;
+        }
+
+        Mesh mesh;
+        fixed (float*  vp = verts, up = uvs)
+        fixed (ushort* ip = idxs)
+        {
+            mesh = new Mesh
+            {
+                VertexCount   = quadCount * 4,
+                TriangleCount = quadCount * 2,
+                Vertices      = vp,
+                TexCoords     = up,
+                Indices       = ip,
+            };
+            // UploadMesh copies CPU data to GPU; nulling pointers afterward prevents
+            // UnloadMesh from calling free() on managed memory (free(null) = safe no-op)
+            Raylib.UploadMesh(ref mesh, false);
+            mesh.Vertices  = null;
+            mesh.TexCoords = null;
+            mesh.Indices   = null;
+        }
+
+        // LoadModelFromMesh sees vaoId > 0 and skips re-upload
+        _terrainModel = Raylib.LoadModelFromMesh(mesh);
+        Raylib.SetMaterialTexture(ref _terrainModel, 0, MaterialMapIndex.Albedo, ref grassTex);
+        Raylib.SetTextureFilter(grassTex, TextureFilter.Point);
+        _terrainModelReady = true;
+
+        Console.WriteLine($"[Engine] Terrain mesh ready: {quadCount} quads, 1 draw call.");
     }
 
     // ── Window icon ───────────────────────────────────────────────────────────
@@ -369,6 +438,10 @@ public sealed class Engine(AssetManager assets, TextureRegistry textures, Bridge
 
         foreach (BlockRenderData block in snap.Blocks)
             DrawBlock(block);
+
+        // One call for the entire 16×16 terrain instead of 256 individual DrawModelEx
+        if (_terrainModelReady)
+            Raylib.DrawModel(_terrainModel, Vector3.Zero, 1f, Color.White);
 
         foreach (EntityRenderData entity in snap.Entities)
             DrawEntity(entity);
@@ -418,36 +491,40 @@ public sealed class Engine(AssetManager assets, TextureRegistry textures, Bridge
         int sw = Raylib.GetScreenWidth();
         int sh = Raylib.GetScreenHeight();
 
-        // ── top-left: Bridge block list ───────────────────────────────────────
-        const int px = 10, py = 10, pw = 380, lh = 18, pad = 8;
+        // ── top-left: Bridge block list (compact 2-column) ───────────────────
+        const int px = 10, py = 10, pw = 380, lh = 16, pad = 8;
 
-        // Collect only bridge stubs (TextureKey starts with "block_")
         var bridgeBlocks = snap.Blocks
             .Where(b => b.TextureKey.StartsWith("block_"))
             .ToList();
 
-        int listRows = bridgeBlocks.Count + 2; // header + tick row
-        int ph       = pad * 2 + listRows * lh;
+        int gridRows = (bridgeBlocks.Count + 1) / 2; // ceil(n/2)
+        int ph       = pad * 2 + (gridRows + 2) * lh; // +2 for header + tick line
 
         Raylib.DrawRectangle(px, py, pw, ph, PanelBg);
         Raylib.DrawRectangleLines(px, py, pw, ph, Accent);
-        Raylib.DrawText($"Bridge Blocks ({bridgeBlocks.Count})", px + pad, py + pad, 16, Accent);
+        Raylib.DrawText($"Bridge Blocks ({bridgeBlocks.Count})", px + pad, py + pad, 15, Accent);
 
-        int by2 = py + pad + lh + 2;
-        foreach (var b in bridgeBlocks)
+        int colW    = (pw - pad * 2) / 2;
+        int gridTop = py + pad + lh + 2;
+
+        for (int i = 0; i < bridgeBlocks.Count; i++)
         {
-            // Extract short class name: "net.minecraft.src.BlockGrass" → "BlockGrass"
-            string shortName = b.JavaClassName.Contains('.')
+            int col = i % 2, row = i / 2;
+            var b   = bridgeBlocks[i];
+            string name = b.JavaClassName.Contains('.')
                 ? b.JavaClassName[(b.JavaClassName.LastIndexOf('.') + 1)..]
                 : b.JavaClassName;
-            HudRow(shortName, b.TextureKey, px + pad, by2);
-            by2 += lh;
+            // Strip "Block" prefix for even shorter display ("BlockGrass" → "Grass")
+            if (name.StartsWith("Block")) name = name[5..];
+            Raylib.DrawText($"#{b.TextureKey[6..],2}  {name}", px + pad + col * colW, gridTop + row * lh, 13, ValueColor);
         }
+
         if (bridgeBlocks.Count > 0)
         {
             long ticks = bridgeBlocks[0].TickCount;
-            Raylib.DrawText($"  Ticks: {ticks}  ({ticks / 20.0:F1} s)",
-                            px + pad, by2, 14, Dim);
+            Raylib.DrawText($"  Ticks {ticks}  ({ticks / 20.0:F1} s)",
+                            px + pad, gridTop + gridRows * lh + 2, 13, Dim);
         }
 
         // ── top-left below: Core world stats ─────────────────────────────────

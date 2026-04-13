@@ -8,7 +8,7 @@ namespace SpectraSharp.Bridge.Overrides;
 //
 // To add a block: one line here, done. For blocks with tick logic or drops, use a separate file.
 
-sealed class GrassBlock    : BlockBase { public override string JavaClassName => "net.minecraft.src.BlockGrass";       public override int TextureIndex =>  3; }
+sealed class GrassBlock    : BlockBase { public override string JavaClassName => "net.minecraft.src.BlockGrass";       public override int TextureIndex =>  0; } // 0=grass_top, 3=grass_side
 sealed class DirtBlock     : BlockBase { public override string JavaClassName => "net.minecraft.src.BlockDirt";        public override int TextureIndex =>  2; }
 sealed class WoodBlock     : BlockBase { public override string JavaClassName => "net.minecraft.src.BlockLog";         public override int TextureIndex => 20; }
 sealed class LeavesBlock   : BlockBase { public override string JavaClassName => "net.minecraft.src.BlockLeaves";      public override int TextureIndex => 52; }
