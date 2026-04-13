@@ -14,15 +14,18 @@ namespace SpectraSharp.Core;
 ///   Game thread  — fixed 20 Hz tick loop, writes <see cref="WorldSnapshot"/>
 ///   Main thread  — Windows message pump + uncapped render, reads snapshot
 ///
-/// The snapshot is a <c>volatile</c> reference swap: the game thread never
-/// blocks the render thread and vice versa.  Window drag no longer pauses
-/// game logic because the game thread is completely independent of GLFW.
+/// Debug scene layout:
+///   • Bridge block showcase — all BlockBase stubs in a line at Z = 0
+///   • Core debug world      — 16×16 flat terrain at Z = +8; entities above it
 /// </summary>
 public sealed class Engine(AssetManager assets, TextureRegistry textures, BridgeRegistry bridge)
 {
     private const double TicksPerSecond = 20.0;
-    private const double FixedDeltaTime = 1.0 / TicksPerSecond;  // 0.05 s
-    private const double MaxAccumulator = 0.25;                    // spiral-of-death cap
+    private const double FixedDeltaTime = 1.0 / TicksPerSecond;
+    private const double MaxAccumulator = 0.25;
+
+    // ── Scene offset for Core debug world (so it doesn't overlap bridge blocks) ─
+    private const float WorldOffsetZ = 8f;
 
     // Shared between threads — atomic reference swap via volatile
     private volatile WorldSnapshot _snapshot = WorldSnapshot.Empty;
@@ -33,21 +36,27 @@ public sealed class Engine(AssetManager assets, TextureRegistry textures, Bridge
     // GPU resources — created after InitWindow, freed before CloseWindow
     private readonly Dictionary<string, Model> _blockModels = [];
 
+    // ── Core world (game thread only — never read directly by render thread) ──
+    private World?              _world;
+    private WorldProvider?      _worldProvider;
+    private readonly List<Entity> _entities = [];
+    private DebugMob?           _debugMob;
+
     // ── Entry point ───────────────────────────────────────────────────────────
 
     public void Run()
     {
         Raylib.SetConfigFlags(ConfigFlags.AlwaysRunWindow);
-        Raylib.InitWindow(1280, 720, "SpectraSharp — Legacy Engine (Parity Protocol)");
-        Raylib.SetTargetFPS(0);  // uncapped render
+        Raylib.InitWindow(1280, 720, "SpectraSharp — Core Debug World");
+        Raylib.SetTargetFPS(0);
 
         SetWindowIcon();
         LoadAssets();
         SetupMaterials();
-        SetupDebugWorld();
+        SetupBridgeBlocks();
+        SetupCoreWorld();
         SetupCamera();
 
-        // Game logic runs on its own thread — completely independent of GLFW
         Thread gameThread = new(GameLoop)
         {
             Name         = "SpectraSharp-GameThread",
@@ -57,11 +66,9 @@ public sealed class Engine(AssetManager assets, TextureRegistry textures, Bridge
 
         Console.WriteLine("[Engine] Game thread started. Render thread: main.");
 
-        // Main thread: Windows message pump + render
         while (!Raylib.WindowShouldClose())
             Render(_snapshot);
 
-        // Shutdown
         _cts.Cancel();
         gameThread.Join(millisecondsTimeout: 500);
 
@@ -95,11 +102,9 @@ public sealed class Engine(AssetManager assets, TextureRegistry textures, Bridge
                 ticked = true;
             }
 
-            // Publish new snapshot after each tick batch
             if (ticked)
                 _snapshot = BuildSnapshot();
 
-            // Sleep until close to the next tick boundary (leave 2 ms for wake-up jitter)
             double timeToNext = FixedDeltaTime - accumulator - 0.002;
             if (timeToNext > 0.001)
                 Thread.Sleep((int)(timeToNext * 1000));
@@ -112,12 +117,31 @@ public sealed class Engine(AssetManager assets, TextureRegistry textures, Bridge
 
     private void FixedUpdate(double delta)
     {
+        // ── Bridge stubs ─────────────────────────────────────────────────────
         foreach (IBridgeStub stub in bridge.AllStubs)
             if (stub is BridgeStubBase b) b.OnTick(delta);
+
+        // ── Core world tick ──────────────────────────────────────────────────
+        _world?.MainTick();
+
+        // ── Entity ticks (reset AABB pool before each physics pass) ─────────
+        AxisAlignedBB.ResetPool();
+        foreach (Entity entity in _entities)
+        {
+            if (!entity.IsDead) entity.Tick();
+        }
+
+        // ── Debug mob: take 1 damage every 2 seconds (40 ticks) ─────────────
+        if (_debugMob != null && !_debugMob.IsDead
+            && _world != null && _world.TotalWorldTime % 40 == 0)
+        {
+            _debugMob.AttackEntityFrom(null!, 1);
+        }
     }
 
     private WorldSnapshot BuildSnapshot()
     {
+        // ── Bridge blocks (line at Z=0) ───────────────────────────────────────
         var blocks = new List<BlockRenderData>();
         long totalTicks = 0;
 
@@ -131,23 +155,152 @@ public sealed class Engine(AssetManager assets, TextureRegistry textures, Bridge
                     block.TextureKey,
                     block.JavaClassName,
                     block.TickCount));
-
                 totalTicks = Math.Max(totalTicks, block.TickCount);
             }
         }
 
-        return new WorldSnapshot(blocks, totalTicks);
+        // ── Core world ground blocks (16×16 at Y=0, rendered at Z+WorldOffsetZ) ─
+        if (_world != null)
+        {
+            for (int bx = 0; bx < 16; bx++)
+            for (int bz = 0; bz < 16; bz++)
+            {
+                int id = _world.GetBlockId(bx, 0, bz);
+                if (id == 0) continue;
+
+                Color col = id == 2
+                    ? new Color(60,  140,  40, 255)   // grass = green
+                    : new Color(120, 120, 120, 255);   // stone = gray
+
+                blocks.Add(new BlockRenderData(
+                    new Vector3(bx, 0f, bz + WorldOffsetZ),
+                    col,
+                    $"world_{id}",     // no model → falls to DrawCube
+                    id == 2 ? "net.minecraft.src.BlockGrass" : "net.minecraft.src.BlockStone",
+                    totalTicks));
+            }
+        }
+
+        // ── Entities ─────────────────────────────────────────────────────────
+        var entities = new List<EntityRenderData>();
+        foreach (Entity entity in _entities)
+        {
+            if (entity.IsDead) continue;
+            string label;
+            Color  col;
+            if (entity is EntityItem item)
+            {
+                label = $"Item  age={item.GetType().GetField("_age",
+                    System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)
+                    ?.GetValue(item) ?? "?"}";
+                col = new Color(255, 220, 50, 255); // gold
+            }
+            else
+            {
+                label = entity.ToString();
+                col   = new Color(220, 80, 80, 255);
+            }
+            entities.Add(new EntityRenderData(
+                new Vector3((float)entity.PosX, (float)entity.PosY, (float)entity.PosZ + WorldOffsetZ),
+                col, label));
+        }
+
+        if (_debugMob != null && !_debugMob.IsDead)
+        {
+            entities.Add(new EntityRenderData(
+                new Vector3((float)_debugMob.PosX, (float)_debugMob.PosY,
+                            (float)_debugMob.PosZ + WorldOffsetZ),
+                new Color(220, 80, 80, 255),
+                $"Mob  HP={_debugMob.GetHealth()}/{_debugMob.GetMaxHealth()}"));
+        }
+
+        // ── World stats ───────────────────────────────────────────────────────
+        long  worldTime       = _world?.WorldTime ?? 0;
+        float brightnessSample = _worldProvider?.BrightnessTable[15] ?? 1.0f;
+        int   mobHp           = _debugMob?.GetHealth() ?? 20;
+        int   mobMax          = _debugMob?.GetMaxHealth() ?? 20;
+        int   liveCount       = _entities.Count(e => !e.IsDead);
+
+        return new WorldSnapshot(blocks, entities, totalTicks,
+                                 worldTime, brightnessSample, mobHp, mobMax, liveCount);
     }
 
-    // ── Material setup ───────────────────────────────────────────────────────
+    // ── Scene setup ───────────────────────────────────────────────────────────
+
+    private void SetupBridgeBlocks()
+    {
+        const float spacing = 2f;
+        int i = 0;
+        foreach (IBridgeStub stub in bridge.AllStubs)
+            if (stub is BlockBase block)
+                block.Position = new Vector3(i++ * spacing, 0f, 0f);
+    }
+
+    private void SetupCoreWorld()
+    {
+        // Build world
+        _worldProvider = new OverworldProvider();
+        var loader     = new DebugChunkLoader();
+        _world         = new World(loader, 42L, false, _worldProvider);
+        loader.SetWorld(_world);
+
+        // Fill 16×16 flat terrain: stone at Y=0, grass at Y=1
+        Console.WriteLine("[Engine] Building debug terrain...");
+        for (int bx = 0; bx < 16; bx++)
+        for (int bz = 0; bz < 16; bz++)
+        {
+            _world.SetBlock(bx, 0, bz, 1); // stone
+            _world.SetBlock(bx, 1, bz, 2); // grass
+        }
+
+        // Verify chunk delegation
+        int testId = _world.GetBlockId(8, 0, 8);
+        Console.WriteLine($"[Engine] World.GetBlockId(8,0,8) = {testId} (expected 1 = stone)");
+        Console.WriteLine($"[Engine] BrightnessTable[15] = {_worldProvider.BrightnessTable[15]:F4}");
+
+        // Spawn 3 EntityItem above the terrain (grass at Y=1, so items start at Y=4)
+        // ItemStack(itemId=1 = stone block item, count=1)
+        for (int i = 0; i < 3; i++)
+        {
+            var stack  = new ItemStack(1, 1);  // stone block item
+            var item   = new EntityItem(_world, 4 + i * 4, 5.0, 4 + i * 2, stack);
+            item.PickupDelay = 0; // immediately pickable in theory
+            _entities.Add(item);
+        }
+
+        // Spawn a debug mob (takes damage every 2 sec for health test)
+        _debugMob = new DebugMob(_world);
+        _debugMob.SetPosition(8.0, 2.0, 8.0);
+        _entities.Add(_debugMob);
+
+        Console.WriteLine($"[Engine] Core world ready. {_entities.Count} entities spawned.");
+    }
+
+    private void SetupCamera()
+    {
+        int   bridgeCount = bridge.AllStubs.Count(s => s is BlockBase);
+        float bridgeEnd   = (bridgeCount - 1) * 2f;
+        float sceneWidth  = Math.Max(bridgeEnd, 15f);
+        float centerX     = sceneWidth / 2f;
+
+        _camera = new Camera3D
+        {
+            Position   = new Vector3(centerX, 20f, -14f),
+            Target     = new Vector3(centerX, 0f, 12f),
+            Up         = Vector3.UnitY,
+            FovY       = 65f,
+            Projection = CameraProjection.Perspective
+        };
+    }
+
+    // ── Material setup ────────────────────────────────────────────────────────
 
     private void SetupMaterials()
     {
         foreach (IBridgeStub stub in bridge.AllStubs)
         {
-            if (stub is not BlockBase block) continue;
+            if (stub is not BlockBase block || _blockModels.ContainsKey(block.TextureKey)) continue;
             if (textures.TryGet(block.TextureKey) is not Texture2D tex || tex.Id == 0) continue;
-            if (_blockModels.ContainsKey(block.TextureKey)) continue;
 
             Model model = Raylib.LoadModelFromMesh(Raylib.GenMeshCube(1f, 1f, 1f));
             Raylib.SetMaterialTexture(ref model, 0, MaterialMapIndex.Albedo, ref tex);
@@ -161,7 +314,6 @@ public sealed class Engine(AssetManager assets, TextureRegistry textures, Bridge
     {
         foreach (Model model in _blockModels.Values)
         {
-            // Clear texture reference before unloading — TextureRegistry owns lifetime
             Model m = model;
             m.Materials[0].Maps[(int)MaterialMapIndex.Albedo].Texture = new Texture2D();
             Raylib.UnloadModel(m);
@@ -175,7 +327,6 @@ public sealed class Engine(AssetManager assets, TextureRegistry textures, Bridge
     {
         string path = Path.Combine(AppContext.BaseDirectory, "Assets", "Branding", "SpectraSharpLogo256x256.png");
         if (!File.Exists(path)) return;
-
         Image icon = Raylib.LoadImage(path);
         Raylib.SetWindowIcon(icon);
         Raylib.UnloadImage(icon);
@@ -188,14 +339,12 @@ public sealed class Engine(AssetManager assets, TextureRegistry textures, Bridge
         AssetData atlasData = assets.ExtractTerrainPng();
         Image     atlas     = Raylib.LoadImageFromMemory(".png", atlasData.Memory.ToArray());
 
-        // Deduplicate by TextureKey — two blocks sharing a tile index only upload once
         var seen = new HashSet<string>();
         foreach (IBridgeStub stub in bridge.AllStubs)
         {
             if (stub is not BlockBase block || !seen.Add(block.TextureKey)) continue;
             TerrainAtlas.ExtractAndRegister(block.TextureIndex, atlas, textures, block.TextureKey);
 
-            // Point filtering — pixel-art textures must not be interpolated
             if (textures.TryGet(block.TextureKey) is Texture2D tex)
                 Raylib.SetTextureFilter(tex, TextureFilter.Point);
         }
@@ -204,40 +353,7 @@ public sealed class Engine(AssetManager assets, TextureRegistry textures, Bridge
         Console.WriteLine($"[Engine] Assets loaded — {bridge.Count} stub(s), {seen.Count} unique tile(s).");
     }
 
-    private void SetupDebugWorld()
-    {
-        const float spacing = 2f;
-        int i = 0;
-        foreach (IBridgeStub stub in bridge.AllStubs)
-            if (stub is BlockBase block)
-                block.Position = new Vector3(i++ * spacing, 0f, 0f);
-    }
-
-    // ── Camera ────────────────────────────────────────────────────────────────
-
-    private void SetupCamera()
-    {
-        int   blockCount = bridge.AllStubs.Count(s => s is BlockBase);
-        float rowWidth   = (blockCount - 1) * 2f;
-        float centerX    = rowWidth / 2f;
-
-        // Compute distance so the full row fits inside the horizontal FoV with 20% margin
-        const float fovY        = 65f;
-        float       halfFovRad  = fovY * 0.5f * MathF.PI / 180f;
-        float       dist        = (rowWidth / 2f) / MathF.Tan(halfFovRad) * 1.2f;
-        dist = MathF.Max(dist, 10f);
-
-        _camera = new Camera3D
-        {
-            Position   = new Vector3(centerX, dist * 0.4f, dist),
-            Target     = new Vector3(centerX, 0f, 0f),
-            Up         = Vector3.UnitY,
-            FovY       = fovY,
-            Projection = CameraProjection.Perspective
-        };
-    }
-
-    // ── Render (main thread, uncapped) ────────────────────────────────────────
+    // ── Render ────────────────────────────────────────────────────────────────
 
     private void Render(WorldSnapshot snap)
     {
@@ -245,10 +361,19 @@ public sealed class Engine(AssetManager assets, TextureRegistry textures, Bridge
         Raylib.ClearBackground(Color.SkyBlue);
 
         Raylib.BeginMode3D(_camera);
-        Raylib.DrawGrid(20, 1f);
+        Raylib.DrawGrid(30, 1f);
 
         foreach (BlockRenderData block in snap.Blocks)
             DrawBlock(block);
+
+        foreach (EntityRenderData entity in snap.Entities)
+            DrawEntity(entity);
+
+        // Label: bridge showcase
+        Raylib.DrawLine3D(new Vector3(-1f, 0.01f, 0f), new Vector3(16f, 0.01f, 0f), Color.Yellow);
+        // Label: core world border
+        Raylib.DrawLine3D(new Vector3(-1f, 0.01f, WorldOffsetZ), new Vector3(17f, 0.01f, WorldOffsetZ), Color.Green);
+        Raylib.DrawLine3D(new Vector3(-1f, 0.01f, WorldOffsetZ + 16f), new Vector3(17f, 0.01f, WorldOffsetZ + 16f), Color.Green);
 
         Raylib.EndMode3D();
 
@@ -267,46 +392,78 @@ public sealed class Engine(AssetManager assets, TextureRegistry textures, Bridge
         Raylib.DrawCubeWires(block.Position, 1f, 1f, 1f, Color.Black);
     }
 
+    private static void DrawEntity(EntityRenderData entity)
+    {
+        Raylib.DrawCube(entity.Position, 0.3f, 0.3f, 0.3f, entity.RenderColor);
+        Raylib.DrawCubeWires(entity.Position, 0.3f, 0.3f, 0.3f, Color.White);
+    }
+
     // ── HUD ───────────────────────────────────────────────────────────────────
 
-    private static readonly Color PanelBg    = new(0,   0,   0,   160);
-    private static readonly Color Accent      = new(255, 200,  50, 255);
-    private static readonly Color Dim         = new(180, 180, 180, 255);
-    private static readonly Color ValueColor  = new(255, 255, 255, 255);
+    private static readonly Color PanelBg   = new(0,   0,   0,   160);
+    private static readonly Color Accent     = new(255, 200,  50, 255);
+    private static readonly Color Dim        = new(180, 180, 180, 255);
+    private static readonly Color ValueColor = new(255, 255, 255, 255);
+    private static readonly Color GreenColor = new( 80, 220,  80, 255);
+    private static readonly Color RedColor   = new(220,  60,  60, 255);
 
     private void DrawHud(WorldSnapshot snap)
     {
         int sw = Raylib.GetScreenWidth();
         int sh = Raylib.GetScreenHeight();
 
-        // ── top-left panel ────────────────────────────────────────────────────
+        // ── top-left: Bridge block info ───────────────────────────────────────
         const int px = 10, py = 10, pw = 380, lh = 22, pad = 10;
-
         BlockRenderData? first = snap.Blocks.Count > 0 ? snap.Blocks[0] : null;
         int rows = first is not null ? 5 : 2;
         int ph   = pad * 2 + rows * lh;
 
         Raylib.DrawRectangle(px, py, pw, ph, PanelBg);
         Raylib.DrawRectangleLines(px, py, pw, ph, Accent);
-        Raylib.DrawText("SpectraSharp  |  Debug", px + pad, py + pad, 18, Accent);
+        Raylib.DrawText("Bridge Blocks", px + pad, py + pad, 18, Accent);
 
         if (first is not null)
         {
             int y = py + pad + lh + 4;
-            HudRow("Texture",  first.TextureKey,                     px + pad, y); y += lh;
-            HudRow("Parity",   first.JavaClassName,                  px + pad, y); y += lh;
-            HudRow("Tick",     $"{first.TickCount}",                 px + pad, y); y += lh;
-            HudRow("Elapsed",  $"{first.TickCount / 20.0:F1} s",     px + pad, y);
+            HudRow("Texture",  first.TextureKey,              px + pad, y); y += lh;
+            HudRow("Parity",   first.JavaClassName,            px + pad, y); y += lh;
+            HudRow("Tick",     $"{first.TickCount}",           px + pad, y); y += lh;
+            HudRow("Elapsed",  $"{first.TickCount / 20.0:F1} s", px + pad, y);
         }
 
-        // ── bottom-left: FPS + frame time ────────────────────────────────────
+        // ── top-left below: Core world stats ─────────────────────────────────
+        int py2 = py + ph + 6;
+        const int ph2 = pad * 2 + 6 * lh;
+
+        Raylib.DrawRectangle(px, py2, pw, ph2, PanelBg);
+        Raylib.DrawRectangleLines(px, py2, pw, ph2, GreenColor);
+        Raylib.DrawText("Core World", px + pad, py2 + pad, 18, GreenColor);
+
+        int y2 = py2 + pad + lh + 4;
+        HudRow("WorldTime", $"{snap.WorldTime} / 24000",       px + pad, y2); y2 += lh;
+        HudRow("Brightness", $"{snap.BrightnessSample:F4}",    px + pad, y2); y2 += lh;
+        HudRow("Entities",  $"{snap.LiveEntityCount} alive",   px + pad, y2); y2 += lh;
+
+        // Health bar for debug mob
+        int barX = px + pad;
+        int barY = y2 + 2;
+        float pct = snap.MobMaxHealth > 0 ? (float)snap.MobHealth / snap.MobMaxHealth : 0f;
+        int barW  = pw - pad * 2;
+        int barFill = (int)(barW * pct);
+        Raylib.DrawText("Mob HP:", barX, barY, 16, Dim);
+        Raylib.DrawRectangle(barX + 70, barY, barW - 70, 14, new Color(60, 0, 0, 200));
+        Raylib.DrawRectangle(barX + 70, barY, (int)((barW - 70) * pct), 14,
+            pct > 0.5f ? GreenColor : pct > 0.25f ? Accent : RedColor);
+        Raylib.DrawText($"{snap.MobHealth}/{snap.MobMaxHealth}", barX + 70 + (barW - 70) + 4, barY, 14, ValueColor);
+        y2 += lh + 4;
+
+        HudRow("Stubs",   $"{bridge.Count}",                   px + pad, y2); y2 += lh;
+        HudRow("Ticks",   $"{snap.TotalTicks}",                px + pad, y2);
+
+        // ── bottom-left: FPS ─────────────────────────────────────────────────
         int    fps = Raylib.GetFPS();
         double ft  = Raylib.GetFrameTime() * 1000.0;
-
-        Color fpsColor = fps >= 60 ? new Color(80,  220, 80,  255)
-                       : fps >= 30 ? new Color(220, 180, 50,  255)
-                                   : new Color(220, 60,  60,  255);
-
+        Color  fpsColor = fps >= 60 ? GreenColor : fps >= 30 ? Accent : RedColor;
         const int bw = 200, bh = 44;
         int bx = px, by = sh - bh - px;
         Raylib.DrawRectangle(bx, by, bw, bh, PanelBg);
@@ -314,15 +471,37 @@ public sealed class Engine(AssetManager assets, TextureRegistry textures, Bridge
         Raylib.DrawText($"FPS  {fps}",         bx + pad, by + pad,      18, fpsColor);
         Raylib.DrawText($"{ft:F2} ms / frame", bx + pad, by + pad + 20, 14, Dim);
 
-        // ── top-right: thread info ────────────────────────────────────────────
-        string info = $"Stubs: {bridge.Count}  |  Ticks: {snap.TotalTicks}";
-        int tw = Raylib.MeasureText(info, 16);
-        Raylib.DrawText(info, sw - tw - px - pad, py + pad, 16, Dim);
+        // ── top-right: legend ────────────────────────────────────────────────
+        string[] legend =
+        [
+            "Yellow line = Bridge stubs",
+            "Green border = Core World (16×16)",
+            "Gold cubes  = EntityItem (bouncing)",
+            "Red cube    = DebugMob (loses 1 HP / 2 s)"
+        ];
+        int tw = 280, ty = py + pad;
+        for (int li = 0; li < legend.Length; li++)
+        {
+            Raylib.DrawText(legend[li], sw - tw - px, ty + li * lh, 14, Dim);
+        }
     }
 
     private static void HudRow(string label, string value, int x, int y)
     {
-        Raylib.DrawText($"{label,-10}", x,      y, 16, Dim);
-        Raylib.DrawText(value,          x + 90, y, 16, ValueColor);
+        Raylib.DrawText($"{label,-12}", x,       y, 16, Dim);
+        Raylib.DrawText(value,          x + 110, y, 16, ValueColor);
+    }
+
+    // ── DebugMob — minimal concrete LivingEntity for health testing ───────────
+
+    private sealed class DebugMob(World world) : LivingEntity(world)
+    {
+        public override int GetMaxHealth() => 20;
+
+        protected override void EntityInit()
+        {
+            base.EntityInit();       // registers DataWatcher index 8
+            SetSize(0.6f, 1.8f);     // player-sized mob
+        }
     }
 }

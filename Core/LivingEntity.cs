@@ -132,7 +132,7 @@ public abstract class LivingEntity : Entity
     /// obf: abstract <c>f_()</c> — returns this entity's maximum health.
     /// MUST be implemented by every concrete subclass.
     /// </summary>
-    protected abstract int GetMaxHealth();
+    public abstract int GetMaxHealth();
 
     // ── Health system (spec §6) ───────────────────────────────────────────────
 
