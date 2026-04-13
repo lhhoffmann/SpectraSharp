@@ -204,3 +204,31 @@ and by World block-break logic
 - Which data types are supported? (byte, short, int, float, string, ItemStack, ChunkCoordinates?)
 - How does the dirty flag work for network sync?
 - Java class name: `net.minecraft.src.DataWatcher`?
+
+## Item
+[STATUS:IMPLEMENTED]
+**Needed for:** `Core/Item.cs` — base class for all items; required to un-stub `ItemStack.GetItem()`,
+`ItemStack.GetMaxStackSize()`, `ItemStack.GetMaxDamage()`, and `Block.DropBlockAsItemWithChance`.
+**Questions:**
+- Obfuscated class name? (suspected `acy`)
+- Static registry: `acy.d[]` — item array indexed by item ID? What is the max ID?
+- Instance fields: itemID (int)? maxStackSize (int)? maxDamage (int)? iconIndex (int)?
+- `e()` → int : getMaxStackSize?
+- `c()` → int : getMaxDamage (0 for undamageable)?
+- Is there a `setMaxDamage(int)` builder method?
+- Any subclasses needed immediately (ItemBlock, ItemFood, ItemTool, ItemArmor)?
+- Java class name: `net.minecraft.src.Item`?
+
+## LivingEntity
+[STATUS:IMPLEMENTED]
+**Needed for:** `Core/LivingEntity.cs` — entity subclass with health, armor, AI; required by
+`ItemStack.DamageItem(int, nq)` parameter type and as base for Player and mobs.
+**Questions:**
+- Obfuscated class name? (suspected `nq`)
+- Does it extend `ia` (Entity) directly?
+- Health fields: `bH` = health (float)? `bJ` = maxHealth? Or int-based?
+- Is there a DataWatcher entry for health?
+- Key methods: `a(pm, float)` (attackEntityFrom — apply damage)? `bO()` (getHealth)?
+  `a(float)` (heal)? `bQ()` (getMaxHealth)?
+- AI tick: does the base `nq` drive pathfinding or is that in subclasses?
+- Java class name: `net.minecraft.src.EntityLiving`? (obf: `nq`)

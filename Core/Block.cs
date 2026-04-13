@@ -63,6 +63,12 @@ public class Block
     public  static readonly int[]       LightValue       = new int[256];       // obf: q  0–15
     public  static readonly bool[]      HasTileEntity    = new bool[256];      // obf: r
     public  static readonly bool[]      RenderSpecial    = new bool[256];      // obf: s
+    /// <summary>
+    /// obf: static <c>ca[256]</c> — per-block slipperiness lookup table.
+    /// Default 0.6F. Ice = 0.98F. Initialised from Block instance field when block registers.
+    /// Used by LivingEntity friction formula: <c>Block.SlipperinessMap[id] * 0.91F</c>.
+    /// </summary>
+    public  static readonly float[]    SlipperinessMap  = Enumerable.Repeat(0.6f, 256).ToArray(); // obf: ca[]
 
     // ── Instance fields (spec §4) ─────────────────────────────────────────────
 
@@ -83,9 +89,11 @@ public class Block
     private readonly float _bY = 1.0f;                  // obf: bY  purpose TBD
 #pragma warning restore CS0414
     public  Material? BlockMaterial;                     // obf: bZ  (final in Java) set in constructor
-#pragma warning disable CS0414
-    private readonly float _ca = 0.6f;                  // obf: ca  slipperiness candidate
-#pragma warning restore CS0414
+    /// <summary>
+    /// obf: <c>ca</c> (instance) — per-block slipperiness. Default 0.6F; ice = 0.98F.
+    /// Written into <see cref="SlipperinessMap"/> when block registers.
+    /// </summary>
+    public float Slipperiness = 0.6f;                   // obf: ca (instance)
     public  string?   BlockName;                         // obf: a   "tile.xxx"
 
     // ── Constructors (spec §5) ────────────────────────────────────────────────
@@ -108,10 +116,11 @@ public class Block
         SetBounds(0f, 0f, 0f, 1f, 1f, 1f);
 
         // Virtual call — subclass override resolves at construction time (quirk 7)
-        IsOpaqueCubeArr[blockId] = IsOpaqueCube();
-        LightOpacity[blockId]    = IsOpaqueCube() ? 255 : 0;
-        CanPassThrough[blockId]  = !material.BlocksMovement();
-        _unknownN[blockId]       = false;
+        IsOpaqueCubeArr[blockId]  = IsOpaqueCube();
+        LightOpacity[blockId]     = IsOpaqueCube() ? 255 : 0;
+        CanPassThrough[blockId]   = !material.BlocksMovement();
+        _unknownN[blockId]        = false;
+        SlipperinessMap[blockId]  = Slipperiness; // default 0.6F; set before subclass can change it
     }
 
     /// <summary>

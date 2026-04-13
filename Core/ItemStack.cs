@@ -64,9 +64,11 @@ public sealed class ItemStack
 
     /// <summary>
     /// obf: <c>a()</c> — returns Item from static registry <c>acy.d[c]</c>.
-    /// Stub: Item (<c>acy</c>) spec pending. Returns null.
+    /// ItemId is the direct registry index (block items: 0–255; pure items: 256+).
     /// </summary>
-    public object? GetItem() => null; // TODO: return Item.ItemsList[ItemId]
+    public Item? GetItem() => (ItemId >= 0 && ItemId < Item.ItemsList.Length)
+                               ? Item.ItemsList[ItemId]
+                               : null;
 
     // ── Damage / metadata (spec §4) ───────────────────────────────────────────
 
@@ -76,19 +78,13 @@ public sealed class ItemStack
     /// <summary>obf: <c>i()</c> — returns itemDamage. Identical to <see cref="GetItemDamage"/> (quirk 2).</summary>
     public int GetMetadata() => _itemDamage;
 
-    // ── Stack size / durability stubs (spec §4) ───────────────────────────────
+    // ── Stack size / durability (spec §4) ────────────────────────────────────
 
-    /// <summary>
-    /// obf: <c>f()</c> → <c>min(item.maxStackSize, 64)</c>.
-    /// Stub: returns 64 until Item spec is available.
-    /// </summary>
-    public int GetMaxStackSize() => 64; // TODO: Math.Min(item.GetMaxStackSize(), 64)
+    /// <summary>obf: <c>f()</c> → <c>min(item.maxStackSize, 64)</c>.</summary>
+    public int GetMaxStackSize() => Math.Min(GetItem()?.GetMaxStackSize() ?? 64, 64);
 
-    /// <summary>
-    /// obf: <c>j()</c> → <c>item.maxDamage</c>.
-    /// Stub: returns 0 (undamageable) until Item spec is available.
-    /// </summary>
-    public int GetMaxDamage() => 0; // TODO: item.GetMaxDamage()
+    /// <summary>obf: <c>j()</c> → <c>item.maxDamage</c>. 0 for undamageable.</summary>
+    public int GetMaxDamage() => GetItem()?.GetMaxDamage() ?? 0;
 
     // ── Damage (spec §4 / quirk 3) ────────────────────────────────────────────
 

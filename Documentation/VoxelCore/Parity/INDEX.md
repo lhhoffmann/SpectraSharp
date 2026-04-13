@@ -39,6 +39,8 @@ Analysis AI                        Coder AI
 | [ItemStack_Spec.md](Specs/ItemStack_Spec.md) | ItemStack (`dk`) — item + count + damage container; fields c=itemId/a=stackSize/e=damage; NBT serialisation; Unbreaking check | [STATUS:IMPLEMENTED] `Core/ItemStack.cs` |
 | [EntityItem_Spec.md](Specs/EntityItem_Spec.md) | EntityItem (`ih`) — dropped-item entity; 0.25×0.25 size; gravity/bounce/friction tick; pickup delay; despawn at age 6000 | [STATUS:IMPLEMENTED] `Core/EntityItem.cs` |
 | [DataWatcher_Spec.md](Specs/DataWatcher_Spec.md) | DataWatcher (`cr`) — per-entity synchronized data; 7 types; typeId<<5|entryId wire header; 0x7F terminator | [STATUS:IMPLEMENTED] `Core/DataWatcher.cs` |
+| [Item_Spec.md](Specs/Item_Spec.md) | Item (`acy`) — base item class; d[32000] registry (offset 256); maxStackSize; icon atlas; virtual use/hit/place methods | [STATUS:IMPLEMENTED] `Core/Item.cs` |
+| [LivingEntity_Spec.md](Specs/LivingEntity_Spec.md) | LivingEntity (`nq`) — abstract; health/invulnerability/armor/knockback/potions/AI/friction movement | [STATUS:IMPLEMENTED] `Core/LivingEntity.cs` |
 
 ### Mappings
 

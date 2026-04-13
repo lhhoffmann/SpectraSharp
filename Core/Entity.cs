@@ -81,7 +81,7 @@ public abstract class Entity
     public  bool VelocityChanged;        // obf: ap
 #pragma warning disable CS0414, CS0169
     private bool _firstUpdate = true;    // obf: d — true until end of first entityBaseTick (quirk 2)
-    private bool _unknownL;              // obf: l — possibly isImmuneToFire subtype
+    protected bool IsLiving;             // obf: l — set true by LivingEntity constructor
     private bool _unknownAo;            // obf: ao
 #pragma warning restore CS0414, CS0169
 
@@ -451,7 +451,7 @@ public abstract class Entity
     public bool IsOnFire() => _fireTicks > 0 || GetFlagBit(0);
 
     /// <summary>True if entity is alive (not dead). Spec: <c>K()</c> → bool.</summary>
-    public bool IsEntityAlive() => !IsDead;
+    public virtual bool IsEntityAlive() => !IsDead;
 
     // ── Distance (spec §10) ───────────────────────────────────────────────────
 

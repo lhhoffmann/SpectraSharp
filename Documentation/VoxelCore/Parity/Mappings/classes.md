@@ -20,10 +20,12 @@ Obfuscated name (as found in `temp/decompiled/`) → MCP/human-readable name.
 | Obfuscated | Human name | Notes |
 |---|---|---|
 | `yy` | `Block` | Base class + static block registry (IDs 1–122) |
+| `acy` | `Item` | Base item class; d[32000] registry (items at index 256+id); bN=maxStackSize; bO=iconIndex |
 | `acr` | `RenderBlocks` | Per-face OpenGL renderer, 5064 lines |
 | `wu` | `Material` | Block material (stone, wood, cloth, …) |
 | `zx` | `Chunk` | 16×16×128 chunk data |
 | `ry` | `World` | World/level root object |
+| `nq` | `LivingEntity` | 1257 lines; abstract; health aM; invulnerability ac/aq; potion effects bh; friction movement d() |
 | `gy` | `ChunkLoader` | Reads/writes chunk `.dat` files |
 
 ## Block Subclasses
