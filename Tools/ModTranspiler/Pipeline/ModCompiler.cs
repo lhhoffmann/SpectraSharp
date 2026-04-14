@@ -59,12 +59,17 @@ static class ModCompiler
     {
         var refs = new List<MetadataReference>();
 
-        // .NET runtime
+        // .NET runtime — skip native DLLs (no managed metadata)
         string runtimeDir = Path.GetDirectoryName(typeof(object).Assembly.Location)!;
         foreach (string dll in Directory.GetFiles(runtimeDir, "*.dll"))
         {
-            try { refs.Add(MetadataReference.CreateFromFile(dll)); }
-            catch { /* skip if unreadable */ }
+            try
+            {
+                // GetAssemblyName throws BadImageFormatException for native DLLs
+                System.Reflection.AssemblyName.GetAssemblyName(dll);
+                refs.Add(MetadataReference.CreateFromFile(dll));
+            }
+            catch { /* native or unreadable — skip */ }
         }
 
         // SpectraSharp engine (contracts: ISpectraMod, BlockBase, etc.)

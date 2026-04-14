@@ -63,4 +63,23 @@ public sealed class NibbleArray
 
     /// <summary>Returns the raw backing byte array for serialisation / network packets.</summary>
     public byte[] GetData() => _data;
+
+    /// <summary>
+    /// Overwrites the backing array with <paramref name="data"/> in-place.
+    /// Used when loading a chunk from disk (spec §10.1).
+    /// Length must match the existing array or be ignored.
+    /// </summary>
+    public void SetRawData(byte[] data)
+    {
+        int len = Math.Min(data.Length, _data.Length);
+        Array.Copy(data, _data, len);
+    }
+
+    /// <summary>Returns true if any byte in the backing array is non-zero.</summary>
+    public bool HasData()
+    {
+        foreach (byte b in _data)
+            if (b != 0) return true;
+        return false;
+    }
 }

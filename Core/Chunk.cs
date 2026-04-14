@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using TileEntityBase = SpectraSharp.Core.TileEntity.TileEntity;
 
 namespace SpectraSharp.Core;
 
@@ -55,13 +56,28 @@ public class Chunk
     public  int         LowestHeightInChunk; // obf: k
     public  readonly int ChunkX;         // obf: l (final)
     public  readonly int ChunkZ;         // obf: m (final)
-    // n: Map<am,bq> tile entity map — stub (bq spec pending)
-    // o: List<ia>[] entity buckets   — stub (ia spec pending)
+    // n: Map<am,bq> tile entity map
+    private readonly Dictionary<(int x, int y, int z), TileEntityBase> _tileEntities = [];
+
+    /// <summary>
+    /// obf: <c>o</c> — entity buckets, one list per 16-block Y slice (8 buckets for a 128-high world).
+    /// Bucket index = clamp(floor(entity.PosY / 16), 0, EntityBuckets-1).
+    /// Spec: Chunk_Spec §2; Entity_Spec §3 chunk-tracking fields.
+    /// </summary>
+    private readonly List<Entity>[] _entityBuckets;
+
     public  bool        IsPopulated;      // obf: p — terrain features generated
     public  bool        IsModified;       // obf: q — dirty flag
     public  bool        IsLightPopulated; // obf: r — sky-light computed
     public  bool        HasEntities;      // obf: s
     public  long        LastSaveTime;     // obf: t — world-time at last save
+
+    /// <summary>
+    /// True when this chunk must never be persisted to disk.
+    /// Used by <see cref="ChunkProviderServer"/> for the shared <c>EmptyChunk</c> sentinel
+    /// returned for out-of-bounds coordinates (spec: <c>hn</c>).
+    /// </summary>
+    public bool NoSave;
 #pragma warning disable CS0169 // spec-required field — purpose TBD
     private bool        _u;               // obf: u — purpose TBD
 #pragma warning restore CS0169
@@ -72,6 +88,7 @@ public class Chunk
     /// <summary>
     /// 3-arg constructor — empty chunk, no block data yet. Spec: <c>zx(ry, int, int)</c>.
     /// Allocates structural arrays; block array is zeroed (all air).
+    /// Light nibble arrays are allocated here (sky + block BFS requires them).
     /// </summary>
     public Chunk(World world, int chunkX, int chunkZ)
     {
@@ -83,11 +100,16 @@ public class Chunk
         _heightMap    = new byte[256];
         _precipCache  = new int[256];
         _dirtyColumns = new bool[256];
+        _metadata     = new NibbleArray(BlockArraySize, HeightBits);
+        _skyLight     = new NibbleArray(BlockArraySize, HeightBits);
+        _blockLight   = new NibbleArray(BlockArraySize, HeightBits);
 
         for (int i = 0; i < 256; i++) _precipCache[i] = -999;
 
-        // Entity bucket lists — stub (ia spec pending)
-        // TileEntity map     — stub (bq spec pending)
+        // Entity bucket lists (spec: o[] — 8 buckets, one per 16-block Y slice)
+        _entityBuckets = new List<Entity>[EntityBuckets];
+        for (int i = 0; i < EntityBuckets; i++) _entityBuckets[i] = [];
+
     }
 
     /// <summary>
@@ -101,6 +123,65 @@ public class Chunk
         _metadata   = new NibbleArray(blockData.Length, HeightBits);
         _skyLight   = new NibbleArray(blockData.Length, HeightBits);
         _blockLight = new NibbleArray(blockData.Length, HeightBits);
+    }
+
+    // ── Serialization accessors (WorldSave — DiskChunkLoader) ────────────────
+    // Internal: only the save system needs raw array access.
+
+    internal byte[]       BlockIdsRaw   => _blockIds;
+    internal byte[]       HeightMapRaw
+    {
+        get => _heightMap;
+        set => _heightMap = value;
+    }
+    internal NibbleArray  MetadataRaw   => _metadata!;
+    internal NibbleArray  SkyLightRaw   => _skyLight!;
+    internal NibbleArray  BlockLightRaw => _blockLight!;
+
+    /// <summary>Resets the height map to all-zero (used before re-calculating sky light on load).</summary>
+    internal void ClearHeightMap() => Array.Clear(_heightMap);
+
+    // ── Entity bucket management (spec §2 field o, Entity_Spec §3) ───────────
+
+    private static int BucketIndex(double posY)
+        => Math.Clamp((int)(posY / 16.0), 0, EntityBuckets - 1);
+
+    /// <summary>
+    /// Adds an entity to its Y-bucket. Sets entity chunk-tracking fields.
+    /// Spec: <c>a(ia entity)</c> on Chunk.
+    /// </summary>
+    public void AddEntity(Entity entity)
+    {
+        HasEntities = true;
+        int bucket = BucketIndex(entity.PosY);
+        _entityBuckets[bucket].Add(entity);
+        entity.AddedToChunk  = true;
+        entity.ChunkCoordX   = ChunkX;
+        entity.ChunkCoordY   = bucket;
+        entity.ChunkCoordZ   = ChunkZ;
+    }
+
+    /// <summary>
+    /// Removes an entity from its Y-bucket using the entity's stored bucket index.
+    /// Spec: <c>b(ia entity)</c> on Chunk.
+    /// </summary>
+    public void RemoveEntity(Entity entity)
+    {
+        int bucket = Math.Clamp(entity.ChunkCoordY, 0, EntityBuckets - 1);
+        _entityBuckets[bucket].Remove(entity);
+        entity.AddedToChunk = false;
+    }
+
+    /// <summary>
+    /// Returns all entities in Y-buckets overlapping [minY, maxY] (world Y range).
+    /// Used by World for AABB collision queries and rendering.
+    /// </summary>
+    public void GetEntitiesInRange(List<Entity> result, double minY, double maxY)
+    {
+        int bMin = Math.Clamp((int)(minY / 16.0), 0, EntityBuckets - 1);
+        int bMax = Math.Clamp((int)(maxY / 16.0), 0, EntityBuckets - 1);
+        for (int b = bMin; b <= bMax; b++)
+            result.AddRange(_entityBuckets[b]);
     }
 
     // ── Block access (spec §7) ────────────────────────────────────────────────
@@ -263,18 +344,73 @@ public class Chunk
 
     // ── Lifecycle (spec §12) ──────────────────────────────────────────────────
 
+    // ── TileEntity map (spec §2 field n) ─────────────────────────────────────
+
+    /// <summary>
+    /// Returns the TileEntity at chunk-local (x, y, z), or null if none.
+    /// Spec: <c>n.get(am(x,y,z))</c>.
+    /// </summary>
+    public TileEntityBase? GetTileEntity(int x, int y, int z)
+        => _tileEntities.TryGetValue((x, y, z), out var te) ? te : null;
+
+    /// <summary>
+    /// Adds or replaces the TileEntity at chunk-local (x, y, z).
+    /// Sets the TE's World, X/Y/Z, and marks it valid.
+    /// Spec: chunk's TE add path; called when SetBlock creates a TE-owning block.
+    /// </summary>
+    public void AddTileEntity(int x, int y, int z, TileEntityBase te)
+    {
+        te.World = World;
+        te.X     = ChunkX * 16 + x;
+        te.Y     = y;
+        te.Z     = ChunkZ * 16 + z;
+        te.Validate();
+        _tileEntities[(x, y, z)] = te;
+        IsModified = true;
+    }
+
+    /// <summary>
+    /// Removes the TileEntity at chunk-local (x, y, z), if any.
+    /// Invalidates the TE before removing it.
+    /// </summary>
+    public void RemoveTileEntity(int x, int y, int z)
+    {
+        if (_tileEntities.TryGetValue((x, y, z), out var te))
+        {
+            te.Invalidate();
+            _tileEntities.Remove((x, y, z));
+            IsModified = true;
+        }
+    }
+
+    /// <summary>Returns all TileEntities in this chunk. Used during chunk save.</summary>
+    public IEnumerable<TileEntityBase> GetTileEntities() => _tileEntities.Values;
+
+    /// <summary>Returns all entities across all Y-buckets. Used during chunk save.</summary>
+    public IEnumerable<Entity> GetAllEntities()
+    {
+        foreach (var bucket in _entityBuckets)
+            foreach (var entity in bucket)
+                yield return entity;
+    }
+
+    // ── Lifecycle (spec §12) ──────────────────────────────────────────────────
+
     /// <summary>Called when the chunk is loaded into the world. Spec: <c>e()</c>.</summary>
     public void OnChunkLoad()
     {
         IsLoaded = true;
-        // Add tile entities to world.h and entities to world.g — stub (bq/ia spec pending)
+        // Set World reference on all TileEntities (in case it was null at load time)
+        foreach (var te in _tileEntities.Values)
+            te.World ??= World;
     }
 
     /// <summary>Called when the chunk is unloaded from the world. Spec: <c>f()</c>.</summary>
     public void OnChunkUnload()
     {
         IsLoaded = false;
-        // Queue tile entity / entity removal — stub
+        foreach (var te in _tileEntities.Values)
+            te.Invalidate();
     }
 
     /// <summary>Marks this chunk dirty (forces save). Spec: <c>g()</c>.</summary>
@@ -298,28 +434,77 @@ public class Chunk
     }
 
     /// <summary>
-    /// Recomputes height map AND marks all XZ columns dirty for sky-light propagation.
-    /// Sky-light BFS deferred to World. Spec: <c>c()</c>.
+    /// Recomputes height map, fills sky-light nibbles, and marks all columns dirty.
+    /// Called once on freshly generated chunks before they are inserted into the world.
+    /// Spec: <c>c()</c> (generateSkylightMap).
+    ///
+    /// Sky-light behaviour (Overworld only):
+    ///   • Blocks at or above the height map receive sky light 15.
+    ///   • Below: attenuates by max(opacity, 1) per step.
     /// </summary>
     public void GenerateSkylightMap()
     {
-        GenerateHeightMap();
+        bool isNether = World?.IsNether ?? false;
+        int min = int.MaxValue;
+
         for (int x = 0; x < 16; x++)
         for (int z = 0; z < 16; z++)
+        {
+            // Find height map: lowest Y where opacity != 0
+            int y = WorldHeight;
+            while (y > 0 && Block.LightOpacity[GetBlockId(x, y - 1, z)] == 0) y--;
+            _heightMap[(z << 4) | x] = (byte)y;
+            if (y < min) min = y;
+
+            if (!isNether)
+            {
+                // Sky-exposed range: fill with 15
+                for (int sy = y; sy < WorldHeight; sy++)
+                    _skyLight!.Set(x, sy, z, 15);
+
+                // Below heightMap: attenuate downward
+                int level = 15;
+                for (int sy = y - 1; sy >= 0 && level > 0; sy--)
+                {
+                    int opacity = Math.Max(Block.LightOpacity[GetBlockId(x, sy, z)], 1);
+                    level = Math.Max(level - opacity, 0);
+                    if (level > 0) _skyLight!.Set(x, sy, z, level);
+                }
+            }
+
             MarkDirtyColumn(x, z);
+        }
+
+        LowestHeightInChunk = min == int.MaxValue ? 0 : min;
+        IsLightPopulated = true;
         IsModified = true;
     }
 
     /// <summary>
-    /// Processes dirty sky-light columns if any exist. Spec: <c>j()</c>.
-    /// Sky-light BFS deferred — dirty flags cleared, full propagation pending.
+    /// Processes dirty sky-light columns — triggers BFS propagation for each dirty column.
+    /// Spec: <c>j()</c>.
     /// </summary>
     public void UpdateSkylight()
     {
-        if (!_hasDirtyColumns || World.IsNether) return;
+        if (!_hasDirtyColumns || (World?.IsNether ?? false)) return;
         _hasDirtyColumns = false;
-        for (int i = 0; i < 256; i++) _dirtyColumns[i] = false;
-        // Full sky-light column propagation deferred — needs World.PropagateLight BFS
+
+        if (World == null) { for (int i = 0; i < 256; i++) _dirtyColumns[i] = false; return; }
+
+        for (int x = 0; x < 16; x++)
+        for (int z = 0; z < 16; z++)
+        {
+            if (!_dirtyColumns[x + z * 16]) continue;
+            _dirtyColumns[x + z * 16] = false;
+
+            int worldX = ChunkX * 16 + x;
+            int worldZ = ChunkZ * 16 + z;
+            int height = _heightMap[(z << 4) | x] & 0xFF;
+
+            // Trigger sky BFS for the column so neighbours get correct light
+            for (int y = 0; y < height; y++)
+                World.PropagateLight(LightType.Sky, worldX, y, worldZ);
+        }
     }
 
     // ── Serialisation (spec §13) ──────────────────────────────────────────────
@@ -329,6 +514,7 @@ public class Chunk
     /// </summary>
     public bool NeedsSaving(bool forceCheck)
     {
+        if (NoSave)            return false;
         if (!IsLightPopulated) return false;
         long now = World.TotalWorldTime;
         return forceCheck
@@ -366,21 +552,66 @@ public class Chunk
     {
         int key       = (z << 4) | x;
         int oldHeight = _heightMap[key] & 0xFF;
+        int newHeight = oldHeight;
+        bool isNether = World?.IsNether ?? false;
 
         if (newBlockId != 0 && Block.LightOpacity[newBlockId] != 0 && y >= oldHeight)
         {
             // New opaque block raises the height map
-            _heightMap[key] = (byte)(y + 1);
-            if (y + 1 < LowestHeightInChunk) LowestHeightInChunk = y + 1;
+            newHeight = y + 1;
+            _heightMap[key] = (byte)newHeight;
+            if (newHeight < LowestHeightInChunk) LowestHeightInChunk = newHeight;
         }
-        else if (newBlockId == 0 && y == oldHeight - 1)
+        else if ((newBlockId == 0 || Block.LightOpacity[newBlockId] == 0) && y == oldHeight - 1)
         {
-            // Block removed at the top — search downward for new top
+            // Block removed (or made transparent) at the top — search downward for new top
             int search = y;
             while (search > 0 && Block.LightOpacity[GetBlockId(x, search - 1, z)] == 0)
                 search--;
-            _heightMap[key] = (byte)search;
+            newHeight = search;
+            _heightMap[key] = (byte)newHeight;
             if (search < LowestHeightInChunk) LowestHeightInChunk = search;
+        }
+
+        // Update sky light nibbles and trigger BFS if height changed (Overworld only)
+        if (newHeight != oldHeight && !isNether && _skyLight != null)
+        {
+            int minY = Math.Min(newHeight, oldHeight);
+            int maxY = Math.Max(newHeight, oldHeight);
+
+            if (newHeight < oldHeight)
+            {
+                // Height fell (block removed) → expose sky light
+                for (int sy = newHeight; sy < oldHeight; sy++)
+                    _skyLight.Set(x, sy, z, 15);
+            }
+            else
+            {
+                // Height rose (block placed) → remove sky light
+                for (int sy = oldHeight; sy < newHeight; sy++)
+                    _skyLight.Set(x, sy, z, 0);
+            }
+
+            // Re-propagate sky attenuation below new height in this column
+            int level = 15;
+            for (int sy = newHeight - 1; sy >= 0 && level > 0; sy--)
+            {
+                int opacity = Math.Max(Block.LightOpacity[GetBlockId(x, sy, z)], 1);
+                level = Math.Max(level - opacity, 0);
+                _skyLight.Set(x, sy, z, level);
+            }
+
+            // Trigger neighbor column sky BFS if this chunk is live in the world
+            if (IsLoaded && World != null)
+            {
+                int worldX = ChunkX * 16 + x;
+                int worldZ = ChunkZ * 16 + z;
+                World.PropagateColumnRange(worldX - 1, worldZ, minY, maxY);
+                World.PropagateColumnRange(worldX + 1, worldZ, minY, maxY);
+                World.PropagateColumnRange(worldX, worldZ - 1, minY, maxY);
+                World.PropagateColumnRange(worldX, worldZ + 1, minY, maxY);
+                World.PropagateColumnRange(worldX, worldZ,     minY, maxY);
+            }
         }
     }
 }

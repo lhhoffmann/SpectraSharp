@@ -31,6 +31,9 @@ static class Translator
         if (manifest.NewRecipes.Count > 0)
             output.Add(RecipeTemplate.Emit(manifest.ModName, manifest.NewRecipes));
 
+        foreach (var wg in manifest.WorldGenHooks)
+            output.Add(WorldGenTemplate.Emit(manifest.ModName, wg));
+
         Console.WriteLine($"[Translator] {output.Count} source files generated.");
         return output;
     }
@@ -110,12 +113,41 @@ static class Translator
         return line;
     }
 
-    static bool HasUnknownJavaPattern(string line) =>
-        line.Contains("new ") && line.Contains("(") && !line.Contains("new ItemStack") ||
-        line.Contains(".getClass()") ||
-        line.Contains("synchronized") ||
-        line.Contains("throws ") ||
-        line.Contains("import ");
+    // Matches obfuscated class names: 1-3 lowercase letters (e.g. ky, ry, aef)
+    static readonly System.Text.RegularExpressions.Regex ObfuscatedName =
+        new(@"\b([a-z]{1,3})\b", System.Text.RegularExpressions.RegexOptions.Compiled);
+
+    static bool HasUnknownJavaPattern(string line)
+    {
+        // Hard Java-isms that can never appear in valid C#
+        if (line.Contains("synchronized") ||
+            line.Contains("throws ")      ||
+            line.Contains("import "))
+            return true;
+
+        // Check for remaining obfuscated class names that we haven't mapped
+        foreach (System.Text.RegularExpressions.Match m in ObfuscatedName.Matches(line))
+        {
+            string token = m.Groups[1].Value;
+            // If it's a known vanilla class → it was already translated or is being used as-is
+            // If it's a common keyword/variable → skip
+            if (IsKnownToken(token)) continue;
+            // Unknown obfuscated class still in the line → needs manual review
+            if (Mappings.VanillaClassList.Contains(token)) continue; // known but intentionally kept
+            return true;
+        }
+
+        return false;
+    }
+
+    static bool IsKnownToken(string t) => t is
+        // C# keywords
+        "if" or "in" or "is" or "as" or "do" or "for" or "new" or "var" or "int" or
+        "out" or "ref" or "get" or "set" or "try" or "by"  or
+        // Common variable names
+        "i" or "j" or "k" or "x" or "y" or "z" or "id" or "dx" or "dy" or "dz" or
+        // Common method/property shorthands
+        "rng" or "pos" or "air" or "null" or "true" or "false";
 }
 
 static class StringExtensions

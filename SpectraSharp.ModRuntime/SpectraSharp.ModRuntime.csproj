@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <AssemblyName>SpectraSharp.ModRuntime</AssemblyName>
+  </PropertyGroup>
+  <ItemGroup>
+    <!-- IKVM runtime — provides Java semantics on .NET CLR -->
+    <PackageReference Include="IKVM" Version="8.*" />
+    <!-- HarmonyLib — runtime IL patching (Mixin equivalent for .NET) -->
+    <PackageReference Include="Lib.Harmony" Version="2.3.*" />
+    <!-- Reference Core for IWorld, IEngine, etc. interfaces -->
+    <ProjectReference Include="..\SpectraSharp.csproj" />
+  </ItemGroup>
+</Project>

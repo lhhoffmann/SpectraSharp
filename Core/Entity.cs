@@ -87,6 +87,14 @@ public abstract class Entity
 
     // ── Timers and counters ───────────────────────────────────────────────────
 
+    /// <summary>
+    /// obf: <c>ac</c> — invulnerability countdown. Set to <c>InvulnerabilityTicks</c> on a full
+    /// hit; decrements to 0 each tick in <see cref="LivingEntity"/>. Declared here in <c>ia</c>
+    /// (Entity base) per spec §2, even though only LivingEntity uses it.
+    /// Source spec: LivingEntityDamage_Spec §2
+    /// </summary>
+    public int InvulnerabilityCountdown;  // obf: ac
+
     public int  TicksExisted;            // obf: Z
     private int _fireTicks;              // obf: c (private) — positive = on fire
     public  int FireImmuneTicks = 1;     // obf: aa
@@ -149,11 +157,21 @@ public abstract class Entity
     /// </summary>
     protected abstract void EntityInit();
 
-    /// <summary>obf: protected abstract <c>b(ik)</c> — readEntityFromNBT. ik (NBT) spec pending.</summary>
-    protected abstract void ReadEntityFromNBT(object nbt);
+    /// <summary>
+    /// obf: protected abstract <c>b(ik)</c> — readEntityFromNBT.
+    /// Called by <see cref="LoadFromNbt"/> after base fields are read.
+    /// Each subclass reads its own fields; if it overrides a supertype's method,
+    /// it calls <c>base.ReadEntityFromNBT(tag)</c> first.
+    /// </summary>
+    protected abstract void ReadEntityFromNBT(Nbt.NbtCompound tag);
 
-    /// <summary>obf: protected abstract <c>a(ik)</c> — writeEntityToNBT. ik (NBT) spec pending.</summary>
-    protected abstract void WriteEntityToNBT(object nbt);
+    /// <summary>
+    /// obf: protected abstract <c>a(ik)</c> — writeEntityToNBT.
+    /// Called by <see cref="SaveToNbt"/> after base fields are written.
+    /// Each subclass writes its own fields; if it overrides a supertype's method,
+    /// it calls <c>base.WriteEntityToNBT(tag)</c> first.
+    /// </summary>
+    protected abstract void WriteEntityToNBT(Nbt.NbtCompound tag);
 
     // ── Core tick (spec §4) ───────────────────────────────────────────────────
 
@@ -298,7 +316,7 @@ public abstract class Entity
         double origDx = dx, origDy = dy, origDz = dz;
 
         // Step 3–4: get colliding block bounding boxes for expanded sweep volume
-        var expanded = BoundingBox.Expand(dx, dy, dz);
+        var expanded = BoundingBox.AddCoord(dx, dy, dz);
         var colliders = World.GetCollidingBoundingBoxes(this, expanded);
 
         // Step 5: sweep Y
@@ -334,7 +352,7 @@ public abstract class Entity
                 BoundingBox.MaxX - dx, BoundingBox.MaxY - dy, BoundingBox.MaxZ - dz);
 
             double stepDy = StepHeight;
-            var sc2 = World.GetCollidingBoundingBoxes(this, BoundingBox.Expand(origDx, stepDy, origDz));
+            var sc2 = World.GetCollidingBoundingBoxes(this, BoundingBox.AddCoord(origDx, stepDy, origDz));
             foreach (var b in sc2) stepDy = b.CalculateYOffset(BoundingBox, stepDy);
             BoundingBox.OffsetInPlace(0, stepDy, 0);
 
@@ -490,6 +508,97 @@ public abstract class Entity
         if (value) flags |= (byte)(1 << bit);
         else       flags &= (byte)~(1 << bit);
         DataWatcher.UpdateObject(0, flags);
+    }
+
+    // ── NBT serialization (spec: EntityNBT_Spec §2) ──────────────────────────
+
+    /// <summary>
+    /// Writes entity state into <paramref name="tag"/>. Returns true if the entity
+    /// was successfully serialized and should be included in the chunk Entities list.
+    ///
+    /// Gate (spec <c>ia.c</c>): skips dead entities and entities without a registered
+    /// string ID in <see cref="EntityRegistry"/>. After the gate, writes base fields
+    /// (ia.d) then dispatches to <see cref="WriteEntityToNBT"/>.
+    /// </summary>
+    public bool SaveToNbt(Nbt.NbtCompound tag)
+    {
+        string? entityId = EntityRegistry.GetEntityStringId(this);
+        if (IsDead || entityId == null) return false;
+
+        tag.PutString("id", entityId);
+
+        // ia.d — base fields
+        var pos = new Nbt.NbtList();
+        pos.Add(new Nbt.NbtDouble(PosX));
+        pos.Add(new Nbt.NbtDouble(PosY + YOffset)); // Y-drift quirk: yOffset added on write
+        pos.Add(new Nbt.NbtDouble(PosZ));
+        tag.PutList("Pos", pos);
+
+        var motion = new Nbt.NbtList();
+        motion.Add(new Nbt.NbtDouble(MotionX));
+        motion.Add(new Nbt.NbtDouble(MotionY));
+        motion.Add(new Nbt.NbtDouble(MotionZ));
+        tag.PutList("Motion", motion);
+
+        var rotation = new Nbt.NbtList();
+        rotation.Add(new Nbt.NbtFloat(RotationYaw));
+        rotation.Add(new Nbt.NbtFloat(RotationPitch));
+        tag.PutList("Rotation", rotation);
+
+        tag.PutFloat("FallDistance", FallDistance);
+        tag.PutShort("Fire",     (short)_fireTicks); // truncated to short (spec quirk 4)
+        tag.PutShort("Air",      DataWatcher.GetShort(1));
+        tag.PutBoolean("OnGround", OnGround);
+
+        WriteEntityToNBT(tag);
+        return true;
+    }
+
+    /// <summary>
+    /// Reads entity state from <paramref name="tag"/>. Restores base fields (ia.e)
+    /// then dispatches to <see cref="ReadEntityFromNBT"/>.
+    /// Spec: <c>ia.e(ik tag)</c>.
+    /// </summary>
+    public void LoadFromNbt(Nbt.NbtCompound tag)
+    {
+        // Motion — each component clamped to ±10
+        Nbt.NbtList? motion = tag.GetList("Motion");
+        if (motion != null && motion.Count >= 3)
+        {
+            MotionX = Math.Clamp(((Nbt.NbtDouble)motion[0]).Value, -10.0, 10.0);
+            MotionY = Math.Clamp(((Nbt.NbtDouble)motion[1]).Value, -10.0, 10.0);
+            MotionZ = Math.Clamp(((Nbt.NbtDouble)motion[2]).Value, -10.0, 10.0);
+        }
+
+        // Rotation
+        Nbt.NbtList? rotation = tag.GetList("Rotation");
+        if (rotation != null && rotation.Count >= 2)
+        {
+            RotationYaw   = ((Nbt.NbtFloat)rotation[0]).Value;
+            RotationPitch = ((Nbt.NbtFloat)rotation[1]).Value;
+            PrevRotYaw    = RotationYaw;
+            PrevRotPitch  = RotationPitch;
+        }
+
+        // Pos — sets all three position copies; Y-drift quirk: stored value used as-is (no - yOffset)
+        Nbt.NbtList? pos = tag.GetList("Pos");
+        if (pos != null && pos.Count >= 3)
+        {
+            double x = ((Nbt.NbtDouble)pos[0]).Value;
+            double y = ((Nbt.NbtDouble)pos[1]).Value;
+            double z = ((Nbt.NbtDouble)pos[2]).Value;
+            PrevPosX = LastTickPosX = x;
+            PrevPosY = LastTickPosY = y;
+            PrevPosZ = LastTickPosZ = z;
+            SetPosition(x, y, z);
+        }
+
+        FallDistance = tag.GetFloat("FallDistance");
+        _fireTicks   = tag.GetShort("Fire");
+        DataWatcher.UpdateObject(1, tag.GetShort("Air"));
+        OnGround     = tag.GetBoolean("OnGround");
+
+        ReadEntityFromNBT(tag);
     }
 
     // ── toString ──────────────────────────────────────────────────────────────

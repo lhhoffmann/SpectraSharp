@@ -158,8 +158,7 @@ public abstract class LivingEntity : Entity
         if (Health <= 0) return;
         Health += amount;
         if (Health > GetMaxHealth()) Health = GetMaxHealth();
-        // ac = aq / 2 — reset half the invulnerability counter
-        // (Entity field 'ac' not yet mapped; skip for now — stub)
+        InvulnerabilityCountdown = InvulnerabilityTicks / 2; // ac = aq/2
     }
 
     /// <summary>
@@ -172,68 +171,111 @@ public abstract class LivingEntity : Entity
     /// </summary>
     public virtual bool CanBePushed() => !IsDead;
 
-    // ── Damage (spec §6) ─────────────────────────────────────────────────────
+    // ── Damage (spec §6 / LivingEntityDamage_Spec §6) ───────────────────────
 
     /// <summary>
-    /// obf: <c>a(pm source, int amount)</c> — attackEntityFrom (apply damage).
-    /// Handles invulnerability window (quirk 2), hurtTime, knockback, death.
-    /// Stub: DamageSource (pm) typed as object; potion checks and sound skipped.
+    /// obf: <c>a(pm source, int amount)</c> — attackEntityFrom.
+    ///
+    /// Full pipeline per LivingEntityDamage_Spec §6:
+    ///   1. Client-side / dead guard.
+    ///   2. Fire-Resistance bypass for fire damage (stub: no potion check yet).
+    ///   3. Invulnerability window: if still in immune half, absorb or partial hit.
+    ///   4. Otherwise: full hit → set ac=aq, record bp, apply damage, hurt flash.
+    ///   5. Track last attacker.
+    ///   6. Knockback.
+    ///   7. Hurt/death sound + death handler.
     /// </summary>
-    public virtual bool AttackEntityFrom(object damageSource, int amount)
+    public virtual bool AttackEntityFrom(DamageSource damageSource, int amount)
     {
         if (World != null && World.IsClientSide) return false;
         NaturalDespawnTicker = 0;
         if (Health <= 0) return false;
 
-        SwingProgress = 1.5f; // arm swing
+        // Fire-resistance bypass (potion check stubbed — no active potion system yet)
+        // if (damageSource.IsFireDamage && HasFireResistancePotion()) return false;
 
-        int ac = 0; // TODO: map Entity field 'ac' (invulnerability counter)
+        SwingProgress = 1.5f; // bb = 1.5F (hurt animation scale)
+        bool fullHit  = true;
 
-        if (ac > InvulnerabilityTicks / 2)
+        if (InvulnerabilityCountdown > InvulnerabilityTicks / 2.0f)
         {
+            // Still in immune half of window
             if (amount <= LastDamage) return false;
+            // Partial hit: only the difference above the last hit applies
             ApplyDamage(damageSource, amount - LastDamage);
             LastDamage = amount;
+            fullHit    = false;
         }
         else
         {
-            LastDamage = amount;
-            PrevHealth = Health;
-            // ac = InvulnerabilityTicks; — TODO
+            LastDamage                = amount;
+            PrevHealth                = Health;         // aN snapshot
+            InvulnerabilityCountdown  = InvulnerabilityTicks; // ac = aq
             ApplyDamage(damageSource, amount);
-            HurtTime = HurtDuration = 10;
+            HurtTime = HurtDuration  = 10;
         }
 
         KnockbackAngle = 0.0f;
 
-        if (Health <= 0) OnDeath(damageSource);
+        if (fullHit)
+        {
+            // Track last attacker for XP attribution
+            Entity? attacker = damageSource.GetAttacker();
+            if (attacker is EntityPlayer player)
+            {
+                LastAttacker      = player;
+                LastAttackerTicks = 60;
+            }
+
+            // Knockback
+            if (attacker != null)
+            {
+                double dx = attacker.PosX - PosX;
+                double dz = attacker.PosZ - PosZ;
+                ApplyKnockback(attacker, amount, dx, dz);
+            }
+        }
+
+        if (Health <= 0)
+            OnDeath(damageSource);
 
         return true;
     }
 
+    /// <summary>Overload accepting object for backward-compat with engine code.</summary>
+    public virtual bool AttackEntityFrom(object damageSource, int amount)
+        => AttackEntityFrom(damageSource as DamageSource ?? DamageSource.Generic, amount);
+
     /// <summary>
     /// obf: protected <c>b(pm source, int amount)</c> — applyDamage (inner).
-    /// Applies armor absorption then subtracts from health.
+    /// Applies armor reduction (<see cref="AbsorbArmor"/>) then subtracts from health.
+    /// Source spec: LivingEntityDamage_Spec §7
     /// </summary>
-    protected virtual void ApplyDamage(object damageSource, int amount)
+    protected virtual void ApplyDamage(DamageSource damageSource, int amount)
     {
-        amount = AbsorbArmor(damageSource, amount);
+        amount  = AbsorbArmor(damageSource, amount);
         Health -= amount;
     }
 
+    // Overload for legacy internal calls
+    private void ApplyDamage(object damageSource, int amount)
+        => ApplyDamage(damageSource as DamageSource ?? DamageSource.Generic, amount);
+
     /// <summary>
-    /// obf: <c>c(pm source, int amount)</c> — armor absorption (quirk 3: carries remainder).
-    /// Base: GetTotalArmorValue() = 0, so armor factor = 25 / 25 = full damage.
+    /// obf: <c>c(pm source, int amount)</c> — armor absorption.
+    /// Skipped entirely for unblockable sources.
+    /// Quirk 3: carries remainder in <see cref="ArmorRemainder"/> across hits.
+    /// Source spec: LivingEntityDamage_Spec §8
     /// </summary>
-    protected virtual int AbsorbArmor(object damageSource, int amount)
+    protected virtual int AbsorbArmor(DamageSource damageSource, int amount)
     {
-        int armorValue = GetTotalArmorValue(); // default 0
-        int var3       = 25 - armorValue;
-        int accumulated = amount * var3 + ArmorRemainder;
-        OnArmorDamaged(amount); // hook for subclass (e.g. damage armor items)
-        amount       = accumulated / 25;
-        ArmorRemainder = accumulated % 25; // carry forward (quirk 3)
-        return amount;
+        if (damageSource.IsUnblockable) return amount;
+
+        int armorValue  = GetTotalArmorValue(); // default 0
+        int accumulated = amount * (25 - armorValue) + ArmorRemainder;
+        OnArmorDamaged(amount);
+        ArmorRemainder = accumulated % 25;  // carry forward (quirk 3)
+        return accumulated / 25;
     }
 
     /// <summary>
@@ -242,22 +284,25 @@ public abstract class LivingEntity : Entity
     protected virtual int GetTotalArmorValue() => 0;
 
     /// <summary>
-    /// obf: <c>i(int)</c> — called in armor absorption for subclass to damage armor items.
+    /// obf: <c>i(int)</c> — called in armor absorption; subclass may damage armor items.
     /// No-op base.
     /// </summary>
     protected virtual void OnArmorDamaged(int amount) { }
 
     /// <summary>
-    /// obf: <c>a(pm source)</c> — onDeath callback. Called when health reaches 0.
-    /// Drops items (XP orbs and loot). Stub: XP orb spawn (fk) pending.
+    /// obf: <c>a(pm source)</c> — onDeath callback.
+    /// XP orb spawn (fk) is stubbed pending spec.
     /// </summary>
-    protected virtual void OnDeath(object damageSource)
+    protected virtual void OnDeath(DamageSource damageSource)
     {
         if (DiedFired) return;
         DiedFired = true;
-        // TODO: loot drop logic — requires item drop tables and DamageSource.GetAttacker()
-        // TODO: XP orb spawn (fk spec pending)
+        // XP orb spawn (fk spec pending)
     }
+
+    // Legacy overload kept for EntityPlayer which still types the parameter as object
+    protected virtual void OnDeath(object damageSource)
+        => OnDeath(damageSource as DamageSource ?? DamageSource.Generic);
 
     // ── Knockback (spec §7) ───────────────────────────────────────────────────
 
@@ -422,9 +467,10 @@ public abstract class LivingEntity : Entity
 
         // Step 2: client interpolation — stub (network spec pending)
 
-        // Step 3: countdown timers
-        if (AttackCooldown > 0) AttackCooldown--;
-        if (HurtTime      > 0) HurtTime--;
+        // Step 3: countdown timers (spec: LivingEntityDamage §11)
+        if (AttackCooldown          > 0) AttackCooldown--;
+        if (HurtTime                > 0) HurtTime--;
+        if (InvulnerabilityCountdown > 0) InvulnerabilityCountdown--;
         if (LastAttackerTicks > 0)
         {
             LastAttackerTicks--;
@@ -543,6 +589,31 @@ public abstract class LivingEntity : Entity
 
     // ── NBT hooks (stubs — ik spec pending) ──────────────────────────────────
 
-    protected override void ReadEntityFromNBT(object nbt)  { /* ik spec pending */ }
-    protected override void WriteEntityToNBT(object nbt)   { /* ik spec pending */ }
+    /// <summary>
+    /// Writes living-entity fields. Spec: <c>nq.a(ik tag)</c>.
+    /// Called by <see cref="Entity.SaveToNbt"/> dispatch chain.
+    /// </summary>
+    protected override void WriteEntityToNBT(Nbt.NbtCompound tag)
+    {
+        tag.PutShort("Health",     (short)Health);
+        tag.PutShort("HurtTime",   (short)HurtTime);
+        tag.PutShort("DeathTime",  (short)DeathTime);
+        tag.PutShort("AttackTime", (short)AttackCooldown);
+
+        // ActiveEffects — empty list (potion system stub)
+        tag.PutList("ActiveEffects", new Nbt.NbtList());
+    }
+
+    /// <summary>
+    /// Reads living-entity fields. Spec: <c>nq.b(ik tag)</c>.
+    /// Called by <see cref="Entity.LoadFromNbt"/> dispatch chain.
+    /// </summary>
+    protected override void ReadEntityFromNBT(Nbt.NbtCompound tag)
+    {
+        Health         = tag.GetShort("Health");
+        HurtTime       = tag.GetShort("HurtTime");
+        DeathTime      = tag.GetShort("DeathTime");
+        AttackCooldown = tag.GetShort("AttackTime");
+        // ActiveEffects list — no-op (potion system stub)
+    }
 }

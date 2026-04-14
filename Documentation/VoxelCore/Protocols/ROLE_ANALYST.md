@@ -19,8 +19,42 @@ language without ever seeing the original source.
 1. Read `Documentation/VoxelCore/Parity/Mappings/classes.md` to load the obfuscated→human name table.
 2. Read `Documentation/VoxelCore/Parity/REQUESTS.md` and identify all entries marked `[STATUS:REQUIRED]`.
 3. Read `Documentation/VoxelCore/Parity/INDEX.md` to understand what has already been specified.
-4. Start with the highest-priority `[STATUS:REQUIRED]` entry. If none exist, wait for
-   instructions from the user.
+4. Start with the highest-priority `[STATUS:REQUIRED]` entry. If no `[STATUS:REQUIRED]` entries
+   exist, apply the **Proactive Speccing Protocol** below.
+
+---
+
+## Proactive Speccing Protocol
+
+When the `[STATUS:REQUIRED]` queue is empty, do not wait. Instead:
+
+### What to spec proactively
+
+Identify the **next layer** — classes that are direct dependencies of recently
+`[STATUS:IMPLEMENTED]` specs or that are clearly needed to reach the next playable milestone.
+Priority order:
+
+1. **Unresolved references** in existing specs — any class mentioned as a stub, placeholder,
+   or `// TODO` dependency that does not yet have its own spec.
+2. **Call-graph neighbours** — classes that the already-implemented ones call into.
+   Read the implemented spec, identify the methods it stubs, find those classes in the source.
+3. **Obvious next systems** — if chunks generate terrain, trees are next; if entities move,
+   collision responses are next. Use game-development intuition.
+
+### How many to spec proactively
+
+Write **1–3 specs per session** at most. Do not attempt to pre-spec the entire game.
+The goal is to keep a 2–4 spec buffer ahead of the Coder, not to race ahead.
+
+### Label them in INDEX.md
+
+Add proactive specs with `[STATUS:PROVIDED]` (not a new status). Add a note in the
+description: `(proactive — not yet requested)` so the Coder knows it is available.
+
+Do **not** add a `[STATUS:REQUIRED]` entry to REQUESTS.md for proactive specs — that file
+is owned by the Coder. Simply write the spec and add it to INDEX.md.
+
+---
 
 ---
 

@@ -13,15 +13,21 @@ obj/
 .DS_Store
 Thumbs.db
 
-# Game assets — never committed
+# Third-party JARs — never committed (game assets, decompiler, test mods)
+# Vineflower is downloaded automatically by the ModTranspiler build target (LGPL — not bundled)
 *.jar
 Assets/extracted/
 
-# Mod runtime files — user-supplied JARs and compiled plugins (never committed)
-mods/*.jar
-mods/compiled/
+# Mod drop zone — user JARs and compiled plugins are never committed
+mods/compiled/*.dll
+!mods/.gitkeep
+!mods/compiled/.gitkeep
 
-# Decompiler output — contains third-party code, never committed
+# Decompiler binary — downloaded on first build, not committed (LGPL)
+tools/decompiler/*.jar
+!tools/decompiler/.gitkeep
+
+# Decompiler and mod working output — contains third-party decompiled code
 temp/
 
 # Java build temp
@@ -29,3 +35,6 @@ Tools/.build-tmp/
 
 # Published AOT output
 publish/
+
+# Debug / verification tools — local only, never committed
+Tools/Debug/

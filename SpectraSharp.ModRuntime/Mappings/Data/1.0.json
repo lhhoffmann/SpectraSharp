@@ -1,0 +1,51 @@
+{
+  "version": "1.0",
+  "obfuscated": true,
+  "stubs_version": "v1_0",
+  "loaders": ["modloader"],
+  "fingerprints": ["yy.class", "sr.class", "ry.class"],
+  "classes": {
+    "ry":  "net.minecraft.world.World",
+    "yy":  "net.minecraft.block.Block",
+    "sr":  "net.minecraft.item.Item",
+    "acy": "net.minecraft.item.ItemTool",
+    "acx": "net.minecraft.item.ItemSword",
+    "acz": "net.minecraft.item.ItemArmor",
+    "aco": "net.minecraft.item.ItemBow",
+    "dk":  "net.minecraft.item.ItemStack",
+    "ky":  "net.minecraft.world.gen.feature.WorldGenMineable",
+    "kq":  "net.minecraft.world.gen.feature.WorldGenTrees",
+    "aam": "net.minecraft.world.gen.feature.WorldGenLakes",
+    "ig":  "net.minecraft.world.gen.feature.WorldGenerator",
+    "bq":  "net.minecraft.tileentity.TileEntity",
+    "ia":  "net.minecraft.entity.Entity",
+    "aef": "net.minecraft.entity.EntityLiving",
+    "vm":  "net.minecraft.entity.EntityMob",
+    "hm":  "net.minecraft.entity.player.EntityPlayer",
+    "kq":  "net.minecraft.world.IBlockAccess",
+    "vh":  "net.minecraft.world.WorldChunkManager"
+  },
+  "methods": {
+    "ry.a(IIIII)V":  "scheduleBlockUpdate",
+    "ry.b(IIIII)Z":  "setBlockAndMetadata",
+    "ry.c(IIII)Z":   "setMetadata",
+    "ry.d(IIII)Z":   "setBlock",
+    "ry.a(IIII)I":   "getBlockId",
+    "ry.b(III)I":    "getBlockMetadata",
+    "ry.e(IIII)Z":   "isAreaLoaded",
+    "ry.a(ia)Z":     "spawnEntityInWorld",
+    "yy.a(III)V":    "onBlockAdded",
+    "ig.a(Lry;Ljava/util/Random;III)Z": "generate"
+  },
+  "fields": {
+    "ry.I":    "isClientSide",
+    "ry.f":    "rand",
+    "yy.bK":   "blocksList",
+    "sr.bO":   "itemsList",
+    "dk.a":    "stackSize",
+    "dk.c":    "itemID",
+    "ia.q":    "posX",
+    "ia.r":    "posY",
+    "ia.s":    "posZ"
+  }
+}

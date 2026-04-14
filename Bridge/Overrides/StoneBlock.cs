@@ -18,7 +18,7 @@ public sealed class StoneBlock : BlockBase
 {
     // ── IBridgeStub identity ──────────────────────────────────────────────────
 
-    /// <summary>Fully qualified Java class name this stub replaces.</summary>
+    public override int    BlockId       => 1;
     public override string JavaClassName => "net.minecraft.src.BlockStone";
 
     // ── Texture ───────────────────────────────────────────────────────────────

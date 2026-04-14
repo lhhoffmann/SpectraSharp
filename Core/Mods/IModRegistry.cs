@@ -13,7 +13,7 @@ public interface IModRegistry
 
 public interface IWorldGenHook
 {
-    void OnPopulateChunk(IWorld world, Random rng, int chunkX, int chunkZ);
+    void OnPopulateChunk(IWorld world, System.Random rng, int chunkX, int chunkZ);
 }
 
 public interface ITickHook

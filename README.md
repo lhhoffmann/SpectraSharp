@@ -32,6 +32,16 @@ The goal is to understand the complexities of voxel-based environments, efficien
 
 ---
 
+## 🔧 Third-Party Dependencies
+
+| Component | License | Usage |
+|---|---|---|
+| [Vineflower](https://github.com/Vineflower/vineflower) | LGPL 2.1 | Java decompiler used by the Mod Transpiler. Not bundled — downloaded automatically from Maven Central on first build. Can be replaced by the user at any time. |
+| [Raylib-cs](https://github.com/chrisdill/raylib-cs) | zlib | OpenGL rendering bindings |
+| [HarmonyLib](https://github.com/pardeike/Harmony) | MIT | Runtime method patching for mod hook injection |
+
+---
+
 ## 📜 License & Commercial Use
 
 This project is licensed under the **GNU General Public License v3.0 (GPL-3.0)**. 

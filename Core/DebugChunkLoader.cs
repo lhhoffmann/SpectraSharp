@@ -40,4 +40,10 @@ public sealed class DebugChunkLoader : IChunkLoader
     }
 
     public void Tick() { }
+
+    public IEnumerable<(int chunkX, int chunkZ)> GetLoadedChunkCoords()
+    {
+        foreach (long key in _chunks.Keys)
+            yield return ((int)(key >> 32), (int)key);
+    }
 }

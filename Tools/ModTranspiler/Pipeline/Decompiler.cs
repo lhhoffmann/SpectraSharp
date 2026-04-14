@@ -24,20 +24,24 @@ static class Decompiler
 
         Console.WriteLine($"[Decompiler] Running Vineflower on {Path.GetFileName(jarPath)}...");
 
+        string vineflower = Path.GetFullPath("tools/decompiler/vineflower.jar");
+        string absJar     = Path.GetFullPath(jarPath);
+
         var psi = new ProcessStartInfo("java",
-            $"-jar tools/decompiler/vineflower.jar \"{jarPath}\" \"{outDir}\"")
+            $"-jar \"{vineflower}\" \"{absJar}\" \"{outDir}\"")
         {
-            RedirectStandardOutput = true,
+            RedirectStandardOutput = false,
             RedirectStandardError  = true,
             UseShellExecute        = false,
-            WorkingDirectory       = AppContext.BaseDirectory,
         };
 
         using var proc = Process.Start(psi)
             ?? throw new InvalidOperationException("Failed to start java process.");
 
-        string stderr = proc.StandardError.ReadToEnd();
+        // Read stderr async to avoid blocking while stdout flows freely to the console
+        var stderrTask = proc.StandardError.ReadToEndAsync();
         proc.WaitForExit();
+        string stderr = stderrTask.Result;
 
         if (proc.ExitCode != 0)
             throw new Exception($"Vineflower exited with code {proc.ExitCode}:\n{stderr}");

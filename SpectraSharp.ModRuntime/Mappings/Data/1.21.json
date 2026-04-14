@@ -1,0 +1,26 @@
+{
+  "version": "1.21",
+  "obfuscated": false,
+  "stubs_version": "v1_21",
+  "loaders": ["forge", "fabric", "neoforge"],
+  "fingerprints": ["net/minecraft/world/level/Level.class"],
+  "mojmap": true,
+  "mojmap_url": "https://piston-meta.mojang.com/v1/packages/client_mappings.txt",
+  "classes": {
+    "net.minecraft.world.level.Level":                    "net.minecraft.world.level.Level",
+    "net.minecraft.world.level.LevelAccessor":            "net.minecraft.world.level.LevelAccessor",
+    "net.minecraft.world.level.block.Block":              "net.minecraft.world.level.block.Block",
+    "net.minecraft.world.level.block.state.BlockState":   "net.minecraft.world.level.block.state.BlockState",
+    "net.minecraft.world.item.Item":                      "net.minecraft.world.item.Item",
+    "net.minecraft.world.item.ItemStack":                 "net.minecraft.world.item.ItemStack",
+    "net.minecraft.core.BlockPos":                        "net.minecraft.core.BlockPos",
+    "net.minecraft.world.phys.Vec3":                      "net.minecraft.world.phys.Vec3",
+    "net.minecraft.world.entity.Entity":                  "net.minecraft.world.entity.Entity",
+    "net.minecraft.world.entity.LivingEntity":            "net.minecraft.world.entity.LivingEntity",
+    "net.minecraft.world.entity.player.Player":           "net.minecraft.world.entity.player.Player",
+    "net.minecraft.world.level.block.entity.BlockEntity": "net.minecraft.world.level.block.entity.BlockEntity",
+    "net.minecraftforge.common.MinecraftForge":           "net.minecraftforge.common.MinecraftForge",
+    "net.fabricmc.api.ModInitializer":                    "net.fabricmc.api.ModInitializer",
+    "net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents": "net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents"
+  }
+}

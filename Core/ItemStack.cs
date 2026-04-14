@@ -119,6 +119,36 @@ public sealed class ItemStack
     /// <summary>obf: <c>b()</c> — deep copy. Also deep-copies NBT (quirk 5).</summary>
     public ItemStack Copy() => new ItemStack(this);
 
+    // ── NBT serialization (spec: EntityNBT_Spec §7 / ItemStack_Spec) ────────────
+
+    /// <summary>
+    /// Writes this stack to <paramref name="tag"/>. Spec: <c>dk.b(ik tag)</c> → void.
+    /// Tag fields: "id" (short), "Count" (byte), "Damage" (short); optional "tag" compound.
+    /// </summary>
+    public void SaveToNbt(Nbt.NbtCompound tag)
+    {
+        tag.PutShort("id",     (short)ItemId);
+        tag.PutByte( "Count",  (byte)StackSize);
+        tag.PutShort("Damage", (short)_itemDamage);
+        if (_nbtTag is Nbt.NbtCompound nbtCompound)
+            tag.PutCompound("tag", nbtCompound);
+    }
+
+    /// <summary>
+    /// Creates an ItemStack from <paramref name="tag"/>. Returns null if tag is malformed.
+    /// Spec: <c>dk.c(ik tag)</c> — the static read factory.
+    /// </summary>
+    public static ItemStack? LoadFromNbt(Nbt.NbtCompound tag)
+    {
+        int id = tag.GetShort("id");
+        if (id <= 0) return null;
+        int count  = tag.GetByte("Count");
+        int damage = tag.GetShort("Damage");
+        var stack  = new ItemStack(id, count, damage);
+        stack._nbtTag = tag.GetCompound("tag");
+        return stack;
+    }
+
     // ── Enchantment helpers (spec §4) — stubs (ik spec pending) ──────────────
 
     /// <summary>obf: <c>n()</c> / <c>u()</c> — true if NBT tag contains enchantments. Stub: false.</summary>

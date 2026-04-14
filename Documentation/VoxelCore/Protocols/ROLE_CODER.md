@@ -132,6 +132,34 @@ Before closing the session, append one entry to `Documentation/METRICS.md`:
 
 ---
 
+## Mod Runtime Contract — Your Responsibility as Coder
+
+The Mod Runtime (built by the Mod Coder) defines interfaces in `Core/` and `Core/Mods/`
+that SpectraSharp.Core must implement. These interfaces are the contract between the
+mod system and the engine. **When you see a new method on an existing interface, implement
+it on the concrete Core class.**
+
+### Where to look
+
+| Interface file | Concrete class to implement |
+|---|---|
+| `Core/IWorld.cs` | `Core/World.cs` |
+| `Core/IBlockAccess.cs` | `Core/World.cs` (World implements both) |
+| `Core/Mods/IEngine.cs` | `Core/Engine.cs` |
+| `Core/Mods/IModRegistry.cs` | `Core/Engine.cs` or dedicated registry |
+| `Core/Mods/ICraftingManager.cs` | `Core/Mods/CraftingManager.cs` (create if missing) |
+| `Core/Mods/ISmeltingManager.cs` | `Core/Mods/SmeltingManager.cs` (create if missing) |
+
+### Rule
+
+If an interface gains a new method and the concrete class does not implement it →
+the build fails. Fix it immediately. If you don't know the correct behaviour yet,
+throw `NotImplementedException("Spec pending — see REQUESTS.md")` and file a request.
+
+Never leave an interface method unimplemented silently.
+
+---
+
 ## Definition of Done
 
 A system is done when:

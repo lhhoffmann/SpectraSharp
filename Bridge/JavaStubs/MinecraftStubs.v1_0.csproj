@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AssemblyName>MinecraftStubs.v1_0</AssemblyName>
+    <!-- Allow Java-style dotted namespaces (net.minecraft.*) -->
+    <RootNamespace>net.minecraft</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="IKVM" Version="8.*" />
+    <PackageReference Include="Lib.Harmony" Version="2.3.*" />
+    <!-- AllocGuard pools + ModRuntime contracts -->
+    <ProjectReference Include="..\..\SpectraSharp.ModRuntime\SpectraSharp.ModRuntime.csproj" />
+    <!-- Core interfaces (IWorld, IEngine, etc.) — never import concrete Core classes -->
+    <ProjectReference Include="..\..\SpectraSharp.csproj" />
+  </ItemGroup>
+</Project>

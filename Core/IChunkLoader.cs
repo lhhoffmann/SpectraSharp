@@ -29,4 +29,11 @@ public interface IChunkLoader
     /// Spec: <c>a()</c>.
     /// </summary>
     void Tick();
+
+    /// <summary>
+    /// Returns the chunk-grid coordinates (chunkX, chunkZ) of every chunk currently held
+    /// in memory. Used by <see cref="World.TickChunks"/> to iterate loaded chunks for
+    /// random block ticks without requiring a player-proximity list.
+    /// </summary>
+    IEnumerable<(int chunkX, int chunkZ)> GetLoadedChunkCoords();
 }

@@ -48,6 +48,15 @@ public class EntityItem : Entity
         MotionY      = 0.2;
     }
 
+    /// <summary>
+    /// NBT-load constructor. Used by <see cref="EntityRegistry.CreateFromNbt"/>.
+    /// ItemStack is a placeholder; <see cref="ReadEntityFromNBT"/> replaces it from the tag.
+    /// </summary>
+    public EntityItem(World world) : base(world)
+    {
+        ItemStack = new ItemStack(0); // placeholder
+    }
+
     // ── EntityInit (spec §3 step 2–3) ────────────────────────────────────────
 
     protected override void EntityInit()
@@ -107,6 +116,16 @@ public class EntityItem : Entity
         _age++;
         if (_age >= 6000) SetDead();
 
+        // Pickup check: search for nearby players within radius 1 (spec §5)
+        if (!IsDead && PickupDelay == 0 && World != null)
+        {
+            var nearby = World.GetNearbyPlayers(PosX, PosY, PosZ, 1.0);
+            foreach (var player in nearby)
+            {
+                if (TryPickup(player)) break;
+            }
+        }
+
         // Visual counter (drives renderer bobbing)
         _visualTick++;
     }
@@ -114,13 +133,18 @@ public class EntityItem : Entity
     // ── Pickup (spec §5) ─────────────────────────────────────────────────────
 
     /// <summary>
-    /// Server-side pickup attempt. Stub — player inventory accept requires Player spec.
-    /// Spec: <c>a(vi player)</c>.
+    /// Server-side pickup attempt.
+    /// Spec: <c>a(vi player)</c> — adds to player inventory if delay has expired.
     /// </summary>
-    public bool TryPickup(object player)
+    public bool TryPickup(EntityPlayer player)
     {
         if (PickupDelay > 0) return false;
-        // TODO: player.Inventory.AddItemStack(ItemStack) — vi spec pending
+        if (ItemStack == null) return false;
+        if (player.Inventory.AddItemStackToInventory(ItemStack))
+        {
+            SetDead(); // item absorbed
+            return true;
+        }
         return false;
     }
 
@@ -149,6 +173,29 @@ public class EntityItem : Entity
 
     // ── NBT hooks (stubs) ─────────────────────────────────────────────────────
 
-    protected override void ReadEntityFromNBT(object nbt) { /* ik spec pending */ }
-    protected override void WriteEntityToNBT(object nbt)  { /* ik spec pending */ }
+    /// <summary>
+    /// Writes EntityItem fields. Spec: <c>ih.a(ik tag)</c>.
+    /// Quirk: Health is written as <c>(short)((byte)_health)</c> — byte-cast then widen.
+    /// No PickupDelay field in Minecraft 1.0 NBT.
+    /// </summary>
+    protected override void WriteEntityToNBT(Nbt.NbtCompound tag)
+    {
+        tag.PutShort("Health", (short)(byte)_health); // byte-cast quirk (spec §4)
+        tag.PutShort("Age",    (short)_age);
+
+        var itemTag = new Nbt.NbtCompound();
+        ItemStack.SaveToNbt(itemTag);
+        tag.PutCompound("Item", itemTag);
+    }
+
+    /// <summary>Reads EntityItem fields. Spec: <c>ih.b(ik tag)</c>.</summary>
+    protected override void ReadEntityFromNBT(Nbt.NbtCompound tag)
+    {
+        _health = tag.GetShort("Health");
+        _age    = tag.GetShort("Age");
+
+        Nbt.NbtCompound? itemTag = tag.GetCompound("Item");
+        if (itemTag != null)
+            ItemStack = ItemStack.LoadFromNbt(itemTag) ?? ItemStack;
+    }
 }

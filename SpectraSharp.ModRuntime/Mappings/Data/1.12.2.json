@@ -1,0 +1,31 @@
+{
+  "version": "1.12.2",
+  "obfuscated": false,
+  "stubs_version": "v1_12",
+  "loaders": ["forge"],
+  "fingerprints": ["META-INF/MANIFEST.MF:ForgeVersion", "net/minecraftforge/fml/"],
+  "classes": {
+    "net.minecraft.world.World":                          "net.minecraft.world.World",
+    "net.minecraft.world.IBlockAccess":                   "net.minecraft.world.IBlockAccess",
+    "net.minecraft.block.Block":                          "net.minecraft.block.Block",
+    "net.minecraft.block.state.IBlockState":              "net.minecraft.block.state.IBlockState",
+    "net.minecraft.item.Item":                            "net.minecraft.item.Item",
+    "net.minecraft.item.ItemStack":                       "net.minecraft.item.ItemStack",
+    "net.minecraft.util.math.BlockPos":                   "net.minecraft.util.math.BlockPos",
+    "net.minecraft.util.math.Vec3d":                      "net.minecraft.util.math.Vec3d",
+    "net.minecraft.entity.Entity":                        "net.minecraft.entity.Entity",
+    "net.minecraft.entity.EntityLivingBase":              "net.minecraft.entity.EntityLivingBase",
+    "net.minecraft.entity.player.EntityPlayer":           "net.minecraft.entity.player.EntityPlayer",
+    "net.minecraft.tileentity.TileEntity":                "net.minecraft.tileentity.TileEntity",
+    "net.minecraft.world.gen.feature.WorldGenerator":     "net.minecraft.world.gen.feature.WorldGenerator",
+    "net.minecraftforge.fml.common.Mod":                  "net.minecraftforge.fml.common.Mod",
+    "net.minecraftforge.fml.common.event.FMLInitializationEvent":    "net.minecraftforge.fml.common.event.FMLInitializationEvent",
+    "net.minecraftforge.fml.common.event.FMLPreInitializationEvent": "net.minecraftforge.fml.common.event.FMLPreInitializationEvent",
+    "net.minecraftforge.fml.common.registry.GameRegistry": "net.minecraftforge.fml.common.registry.GameRegistry",
+    "net.minecraftforge.common.MinecraftForge":           "net.minecraftforge.common.MinecraftForge",
+    "net.minecraftforge.event.world.BlockEvent$BreakEvent": "net.minecraftforge.event.world.BlockEvent$BreakEvent",
+    "net.minecraftforge.event.entity.player.PlayerEvent":  "net.minecraftforge.event.entity.player.PlayerEvent"
+  },
+  "mojmap": false,
+  "searge": true
+}

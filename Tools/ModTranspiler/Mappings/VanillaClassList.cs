@@ -47,11 +47,20 @@ static class VanillaClassList
         "nk",  "pk",  "agw", "afv", "adb", "aec", "acl", "abx",
         "aby", "abg", "aav", "aaq", "aab",
 
-        // ── Item subclasses ──────────────────────────────────────────────────
+        // ── Item subclasses / item-related ───────────────────────────────────
         "jb",  "qz",  "wg",  "kv",  "jl",
+        "acy", "acx", "acz", "aco", // ItemTool, ItemSword, ItemSpade, ItemAxe, ItemHoe
+        "dk",                        // ItemStack
+        "sr",                        // Item (duplicate — explicit for clarity)
 
         // ── World / Level ────────────────────────────────────────────────────
         "zx",  "ry",  "gy",  "d",   "yy",
+
+        // ── WorldGen ─────────────────────────────────────────────────────────
+        "ky",  // WorldGenMineable (ore vein generator)
+        "ig",  // WorldGenerator base class
+        "kq",  // WorldGenTrees
+        "aam", // WorldGenLakes
 
         // ── GUI ──────────────────────────────────────────────────────────────
         "acr", "adt",
@@ -118,6 +127,20 @@ static class VanillaClassList
         ["nf"]  = "BlockPumpkin",
         ["sy"]  = "BlockEnchantmentTable",
         ["aci"] = "BlockDragonEgg",
+
+        // ── Items ────────────────────────────────────────────────────────────
+        ["sr"]  = "Item",
+        ["acy"] = "ItemTool",
+        ["acx"] = "ItemSword",
+        ["acz"] = "ItemSpade",
+        ["aco"] = "ItemHoe",
+        ["dk"]  = "ItemStack",
+
+        // ── WorldGen ─────────────────────────────────────────────────────────
+        ["ky"]  = "WorldGenMineable",
+        ["ig"]  = "WorldGenerator",
+        ["kq"]  = "WorldGenTrees",
+        ["aam"] = "WorldGenLakes",
     };
 
     public static string ToHumanName(string obfuscated) =>

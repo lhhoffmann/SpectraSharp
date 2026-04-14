@@ -36,15 +36,15 @@ public sealed class Engine(AssetManager assets, TextureRegistry textures, Bridge
     // GPU resources — created after InitWindow, freed before CloseWindow
     private readonly Dictionary<string, Model> _blockModels = [];
 
-    // ── Terrain (single merged mesh — one draw call for the whole 16×16 floor) ──
-    private Model _terrainModel;
-    private bool  _terrainModelReady;
+    // ── Voxel terrain meshes (one Model per unique tile texture) ─────────────────
+    private readonly Dictionary<string, Model> _voxelModels = [];
 
     // ── Core world (game thread only — never read directly by render thread) ──
-    private World?              _world;
-    private WorldProvider?      _worldProvider;
+    private World?               _world;
+    private WorldProvider?       _worldProvider;
+    private int                  _surfaceY = 64; // updated after chunk (0,0) generates
     private readonly List<Entity> _entities = [];
-    private DebugMob?           _debugMob;
+    private DebugMob?            _debugMob;
 
 
     // ── Entry point ───────────────────────────────────────────────────────────
@@ -56,11 +56,12 @@ public sealed class Engine(AssetManager assets, TextureRegistry textures, Bridge
         Raylib.SetTargetFPS(0);
 
         SetWindowIcon();
+        BlockRegistry.Initialize(); // must run before LoadAssets so Core block face tiles are known
         LoadAssets();
         SetupMaterials();
-        BuildTerrainModel();
         SetupBridgeBlocks();
         SetupCoreWorld();
+        BuildVoxelMeshes(); // must run AFTER SetupCoreWorld so chunk (0,0) is generated
         SetupCamera();
 
         Thread gameThread = new(GameLoop)
@@ -130,19 +131,14 @@ public sealed class Engine(AssetManager assets, TextureRegistry textures, Bridge
         // ── Core world tick ──────────────────────────────────────────────────
         _world?.MainTick();
 
-        // ── Entity ticks (reset AABB pool before each physics pass) ─────────
+        // ── Entity ticks ─────────────────────────────────────────────────────
         AxisAlignedBB.ResetPool();
         foreach (Entity entity in _entities)
         {
             if (!entity.IsDead) entity.Tick();
         }
 
-        // ── Debug mob: take 1 damage every 2 seconds (40 ticks) ─────────────
-        if (_debugMob != null && !_debugMob.IsDead
-            && _world != null && _world.TotalWorldTime % 40 == 0)
-        {
-            _debugMob.AttackEntityFrom(null!, 1);
-        }
+        // Debug mob damage intentionally disabled — entity physics not yet fully wired
     }
 
     private WorldSnapshot BuildSnapshot()
@@ -177,7 +173,7 @@ public sealed class Engine(AssetManager assets, TextureRegistry textures, Bridge
 
             if (entity is EntityItem item)
             {
-                label = $"Item  age={item.Age}";
+                label = $"Item age={item.Age}";
                 col   = new Color(255, 220, 50, 255); // gold
             }
             else if (entity is LivingEntity mob)
@@ -220,57 +216,69 @@ public sealed class Engine(AssetManager assets, TextureRegistry textures, Bridge
 
     private void SetupCoreWorld()
     {
-        // Build world
+        const long seed = 42L;
+
+        // Build world using ChunkProviderServer wrapping the procedural generator.
+        // Two-phase construction mirrors ChunkProviderGenerate.SetWorld: create the
+        // server before World exists, then wire them together via SetWorld.
         _worldProvider = new OverworldProvider();
-        var loader     = new DebugChunkLoader();
-        _world         = new World(loader, 42L, false, _worldProvider);
-        loader.SetWorld(_world);
+        var generator  = new ChunkProviderGenerate(seed);
+        var server     = new ChunkProviderServer(WorldSave.NullSaveHandler.Instance.GetChunkPersistence(_worldProvider), generator);
+        _world         = new World(server, seed, false, _worldProvider);
+        server.SetWorld(_world);
 
-        // Fill 16×16 flat terrain: stone at Y=0, grass at Y=1
-        Console.WriteLine("[Engine] Building debug terrain...");
-        for (int bx = 0; bx < 16; bx++)
-        for (int bz = 0; bz < 16; bz++)
-        {
-            _world.SetBlock(bx, 0, bz, 1); // stone
-            _world.SetBlock(bx, 1, bz, 2); // grass
-        }
+        Console.WriteLine("[Engine] Generating terrain chunk (0, 0)...");
+        // Force chunk (0,0) to generate now so surface heights are available for mesh building
+        _ = _world.GetBlockId(0, 0, 0);
 
-        // Verify chunk delegation
-        int testId = _world.GetBlockId(8, 0, 8);
-        Console.WriteLine($"[Engine] World.GetBlockId(8,0,8) = {testId} (expected 1 = stone)");
         Console.WriteLine($"[Engine] BrightnessTable[15] = {_worldProvider.BrightnessTable[15]:F4}");
 
-        // Spawn 3 EntityItem above the terrain (grass at Y=1, so items start at Y=4)
-        // ItemStack(itemId=1 = stone block item, count=1)
+        // Find surface height at chunk centre (8, _, 8) for entity placement
+        _surfaceY = FindSurfaceY(8, 8);
+        Console.WriteLine($"[Engine] Surface at (8,8) = Y{_surfaceY}");
+
+        // Spawn 3 EntityItem floating just above the surface
         for (int i = 0; i < 3; i++)
         {
-            var stack  = new ItemStack(1, 1);  // stone block item
-            var item   = new EntityItem(_world, 4 + i * 4, 5.0, 4 + i * 2, stack);
-            item.PickupDelay = 0; // immediately pickable in theory
+            var stack = new ItemStack(1, 1); // stone block item
+            var item  = new EntityItem(_world, 4 + i * 4, _surfaceY + 3.0, 4 + i * 2, stack);
+            item.PickupDelay = 0;
             _entities.Add(item);
         }
 
-        // Spawn a debug mob (takes damage every 2 sec for health test)
+        // Spawn debug mob at surface
         _debugMob = new DebugMob(_world);
-        _debugMob.SetPosition(8.0, 2.0, 8.0);
+        _debugMob.SetPosition(8.0, _surfaceY + 1.0, 8.0);
         _entities.Add(_debugMob);
 
         Console.WriteLine($"[Engine] Core world ready. {_entities.Count} entities spawned.");
     }
 
+    /// <summary>Returns the Y of the top non-air block at (x, z), or 0 if fully air.</summary>
+    private int FindSurfaceY(int x, int z)
+    {
+        if (_world == null) return 1;
+        for (int y = World.WorldHeight - 1; y >= 0; y--)
+            if (_world.GetBlockId(x, y, z) != 0) return y;
+        return 0;
+    }
+
     private void SetupCamera()
     {
-        int   bridgeCount = bridge.AllStubs.Count(s => s is BlockBase);
-        float bridgeEnd   = (bridgeCount - 1) * 2f;
-        float sceneWidth  = Math.Max(bridgeEnd, 15f);
-        float centerX     = sceneWidth / 2f;
+        // Look at the centre of the 16×16 terrain patch from above-behind.
+        // _surfaceY is the actual terrain surface height (typically 63-70 for seed 42).
+        float centerX  = 8f;
+        float centerZ  = WorldOffsetZ + 8f; // middle of the 16-block terrain patch
+        float sy       = _surfaceY;
 
         _camera = new Camera3D
         {
-            Position   = new Vector3(centerX, 20f, -14f),
-            Target     = new Vector3(centerX, 0f, 12f),
+            // Diagonal view: above and slightly behind the terrain patch
+            // so both the terrain surface and entity cubes are clearly visible
+            Position   = new Vector3(centerX, sy + 12f, WorldOffsetZ - 10f),
+            Target     = new Vector3(centerX, sy - 2f,  centerZ),
             Up         = Vector3.UnitY,
-            FovY       = 65f,
+            FovY       = 70f,
             Projection = CameraProjection.Perspective
         };
     }
@@ -302,96 +310,178 @@ public sealed class Engine(AssetManager assets, TextureRegistry textures, Bridge
         }
         _blockModels.Clear();
 
-        if (_terrainModelReady)
+        foreach (var key in _voxelModels.Keys.ToList())
         {
-            _terrainModel.Materials[0].Maps[(int)MaterialMapIndex.Albedo].Texture = new Texture2D();
-            Raylib.UnloadModel(_terrainModel);
-            _terrainModelReady = false;
+            Model m = _voxelModels[key];
+            m.Materials[0].Maps[(int)MaterialMapIndex.Albedo].Texture = new Texture2D();
+            Raylib.UnloadModel(m);
         }
+        _voxelModels.Clear();
     }
 
-    // ── Terrain mesh (one merged top-face mesh = one draw call for 16×16 floor) ─
+    // ── 3D voxel terrain mesh ─────────────────────────────────────────────────────
 
     /// <summary>
-    /// Builds a single merged mesh with one top-face quad per block in the 16×16 terrain.
-    /// Result: 1 DrawModel call instead of 256 DrawModelEx calls — massive perf win.
-    /// Uses the grass-top tile ("block_0") which must already be in TextureRegistry.
-    /// Vertex memory is allocated in managed arrays, pinned during UploadMesh, then nulled so
-    /// Raylib's UnloadMesh never calls free() on managed memory.
+    /// Iterates all blocks in chunk (0,0) and emits one quad per visible face (neighbour is air).
+    /// Faces are grouped by tile texture key; one Mesh+Model is built per unique tile.
+    /// Result: one draw call per unique tile texture (≈ 3–5 draw calls for typical terrain).
+    ///
+    /// Face convention (matches Core Block.GetTextureIndex):
+    ///   face 0 = bottom (-Y),  face 1 = top (+Y)
+    ///   face 2 = north (-Z),   face 3 = south (+Z)
+    ///   face 4 = west (-X),    face 5 = east (+X)
+    ///
+    /// Vertex layout: 6 verts per face (2 triangles, no index buffer → glDrawArrays).
     /// </summary>
-    private unsafe void BuildTerrainModel()
+    private unsafe void BuildVoxelMeshes()
     {
-        Texture2D grassTex = textures.TryGet("block_0") ?? default;
-        if (grassTex.Id == 0)
+        if (_world == null) return;
+
+        // Build block-ID → tile-per-face lookup from Core blocks
+        // (uses Block.GetTextureIndex which handles multi-face blocks like grass, log)
+        var faceGroups = new Dictionary<string, (List<float> verts, List<float> uvs)>();
+
+        bool IsAirAt(int bx, int by, int bz)
         {
-            Console.WriteLine("[Engine] BuildTerrainModel: block_0 texture not ready — skipping.");
-            return;
+            if (by < 0 || by >= World.WorldHeight) return true;
+            if (bx < 0 || bx >= 16 || bz < 0 || bz >= 16) return true;
+            return _world.GetBlockId(bx, by, bz) == 0;
         }
 
-        const int gridSize  = 16;
-        const int quadCount = gridSize * gridSize; // 256
-        const float meshY   = 2.0f; // top face of grass block at world-Y=1 (Y=1 block → top at Y=2)
-
-        // Managed arrays — GC-pinned inside fixed{} during UploadMesh, then released
-        var verts = new float[quadCount * 4 * 3]; // xyz per vertex, 4 verts per quad
-        var uvs   = new float[quadCount * 4 * 2]; // uv per vertex
-        var idxs  = new ushort[quadCount * 6];    // 2 triangles × 3 indices per quad
-
-        int vi = 0, ui = 0, ii = 0;
-        ushort bv = 0;
-
-        for (int qz = 0; qz < gridSize; qz++)
-        for (int qx = 0; qx < gridSize; qx++)
+        void AddQuad(string key, float x0, float y0, float z0,
+                                 float x1, float y1, float z1,
+                                 float x2, float y2, float z2,
+                                 float x3, float y3, float z3)
         {
-            float x0 = qx,                x1 = qx + 1f;
-            float z0 = qz + WorldOffsetZ, z1 = qz + 1f + WorldOffsetZ;
-
-            // Top-face quad: 4 corners, CCW winding viewed from above (+Y normal)
-            verts[vi++] = x0; verts[vi++] = meshY; verts[vi++] = z0;
-            verts[vi++] = x1; verts[vi++] = meshY; verts[vi++] = z0;
-            verts[vi++] = x1; verts[vi++] = meshY; verts[vi++] = z1;
-            verts[vi++] = x0; verts[vi++] = meshY; verts[vi++] = z1;
-
-            // Per-quad UV 0..1 (each tile shows the full grass-top texture)
-            // V is NOT flipped here — TerrainAtlas already applied ImageFlipVertical
-            uvs[ui++] = 0f; uvs[ui++] = 0f;
-            uvs[ui++] = 1f; uvs[ui++] = 0f;
-            uvs[ui++] = 1f; uvs[ui++] = 1f;
-            uvs[ui++] = 0f; uvs[ui++] = 1f;
-
-            // Two CCW triangles: (0,2,1) and (0,3,2)
-            idxs[ii++] = bv;                   idxs[ii++] = (ushort)(bv + 2); idxs[ii++] = (ushort)(bv + 1);
-            idxs[ii++] = bv;                   idxs[ii++] = (ushort)(bv + 3); idxs[ii++] = (ushort)(bv + 2);
-            bv += 4;
+            if (!faceGroups.TryGetValue(key, out var g))
+                faceGroups[key] = g = (new List<float>(128), new List<float>(128));
+            var (v, u) = g;
+            // Triangle 1: v0, v1, v2
+            v.Add(x0); v.Add(y0); v.Add(z0); u.Add(0f); u.Add(0f);
+            v.Add(x1); v.Add(y1); v.Add(z1); u.Add(1f); u.Add(0f);
+            v.Add(x2); v.Add(y2); v.Add(z2); u.Add(1f); u.Add(1f);
+            // Triangle 2: v0, v2, v3
+            v.Add(x0); v.Add(y0); v.Add(z0); u.Add(0f); u.Add(0f);
+            v.Add(x2); v.Add(y2); v.Add(z2); u.Add(1f); u.Add(1f);
+            v.Add(x3); v.Add(y3); v.Add(z3); u.Add(0f); u.Add(1f);
         }
 
-        Mesh mesh;
-        fixed (float*  vp = verts, up = uvs)
-        fixed (ushort* ip = idxs)
+        int totalFaces = 0;
+
+        for (int bx = 0; bx < 16; bx++)
+        for (int bz = 0; bz < 16; bz++)
+        for (int by = 0; by < World.WorldHeight; by++)
         {
-            mesh = new Mesh
+            int id = _world.GetBlockId(bx, by, bz);
+            if (id == 0) continue;
+
+            Block? blk = Block.BlocksList[id];
+            int tileTop    = blk?.GetTextureIndex(1) ?? (blk?.BlockIndexInTexture ?? 1);
+            int tileSide   = blk?.GetTextureIndex(2) ?? (blk?.BlockIndexInTexture ?? 1);
+            int tileBottom = blk?.GetTextureIndex(0) ?? (blk?.BlockIndexInTexture ?? 1);
+
+            float x = bx, y = by, z = bz + WorldOffsetZ;
+
+            // Top face (+Y): face=1, neighbour above
+            if (IsAirAt(bx, by + 1, bz))
             {
-                VertexCount   = quadCount * 4,
-                TriangleCount = quadCount * 2,
-                Vertices      = vp,
-                TexCoords     = up,
-                Indices       = ip,
-            };
-            // UploadMesh copies CPU data to GPU; nulling pointers afterward prevents
-            // UnloadMesh from calling free() on managed memory (free(null) = safe no-op)
-            Raylib.UploadMesh(ref mesh, false);
-            mesh.Vertices  = null;
-            mesh.TexCoords = null;
-            mesh.Indices   = null;
+                string k = $"block_{tileTop}";
+                if (textures.TryGet(k) != null)
+                {
+                    AddQuad(k,  x,y+1,z,  x+1,y+1,z,  x+1,y+1,z+1,  x,y+1,z+1);
+                    totalFaces++;
+                }
+            }
+
+            // Bottom face (-Y): face=0, neighbour below
+            if (IsAirAt(bx, by - 1, bz))
+            {
+                string k = $"block_{tileBottom}";
+                if (textures.TryGet(k) != null)
+                {
+                    AddQuad(k,  x,y,z+1,  x+1,y,z+1,  x+1,y,z,  x,y,z);
+                    totalFaces++;
+                }
+            }
+
+            // North face (-Z): face=2, neighbour at z-1
+            if (IsAirAt(bx, by, bz - 1))
+            {
+                string k = $"block_{tileSide}";
+                if (textures.TryGet(k) != null)
+                {
+                    AddQuad(k,  x+1,y+1,z,  x,y+1,z,  x,y,z,  x+1,y,z);
+                    totalFaces++;
+                }
+            }
+
+            // South face (+Z): face=3, neighbour at z+1
+            if (IsAirAt(bx, by, bz + 1))
+            {
+                string k = $"block_{tileSide}";
+                if (textures.TryGet(k) != null)
+                {
+                    AddQuad(k,  x,y+1,z+1,  x+1,y+1,z+1,  x+1,y,z+1,  x,y,z+1);
+                    totalFaces++;
+                }
+            }
+
+            // West face (-X): face=4, neighbour at x-1
+            if (IsAirAt(bx - 1, by, bz))
+            {
+                string k = $"block_{tileSide}";
+                if (textures.TryGet(k) != null)
+                {
+                    AddQuad(k,  x,y+1,z,  x,y+1,z+1,  x,y,z+1,  x,y,z);
+                    totalFaces++;
+                }
+            }
+
+            // East face (+X): face=5, neighbour at x+1
+            if (IsAirAt(bx + 1, by, bz))
+            {
+                string k = $"block_{tileSide}";
+                if (textures.TryGet(k) != null)
+                {
+                    AddQuad(k,  x+1,y+1,z+1,  x+1,y+1,z,  x+1,y,z,  x+1,y,z+1);
+                    totalFaces++;
+                }
+            }
         }
 
-        // LoadModelFromMesh sees vaoId > 0 and skips re-upload
-        _terrainModel = Raylib.LoadModelFromMesh(mesh);
-        Raylib.SetMaterialTexture(ref _terrainModel, 0, MaterialMapIndex.Albedo, ref grassTex);
-        Raylib.SetTextureFilter(grassTex, TextureFilter.Point);
-        _terrainModelReady = true;
+        // Build one Mesh+Model per texture group
+        foreach (var (key, (vertsL, uvsL)) in faceGroups)
+        {
+            if (vertsL.Count == 0) continue;
+            Texture2D? tex = textures.TryGet(key);
+            if (tex == null || tex.Value.Id == 0) continue;
 
-        Console.WriteLine($"[Engine] Terrain mesh ready: {quadCount} quads, 1 draw call.");
+            float[] vArr = vertsL.ToArray();
+            float[] uArr = uvsL.ToArray();
+            int vc = vArr.Length / 3;
+
+            Mesh mesh;
+            fixed (float* vp = vArr, up = uArr)
+            {
+                mesh = new Mesh
+                {
+                    VertexCount   = vc,
+                    TriangleCount = vc / 3,
+                    Vertices      = vp,
+                    TexCoords     = up,
+                };
+                Raylib.UploadMesh(ref mesh, false);
+                mesh.Vertices  = null;
+                mesh.TexCoords = null;
+            }
+
+            Model model = Raylib.LoadModelFromMesh(mesh);
+            Texture2D t = tex.Value;
+            Raylib.SetMaterialTexture(ref model, 0, MaterialMapIndex.Albedo, ref t);
+            _voxelModels[key] = model;
+        }
+
+        Console.WriteLine($"[Engine] Voxel mesh ready: {totalFaces} faces, {_voxelModels.Count} draw calls.");
     }
 
     // ── Window icon ───────────────────────────────────────────────────────────
@@ -409,21 +499,91 @@ public sealed class Engine(AssetManager assets, TextureRegistry textures, Bridge
 
     private void LoadAssets()
     {
+        // Load biome colour lookup images (grasscolor.png, foliagecolor.png) first
+        // so BiomeTintColor properties can use them when tiles are extracted below.
+        TryLoadColorImage("grasscolor.png",   pixels => GrassColorizer.SetPixels(pixels));
+        TryLoadColorImage("foliagecolor.png", pixels => FoliageColorizer.SetPixels(pixels));
+
         AssetData atlasData = assets.ExtractTerrainPng();
         Image     atlas     = Raylib.LoadImageFromMemory(".png", atlasData.Memory.ToArray());
 
-        var seen = new HashSet<string>();
+        var white = new Raylib_cs.Color(255, 255, 255, 255);
+
+        // ── Phase 1: collect unique (tileIdx, tint) per texture key ────────────
+        // Separating data collection from GPU work avoids closing over Raylib Image
+        // resources in local functions. Biome-tinted entries win over untinted ones
+        // so GrassBlock's green tint for tile 0 beats the Metallurgy placeholder
+        // stubs that also map to tile 0 with white tint.
+        var tileQueue = new Dictionary<string, (int idx, Raylib_cs.Color tint)>();
+
+        bool HasBiomeTint(Raylib_cs.Color c) =>
+            c.A != 0 && (c.R != 255 || c.G != 255 || c.B != 255);
+
         foreach (IBridgeStub stub in bridge.AllStubs)
         {
-            if (stub is not BlockBase block || !seen.Add(block.TextureKey)) continue;
-            TerrainAtlas.ExtractAndRegister(block.TextureIndex, atlas, textures, block.TextureKey);
+            if (stub is not BlockBase block) continue;
+            var biomeTint = block.BiomeTintColor;
 
-            if (textures.TryGet(block.TextureKey) is Texture2D tex)
-                Raylib.SetTextureFilter(tex, TextureFilter.Point);
+            // For each (key, tint) pair: store it, but let a biome-tinted entry
+            // overwrite a white entry for the same key.
+            void TryQueue(int idx, string key, Raylib_cs.Color tint)
+            {
+                if (!tileQueue.TryGetValue(key, out var existing)
+                    || (HasBiomeTint(tint) && !HasBiomeTint(existing.tint)))
+                    tileQueue[key] = (idx, tint);
+            }
+
+            // Primary tile (covers all faces for most blocks)
+            TryQueue(block.TextureIndex,       block.TextureKey,       biomeTint);
+            // Top face (may differ from primary, e.g. WoodBlock top = log-end vs bark)
+            TryQueue(block.TextureIndexTop,    block.TextureKeyTop,    biomeTint);
+            // Side faces — NO biome tint: grass_side has dirt (brown) + gray gradient;
+            // applying full tint makes the whole tile green, hiding the dirt portion.
+            TryQueue(block.TextureIndexSide,   block.TextureKeySide,   white);
+            // Bottom face — no biome tint
+            TryQueue(block.TextureIndexBottom, block.TextureKeyBottom, white);
+        }
+
+        // ── Phase 2: extract and upload each unique tile ───────────────────────
+        foreach (var (key, (idx, tint)) in tileQueue)
+        {
+            TerrainAtlas.ExtractAndRegister(idx, atlas, textures, key, tint);
+            if (textures.TryGet(key) is Texture2D t)
+                Raylib.SetTextureFilter(t, TextureFilter.Point);
         }
 
         Raylib.UnloadImage(atlas);
-        Console.WriteLine($"[Engine] Assets loaded — {bridge.Count} stub(s), {seen.Count} unique tile(s).");
+        Console.WriteLine($"[Engine] Assets loaded — {bridge.Count} stub(s), {tileQueue.Count} unique tile(s).");
+    }
+
+    /// <summary>
+    /// Loads a 256×256 colour image from the JAR and passes its pixel data to the given setter.
+    /// Silently skips if the entry is missing (older JAR versions) or cannot be decoded.
+    /// </summary>
+    private unsafe void TryLoadColorImage(string entryPath, Action<int[]> setPixels)
+    {
+        try
+        {
+            AssetData data  = assets.ExtractAsset(entryPath);
+            Image     img   = Raylib.LoadImageFromMemory(".png", data.Memory.ToArray());
+            int       count = img.Width * img.Height;
+            int[]     pixels = new int[count];
+
+            Color* ptr = (Color*)img.Data;
+            for (int i = 0; i < count; i++)
+            {
+                Color c = ptr[i];
+                pixels[i] = (c.R << 16) | (c.G << 8) | c.B;
+            }
+
+            Raylib.UnloadImage(img);
+            setPixels(pixels);
+            Console.WriteLine($"[Engine] Loaded {entryPath} ({count} pixels).");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[Engine] {entryPath} not available — using fallback colours. ({ex.Message})");
+        }
     }
 
     // ── Render ────────────────────────────────────────────────────────────────
@@ -439,9 +599,15 @@ public sealed class Engine(AssetManager assets, TextureRegistry textures, Bridge
         foreach (BlockRenderData block in snap.Blocks)
             DrawBlock(block);
 
-        // One call for the entire 16×16 terrain instead of 256 individual DrawModelEx
-        if (_terrainModelReady)
-            Raylib.DrawModel(_terrainModel, Vector3.Zero, 1f, Color.White);
+        // 3D voxel terrain — one draw call per tile texture
+        if (_voxelModels.Count > 0)
+        {
+            Rlgl.DisableBackfaceCulling();
+            foreach (Model vm in _voxelModels.Values)
+                Raylib.DrawModel(vm, Vector3.Zero, 1f, Color.White);
+            Rlgl.EnableBackfaceCulling();
+        }
+
 
         foreach (EntityRenderData entity in snap.Entities)
             DrawEntity(entity);

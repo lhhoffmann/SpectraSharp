@@ -121,6 +121,7 @@ public class Block
         CanPassThrough[blockId]   = !material.BlocksMovement();
         _unknownN[blockId]        = false;
         SlipperinessMap[blockId]  = Slipperiness; // default 0.6F; set before subclass can change it
+        RenderSpecial[blockId]    = true;          // s[id] = true by default; cleared via ClearNeedsRandomTick()
     }
 
     /// <summary>
@@ -193,6 +194,7 @@ public class Block
     public Block ClearNeedsRandomTick()
     {
         NeedsRandomTick = false;
+        RenderSpecial[BlockID] = false;
         return this;
     }
 
@@ -243,6 +245,13 @@ public class Block
     public virtual int QuantityDroppedWithBonus(int fortune, JavaRandom rng)
         => QuantityDropped(rng);
 
+    /// <summary>
+    /// Metadata (damage value) of the dropped item. Default 0.
+    /// Override to preserve the block's own metadata in the drop (e.g. wool colour, slab variant).
+    /// Spec: <c>a(int meta) — getDamageValue</c>.
+    /// </summary>
+    public virtual int DamageDropped(int meta) => 0;
+
     /// <summary>Returns tick delay denominator. Default 10. Spec: <c>d()</c>.</summary>
     public virtual int GetTickDelay() => 10;
 
@@ -286,6 +295,18 @@ public class Block
 
     /// <summary>Called when a neighbour changes. Default no-op. Spec: <c>e(World,x,y,z,int neighbourId)</c>.</summary>
     public virtual void OnNeighborBlockChange(IWorld world, int x, int y, int z, int neighbourId) { }
+
+    /// <summary>
+    /// Called when a player right-clicks the block. Returns true to consume the click.
+    /// Spec: <c>a(ry, x, y, z, vi player)</c>.
+    /// </summary>
+    public virtual bool OnBlockActivated(IWorld world, int x, int y, int z, EntityPlayer player) => false;
+
+    /// <summary>
+    /// Called each tick while an entity walks on top of this block.
+    /// Spec: <c>b(ry, x, y, z, ia entity)</c>.
+    /// </summary>
+    public virtual void OnEntityWalking(IWorld world, int x, int y, int z, Entity entity) { }
 
     /// <summary>Called when placed. Default no-op. Spec: <c>a(World,x,y,z)</c>.</summary>
     public virtual void OnBlockAdded(IWorld world, int x, int y, int z) { }
@@ -468,6 +489,28 @@ public class Block
     public virtual float GetSlipperiness(IBlockAccess world, int x, int y, int z)
         => world.IsWet(x, y, z) ? 0.2f : 1.0f;
 
+    /// <summary>
+    /// Spawns an EntityItem at a jittered position inside block (x,y,z).
+    /// Jitter: (rnd*0.7)+0.15 per axis so items appear in the centre third of the block.
+    /// Pickup delay = 10 ticks (quirk 5). Spec: <c>a(ry,x,y,z,dk)</c>.
+    /// </summary>
+    protected void SpawnAsEntity(IWorld world, int x, int y, int z, ItemStack stack)
+    {
+        if (world.IsClientSide) return;
+
+        double jx = world.Random.NextFloat() * 0.7f + 0.15;
+        double jy = world.Random.NextFloat() * 0.7f + 0.15;
+        double jz = world.Random.NextFloat() * 0.7f + 0.15;
+
+        // EntityItem requires the concrete World; IWorld is the calling contract.
+        // Blocks are only ever ticked by World.MainTick, so the cast is safe.
+        if (world is not World concreteWorld) return;
+
+        var entity = new EntityItem(concreteWorld, x + jx, y + jy, z + jz, stack);
+        entity.PickupDelay = 10; // quirk 5 — 10-tick pickup delay
+        world.SpawnEntity(entity);
+    }
+
     /// <summary>Unlocalized name (translation key, e.g. "tile.stone"). Spec: <c>p()</c>.</summary>
     public string? GetUnlocalizedName() => BlockName;
 
@@ -494,8 +537,6 @@ public class Block
     /// <summary>
     /// Drops this block as an item with a probability gate per dropped item.
     /// Jitter formula: (rnd*0.7)+0.15 per axis (quirk 4). Spec: <c>a(World,x,y,z,meta,float chance,fortune)</c>.
-    ///
-    /// EntityItem creation is stubbed — requires EntityItem (ih) spec.
     /// </summary>
     public virtual void DropBlockAsItemWithChance(
         IWorld world, int x, int y, int z, int meta, float dropChance, int fortune)
@@ -510,14 +551,7 @@ public class Block
             int itemId = IdDropped(meta, world.Random, fortune);
             if (itemId <= 0) continue;
 
-            // Jitter: (rnd * 0.7F) + (1.0F - 0.7F) * 0.5F = rnd * 0.7 + 0.15 (quirk 4)
-            double jx = world.Random.NextFloat() * 0.7f + 0.15;
-            double jy = world.Random.NextFloat() * 0.7f + 0.15;
-            double jz = world.Random.NextFloat() * 0.7f + 0.15;
-
-            // TODO: spawn EntityItem at (x+jx, y+jy, z+jz) with itemId
-            // Blocked on EntityItem (ih) and ItemStack (dk) specs.
-            // SpawnAsEntity(world, x, y, z, new ItemStack(itemId));
+            SpawnAsEntity(world, x, y, z, new ItemStack(itemId, 1, DamageDropped(meta)));
         }
     }
 

@@ -13,10 +13,13 @@
 
   <ItemGroup>
     <Compile Remove="Tools/**" />
+    <Compile Remove="Bridge/JavaStubs/**" />
+    <Compile Remove="SpectraSharp.ModRuntime/**" />
   </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Raylib-cs" Version="7.0.2" />
+    <PackageReference Include="Lib.Harmony" Version="2.3.3" />
   </ItemGroup>
 
   <ItemGroup>

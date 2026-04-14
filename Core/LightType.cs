@@ -1,12 +1,11 @@
 namespace SpectraSharp.Core;
 
 /// <summary>
-/// Partial replica of <c>bn</c> (EnumSkyBlock / LightType).
+/// Replica of <c>bn</c> (EnumSkyBlock / LightType).
 /// Two-value enum distinguishing sky-light from block-light.
 ///
-/// Confirmed from Chunk_Spec.md and World_Spec.md usage:
+/// Confirmed from Chunk_Spec.md, World_Spec.md, and LightPropagation_Spec.md:
 ///   bn.a = sky-light, bn.b = block-light.
-/// Full <c>bn</c> spec pending (see REQUESTS.md).
 /// </summary>
 public enum LightType
 {

@@ -6,6 +6,8 @@ namespace SpectraSharp.Core.Mods;
 /// </summary>
 public interface IEngine
 {
-    IWorld      World    { get; }
-    IModRegistry Registry { get; }
+    IWorld           World     { get; }
+    IModRegistry     Registry  { get; }
+    ICraftingManager Crafting  { get; }
+    ISmeltingManager Smelting  { get; }
 }

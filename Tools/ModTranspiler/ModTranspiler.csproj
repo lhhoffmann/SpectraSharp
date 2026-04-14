@@ -24,4 +24,25 @@
     <ProjectReference Include="../../SpectraSharp.csproj" />
   </ItemGroup>
 
+  <!--
+    Vineflower decompiler — LGPL 2.1 (https://github.com/Vineflower/vineflower)
+    Not bundled in this repository. Downloaded automatically from Maven Central on first build.
+    The JAR is gitignored; only this declaration is committed.
+  -->
+  <PropertyGroup>
+    <VineflowerVersion>1.10.1</VineflowerVersion>
+    <VineflowerJar>$(MSBuildThisFileDirectory)../../tools/decompiler/vineflower.jar</VineflowerJar>
+    <VineflowerUrl>https://repo1.maven.org/maven2/org/vineflower/vineflower/$(VineflowerVersion)/vineflower-$(VineflowerVersion).jar</VineflowerUrl>
+  </PropertyGroup>
+
+  <Target Name="DownloadVineflower" BeforeTargets="Build" Condition="!Exists('$(VineflowerJar)')">
+    <Message Text="[ModTranspiler] Downloading Vineflower $(VineflowerVersion) from Maven Central..." Importance="High" />
+    <MakeDir Directories="$(MSBuildThisFileDirectory)../../tools/decompiler" />
+    <DownloadFile
+      SourceUrl="$(VineflowerUrl)"
+      DestinationFolder="$(MSBuildThisFileDirectory)../../tools/decompiler"
+      DestinationFileName="vineflower.jar" />
+    <Message Text="[ModTranspiler] Vineflower downloaded → tools/decompiler/vineflower.jar" Importance="High" />
+  </Target>
+
 </Project>

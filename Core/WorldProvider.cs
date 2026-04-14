@@ -22,7 +22,7 @@ public abstract class WorldProvider
     // ── Fields (spec §2) ─────────────────────────────────────────────────────
 
     public  World?  WorldRef;                  // obf: a — set by RegisterWorld
-    // obf: b — WorldChunkManager (vh) — stub (vh spec pending)
+    // obf: b — WorldChunkManager (vh); created by CreateWorldChunkManager
 #pragma warning disable CS0169
     private bool    _unknownC;                 // obf: c — purpose TBD
     private bool    _unknownD;                 // obf: d — purpose TBD
@@ -48,11 +48,12 @@ public abstract class WorldProvider
 
     /// <summary>
     /// Creates the WorldChunkManager for this dimension. Spec: protected <c>b()</c>.
-    /// [UNCERTAIN] — vh (WorldChunkManager) spec pending. No-op stub.
+    /// Overworld: new vh(WorldRef). Nether subclass would create a single-biome manager.
     /// </summary>
     protected virtual void CreateWorldChunkManager()
     {
-        // stub: new vh(WorldRef) — pending vh spec
+        if (WorldRef != null)
+            WorldRef.ChunkManager = new WorldChunkManager(WorldRef.WorldSeed);
     }
 
     /// <summary>

@@ -47,6 +47,20 @@ static class VanillaApiMap
         ["Block.blocksList[?]"]                        = "BlockRegistry.Get(?)",
         ["Item.itemsList[?]"]                          = "ItemRegistry.Get(?)",
 
+        // ── WorldGen constructors + generate calls ───────────────────────────
+        ["new ky(?,?)"]                                = "new WorldGenMineable(?,?)",
+        ["new kq()"]                                   = "new WorldGenTrees()",
+        ["new aam()"]                                  = "new WorldGenLakes()",
+        // .a(world, rng, x, y, z) = WorldGenerator.generate — 5-arg signature is unique
+        [".a(?,?,?,?,?)"]                              = ".Generate(?,?,?,?,?)",
+
+        // ── Java Random ──────────────────────────────────────────────────────
+        ["rand.nextInt(?)"]                            = "rng.Next(?)",
+        ["random.nextInt(?)"]                          = "rng.Next(?)",
+        ["rand.nextFloat()"]                           = "(float)rng.NextDouble()",
+        ["random.nextFloat()"]                         = "(float)rng.NextDouble()",
+        ["rand.nextDouble()"]                          = "rng.NextDouble()",
+
         // ── Java System ──────────────────────────────────────────────────────
         ["System.out.println(?)"]                      = "Console.WriteLine(?)",
         ["System.err.println(?)"]                      = "Console.Error.WriteLine(?)",
@@ -63,6 +77,15 @@ static class VanillaApiMap
         ["block.lightValue"]           = "block.LightEmission",
         ["block.lightOpacity"]         = "block.LightOpacity",
         ["block.blockMaterial"]        = "block.Material",
+
+        // ── Item/Block ID field (.bM = itemID / blockID in 1.0) ──────────────
+        [".bM"]                        = ".Id",
+
+        // ── WorldGen context: Java variable name 'rand' → C# 'rng' ───────────
+        [" rand,"]                     = " rng,",
+        [" rand)"]                     = " rng)",
+        ["(rand,"]                     = "(rng,",
+        ["(rand)"]                     = "(rng)",
 
         ["player.posX"]                = "player.Position.X",
         ["player.posY"]                = "player.Position.Y",
