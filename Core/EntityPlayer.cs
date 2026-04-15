@@ -441,4 +441,40 @@ public abstract class EntityPlayer : LivingEntity
             case 3: SleepPoseOffsetX = -1.8f; SleepPoseOffsetZ =  0.0f; break; // east
         }
     }
+
+    // ── Portal / dimension travel (BlockPortal_Spec §4, ChunkProviderEnd_Spec §7) ─
+
+    /// <summary>
+    /// obf: <c>bY</c> — portal cooldown counter. 20 = initial (first portal entry needs 20 ticks).
+    /// Decremented each tick by the server tick loop. While > 0 and in portal: held at 10.
+    /// </summary>
+    public int PortalCooldown = 20;
+
+    /// <summary>
+    /// obf: <c>bZ</c> — portal teleport trigger. Set true when PortalCooldown reaches 0
+    /// while the player is inside a portal. Cleared after dimension transfer.
+    /// Note: this field name intentionally differs from the sneaking flag (also bZ in spec vi).
+    /// In practice, bZ is reused — sneaking is in DataWatcher; portal trigger is bZ here.
+    /// </summary>
+    public bool PortalTrigger;
+
+    /// <summary>
+    /// obf: <c>S()</c> — inPortal(). Called each tick while inside a portal block.
+    /// If cooldown > 0: resets it to 10 (prevents it going below 10 while in portal).
+    /// If cooldown == 0: sets PortalTrigger = true (initiates dimension travel).
+    /// (spec: BlockPortal_Spec §4.2)
+    /// </summary>
+    public void InPortal()
+    {
+        if (PortalCooldown > 0)
+            PortalCooldown = 10;
+        else
+            PortalTrigger = true;
+    }
+
+    /// <summary>
+    /// obf: <c>c(int dim)</c> — travelToDimension. Stub: initiates dimension transfer.
+    /// Full implementation requires server-side dimension routing (WorldServer spec pending).
+    /// </summary>
+    public virtual void TravelToDimension(int dimensionId) { /* stub */ }
 }

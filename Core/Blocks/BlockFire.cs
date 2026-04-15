@@ -80,10 +80,14 @@ public sealed class BlockFire : Block
     /// </summary>
     public override void OnBlockAdded(IWorld world, int x, int y, int z)
     {
-        // End-portal special case: world.y.g > 0 → non-overworld; skip for now (spec §8)
         if (DimensionId(world) == 0)
         {
-            // Overworld: remove immediately if no support
+            // Overworld: check if fire is inside an obsidian portal frame → create portal
+            // Spec: BlockPortal_Spec §6.3 — fire calls sc.g() on placement
+            if (BlockPortal.TryToCreatePortal(world, x, y, z))
+                return; // portal placed; fire replaced by portal blocks
+
+            // Remove immediately if no support
             if (!CanSurviveHere(world, x, y, z))
             {
                 world.SetBlock(x, y, z, 0);

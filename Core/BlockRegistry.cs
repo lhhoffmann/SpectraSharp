@@ -566,11 +566,8 @@ public static class BlockRegistry
             .SetStepSound(Block.SoundGlass)
             .SetBlockName("lightgem");
 
-        // 90 — Nether Portal (sc): texture 14, p.q, sound h, I, light 11, I
-        new Block(90, 14, Material.Portal_A)
-            .SetUnbreakable()
-            .SetLightValue(0.75f)
-            .SetStepSound(Block.SoundGlass)
+        // 90 — Nether Portal (sc): BlockPortal
+        new Blocks.BlockPortal(90)
             .SetBlockName("portal");
 
         // ── Tier 4: Less common (91–122) ──────────────────────────────────────
@@ -746,18 +743,12 @@ public static class BlockRegistry
             .SetHasTileEntity()
             .SetBlockName("cauldron");
 
-        // 119 — End Portal (aid): p.A, I, res 6000000
-        new Block(119, 0, Material.Portal_A)
-            .SetUnbreakable()
-            .SetResistance(6000000.0f);
+        // 119 — End Portal (aid): BlockEndPortal
+        new Blocks.BlockEndPortal(119)
+            .SetBlockName("endPortal");
 
-        // 120 — End Portal Frame (rl): p.q, sound h, I, res 6000000, light 1, T
-        new Block(120, 159, Material.MatPass_Q)
-            .SetUnbreakable()
-            .SetResistance(6000000.0f)
-            .SetLightValue(0.125f)
-            .SetStepSound(Block.SoundGlass)
-            .SetHasTileEntity()
+        // 120 — End Portal Frame (rl): BlockEndPortalFrame
+        new Blocks.BlockEndPortalFrame(120)
             .SetBlockName("endPortalFrame");
 
         // 121 — End Stone (yy): texture 175, p.e, sound f, hard 3.0, res 15

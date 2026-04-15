@@ -63,6 +63,10 @@ public sealed class ChunkProviderGenerate : IChunkLoader
         _noiseHill  = new NoiseGeneratorOctaves(_rand, 16);
         // c field (8 oct, unused) — consume from rand to stay in sync with the original
         _ = new NoiseGeneratorOctaves(_rand, 8);
+
+        _mineshaft .SetWorldSeed(seed);
+        _village   .SetWorldSeed(seed);
+        _stronghold.SetWorldSeed(seed);
     }
 
     /// <summary>Sets the world reference after construction. Call before the first chunk is requested.</summary>
@@ -114,6 +118,11 @@ public sealed class ChunkProviderGenerate : IChunkLoader
 
     private readonly MapGenCaves  _caveGen   = new();
     private readonly MapGenRavine _ravineGen = new();
+
+    // ── Structure generators (WorldGenStructures_Spec §1) ────────────────────
+    private readonly MapGenMineshaft  _mineshaft  = new();
+    private readonly MapGenVillage    _village    = new();
+    private readonly MapGenStronghold _stronghold = new();
 
     // ── Ore generators (BiomeDecorator §4 step 1) ────────────────────────────
 
@@ -217,6 +226,26 @@ public sealed class ChunkProviderGenerate : IChunkLoader
         BiomeGenBase biome = _world.ChunkManager != null
             ? _world.ChunkManager.GetBiomeAt(originX + 8, originZ + 8)
             : BiomeGenBase.Plains;
+
+        // ── Step 0: Structures — WorldGenStructures_Spec §1 ─────────────────────
+        // Runs before ores. Village returns true → suppress dungeon spawn below.
+        bool villagePresent = false;
+        if (_generateStructures)
+        {
+            _mineshaft .Generate(_world, chunkX, chunkZ, _rand);
+            villagePresent = _village.Generate(_world, chunkX, chunkZ, _rand);
+            _stronghold.Generate(_world, chunkX, chunkZ, _rand);
+        }
+
+        // Dungeon spawner (spec §1 — suppressed when village is present in this chunk)
+        // nextInt(4)==0 gives ~25% chance per chunk
+        if (!villagePresent && _rand.NextInt(4) == 0)
+        {
+            int dx = originX + _rand.NextInt(16) + 8;
+            int dy = _rand.NextInt(wh);
+            int dz = originZ + _rand.NextInt(16) + 8;
+            new WorldGenDungeon().Generate(_world, _rand, dx, dy, dz);
+        }
 
         // ── Step 1: Ore generation — BiomeDecorator.b() (spec §4 step 1) ─────
         // Helper a(count, gen, yMin, yMax): no +8 offset on ore helper positions

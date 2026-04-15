@@ -331,6 +331,13 @@ public class Block
     /// </summary>
     public virtual void OnEntityWalking(IWorld world, int x, int y, int z, Entity entity) { }
 
+    /// <summary>
+    /// Called each tick while an entity's bounding box overlaps this block.
+    /// Used by portals (BlockPortal ID 90, BlockEndPortal ID 119) and other contact triggers.
+    /// Spec: <c>a(ry, x, y, z, ia)</c> — onEntityCollidedWithBlock.
+    /// </summary>
+    public virtual void OnEntityCollidedWithBlock(IWorld world, int x, int y, int z, Entity entity) { }
+
     /// <summary>Called when placed. Default no-op. Spec: <c>a(World,x,y,z)</c>.</summary>
     public virtual void OnBlockAdded(IWorld world, int x, int y, int z) { }
 

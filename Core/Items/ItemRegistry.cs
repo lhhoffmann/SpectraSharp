@@ -275,4 +275,13 @@ public static class ItemRegistry
     /// <summary>Gold Boots — itemId=61, tex=(4,3).</summary>
     public static readonly ItemArmor GoldBoots
         = (ItemArmor)new ItemArmor(61, EnumArmorMaterial.GoldMat, 4, 3).SetIcon(4, 3);
+
+    // ── Flint and Steel (ID 259) ──────────────────────────────────────────────
+
+    /// <summary>
+    /// Flint and Steel — itemId=259, durability=64, stack=1.
+    /// obf: acy.aj. Source spec: BlockPortal_Spec §6
+    /// </summary>
+    public static readonly ItemFlintAndSteel FlintAndSteel
+        = (ItemFlintAndSteel)new ItemFlintAndSteel(259).SetIcon(5, 0).SetUnlocalizedName("flintAndSteel");
 }

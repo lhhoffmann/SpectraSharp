@@ -209,10 +209,28 @@ public sealed class NetherProvider : WorldProvider
 }
 
 /// <summary>
-/// <c>ol</c> — The End (dim 1). No sky-light; void fog sky.
+/// <c>ol</c> — The End (dim 1). No sky-light; constant dark-grey void fog.
+/// Spawn point: (100, 50, 0). No sun movement. Sleeping disabled.
+/// Source spec: Documentation/VoxelCore/Parity/Specs/ChunkProviderEnd_Spec.md §2
 /// </summary>
 public sealed class EndProvider : WorldProvider
 {
     public EndProvider() { DimensionId = 1; IsNether = true; SleepingDisabled = true; }
     public override bool HasSkyLight() => false;
+
+    /// <summary>obf: a(long, float) — getSunAngle. Returns 0.0F — no sun in the End.</summary>
+    public float GetEndSunAngle() => 0.0F;
+
+    /// <summary>obf: g() — getSpawnPoint. X=100, Y=50, Z=0 (spec §2.10).</summary>
+    public (int X, int Y, int Z) GetSpawnPoint() => (100, 50, 0);
+
+    /// <summary>
+    /// obf: b(float, float) — getFogColor. Constant dark grey: 0x808080 × 0.15F.
+    /// Ignores time-of-day; scale factor is always 0.15.
+    /// </summary>
+    public (float R, float G, float B) GetFogColor()
+    {
+        const float scale = 0.15f;
+        return (0x80 / 255.0f * scale, 0x80 / 255.0f * scale, 0x80 / 255.0f * scale);
+    }
 }

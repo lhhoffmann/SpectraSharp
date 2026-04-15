@@ -1197,7 +1197,7 @@ Mining speed is always the base player speed because `EntityPlayer.GetMiningSpee
 ---
 
 ## WorldGenStructures
-[STATUS:PROVIDED]
+[STATUS:IMPLEMENTED]
 **Needed for:** `Core/WorldGen/WorldGenMineshaft.cs` + `Core/WorldGen/WorldGenStronghold.cs` + `Core/WorldGen/WorldGenVillage.cs`
 `ChunkProviderGenerate` has the comment "Structure generation (villages, strongholds) is not implemented."
 
@@ -1215,7 +1215,7 @@ Village: 32-chunk grid; offset nextInt(24) in X and Z; valid biomes sr.c+sr.d (p
 ---
 
 ## ChunkProviderEnd
-[STATUS:PROVIDED]
+[STATUS:IMPLEMENTED]
 **Needed for:** `Core/ChunkProviderEnd.cs`
 The End dimension (dimension ID 1 in `WorldProvider`) has no chunk generator.
 
@@ -1281,7 +1281,7 @@ IDs 29 (sticky), 33 (normal), 34 (extension), 36 (moving) are all plain stubs in
 ---
 
 ## BlockPortal
-[STATUS:PROVIDED]
+[STATUS:IMPLEMENTED]
 **Needed for:** `Core/Blocks/BlockPortal.cs` + `Core/WorldGen/PortalTravelAgent.cs`
 Nether portal creation and dimension travel are completely absent. `WorldProvider` dimension routing exists but no portal-linking logic.
 
