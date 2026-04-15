@@ -213,6 +213,18 @@ public class Item
     /// <summary>obf: <c>a(ia)</c> — itemInteractionForEntity. Returns 1 base.</summary>
     public virtual int ItemInteractionForEntity(object entity) => 1;
 
+    /// <summary>
+    /// obf: <c>a(dk, int, int, int, int, nq)</c> — onBlockDestroyed. Returns false base.
+    /// Called after a block is broken; tools/swords override to decrement durability.
+    /// </summary>
+    public virtual bool OnBlockDestroyed(ItemStack stack, int x, int y, int z, object entity) => false;
+
+    /// <summary>
+    /// obf: <c>a()</c> — isItemTool. Returns false base.
+    /// True for tools (ItemTool, ItemSword, ItemHoe) — enables block reach and tool checks.
+    /// </summary>
+    public virtual bool IsItemTool() => false;
+
     // ── toString ──────────────────────────────────────────────────────────────
 
     public override string ToString()

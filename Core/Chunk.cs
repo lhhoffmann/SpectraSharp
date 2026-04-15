@@ -231,7 +231,13 @@ public class Chunk
         // Step 9 (quirk 1 — second metadata write, redundant but spec-required)
         _metadata?.Set(x, y, z, meta);
 
-        // TileEntity creation/removal — stub (ba/bq spec pending)
+        // TileEntity creation/removal
+        if (oldId != blockId)
+        {
+            if (_tileEntities.ContainsKey((x, y, z))) RemoveTileEntity(x, y, z);
+            TileEntityBase? newTe = TileEntityBase.CreateForBlock(blockId);
+            if (newTe != null) AddTileEntity(x, y, z, newTe);
+        }
 
         IsModified = true;
         return true;

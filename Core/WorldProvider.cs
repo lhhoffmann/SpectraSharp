@@ -23,10 +23,12 @@ public abstract class WorldProvider
 
     public  World?  WorldRef;                  // obf: a — set by RegisterWorld
     // obf: b — WorldChunkManager (vh); created by CreateWorldChunkManager
-#pragma warning disable CS0169
-    private bool    _unknownC;                 // obf: c — purpose TBD
-    private bool    _unknownD;                 // obf: d — purpose TBD
-#pragma warning restore CS0169
+    /// <summary>
+    /// obf: c — sleeping-disabled flag. True in dimensions where beds explode (Nether, End).
+    /// Checked by <see cref="EntityPlayer.TrySleep"/> — returns <see cref="EnumSleepResult.WrongDimension"/> when set.
+    /// Spec: BlockBed_Spec §12.1.b.
+    /// </summary>
+    public  bool    SleepingDisabled;          // obf: c
     public  bool    IsNether;                  // obf: e — sky-light suppressed when true
     public  readonly float[] BrightnessTable = new float[16]; // obf: f[16]
     public  int     DimensionId;               // obf: g
@@ -201,7 +203,7 @@ public sealed class OverworldProvider : WorldProvider
 /// </summary>
 public sealed class NetherProvider : WorldProvider
 {
-    public NetherProvider() { DimensionId = -1; IsNether = true; }
+    public NetherProvider() { DimensionId = -1; IsNether = true; SleepingDisabled = true; }
     public override bool HasSkyLight() => false;
     protected override float GetAmbientLight() => 0.1f; // prevents complete darkness
 }
@@ -211,6 +213,6 @@ public sealed class NetherProvider : WorldProvider
 /// </summary>
 public sealed class EndProvider : WorldProvider
 {
-    public EndProvider() { DimensionId = 1; IsNether = true; }
+    public EndProvider() { DimensionId = 1; IsNether = true; SleepingDisabled = true; }
     public override bool HasSkyLight() => false;
 }

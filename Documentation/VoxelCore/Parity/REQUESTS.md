@@ -1083,7 +1083,7 @@ farmland needs moisture tracking and should revert to dirt when dried.
 ---
 
 ## WorldGenDungeon
-[STATUS:PROVIDED]
+[STATUS:IMPLEMENTED]
 **Needed for:** `Core/WorldGen/WorldGenDungeon.cs` — underground dungeon room generator (`acj`).
 Dungeons are small rooms with cobblestone/mossy-cobblestone walls, a mob spawner at the centre,
 and 1–2 chests with a fixed 11-slot loot table. Currently not generated (no call site in
@@ -1100,7 +1100,7 @@ and 1–2 chests with a fixed 11-slot loot table. Currently not generated (no ca
 ---
 
 ## SpawnerAnimals
-[STATUS:PROVIDED]
+[STATUS:IMPLEMENTED]
 **Needed for:** `Core/SpawnerAnimals.cs` — passive/hostile/water mob tick-spawner (`we`).
 Currently mobs are never spawned into a live world — there is no runtime spawning system.
 The spawner runs each tick and maintains caps per creature type.
@@ -1116,7 +1116,7 @@ The spawner runs each tick and maintains caps per creature type.
 ---
 
 ## ChunkProviderHell
-[STATUS:PROVIDED]
+[STATUS:IMPLEMENTED]
 **Needed for:** `Core/ChunkProviderHell.cs` — Nether terrain generator (`jv`).
 Currently the Nether dimension has no generator — entering the Nether would produce empty chunks.
 Required for full dimension support.
@@ -1130,3 +1130,208 @@ Required for full dimension support.
 - Cave carving (thickness=0.5)
 - NetherFortress (`ed`) call site
 - Populate: 8 lava pools, fire, 2 glowstone cluster algorithms, mushroom bug (nextInt(1))
+
+---
+
+## MobAI_PathFinder
+[STATUS:IMPLEMENTED]
+**Deliverable:** `Specs/MobAI_PathFinder_Spec.md`
+**Corrections to request:** Coder's obf guesses were wrong — correct names: PathFinder=`rw`, PathEntity=`dw`, PathPoint=`mo`, PathHeap=`zs`, PathNodeCache=`ob`, ChunkCache=`xk`. `lb`=TexturePack GUI screen; `nb`=a particle entity; `ij` = unknown.
+Full spec covers: A* algorithm in `rw`, `ww` AI tick `n()` complete sequence, `zo` target+attack, `fx` breed+follow, `dw` navigation, path waypoint → movement steering. 5 open questions documented.
+
+---
+
+## Explosion
+[STATUS:PROVIDED]
+**Needed for:** `Core/Explosion.cs` + `Core/Entities/EntityTNTPrimed.cs`
+Creeper explosion is referenced in `EntityCreeper` (fuse countdown, `IsPowered`) but no `Explosion` class exists. TNT block (ID 46) is a plain stub in `BlockRegistry`.
+
+**Expected deliverable:** `Specs/Explosion_Spec.md`
+- Obf class name and fields
+- Sphere ray-cast algorithm: number of rays (1352?), attenuation-per-block, total damage falloff
+- Block destruction: which blocks survive (obsidian resistance threshold), drop probability formula
+- Entity damage: distance-based damage + knockback formula
+- Creeper fuse: `_fuseCountdown` tick sequence, ignite distance, normal vs powered radius (3 vs 6?)
+- TNT entity (`abv`?): fields (fuse=80, power=4), lit-by-fire/flame/explosion, drop behavior
+- `BlockTNT` (`vm`?, ID 46): `onBlockActivated` / `onNeighborBlockChange` ignite triggers
+
+**Resolution:** `Specs/Explosion_Spec.md` written. Confirmed obf names: `xp`=Explosion, `dd`=EntityTNTPrimed, `abm`=BlockTNT (corrects Coder guesses `abv`/`vm`). Key findings: 1352 rays from 16³ surface-only grid; entity damage uses `f*=2` (doubled power) — max damage = 16P+1; incendiary fire uses non-deterministic local `Random h` (not world RNG); chain-TNT fuse = `nextInt(20)+10`; Creeper power 3 (normal) / 6 (powered), 30-tick threshold, dist 3/7.
+
+---
+
+## ItemTool
+[STATUS:IMPLEMENTED]
+**Needed for:** `Core/Items/ItemTool.cs` + `Core/Items/ItemSword.cs` + `Core/Items/ItemArmor.cs`
+Mining speed is always the base player speed because `EntityPlayer.GetMiningSpeed` has no tool-speed multiplier. Combat damage is missing the sword bonus. Armor reduction in `LivingEntity.AttackEntityFrom` is missing armor-value lookup.
+
+**Expected deliverable:** `Specs/ItemTool_Spec.md`
+- Obf class names: ItemTool (`acq`?), ItemPickaxe, ItemAxe, ItemShovel, ItemHoe, ItemSword (`acp`?), ItemArmor (`acr`?)
+- `EnumToolMaterial` (`ah`): WOOD/STONE/IRON/DIAMOND/GOLD — harvestLevel, maxUses, efficiency, damage bonus, enchantability table
+- `ItemTool.getStrVsBlock(ItemStack, Block)` — returns efficiency if block in `blocksEffectiveAgainst`, else 1.0
+- `ItemTool.hitEntity` — damage application + durability decrement
+- `ItemSword`: damage bonus per material, `getStrVsBlock` always 1.5
+- `EnumArmorMaterial` (CLOTH/CHAIN/IRON/DIAMOND/GOLD): durability/reduction per slot
+- `ItemArmor`: `ArmorIndex` (0-3 = helmet/chest/legs/boots), icon texture formula
+- Item durability: `ItemStack.damage` decrement path, break threshold, `onItemBreak`
+- `EntityPlayer.getMiningSpeed` full formula (tool efficiency x haste/fatigue potion factor)
+
+**Resolution:** `Specs/ItemTool_Spec.md` written. All Coder guesses wrong: real classes = `ads`=ItemTool, `nu`=EnumToolMaterial, `zp`=ItemSword, `adb`=ItemSpade, `zu`=ItemPickaxe, `ago`=ItemAxe, `wr`=ItemHoe, `agi`=ItemArmor, `dj`=EnumArmorMaterial. Key corrections: sword (`zp`) does NOT extend `ads` — extends `acy` directly; sword getStrVsBlock returns 1.5F (not "always 1.5" as spec requested — cobweb is 15.0F); ItemHoe (`wr`) also extends `acy` not `ads`; axe efficiency applies to ALL wood-material blocks not just `bR`; Unbreaking uses world RNG. Full mining speed formula with Efficiency/Haste/Fatigue/water/airborne modifiers documented.
+
+---
+
+## NetherFortress
+[STATUS:IMPLEMENTED]
+**Needed for:** `Core/WorldGen/NetherFortress.cs`
+`ChunkProviderHell.Populate` has a stub comment `// Pass 4: Fortress outlines — stub (NetherFortress spec pending)`.
+
+**Expected deliverable:** `Specs/NetherFortress_Spec.md`
+- Obf class name `ed`, full field list
+- Room/corridor piece list: bridge segments, crossing, staircase, nether-wart room, blaze spawner corridor, entrance
+- Grid-based placement: periodic grid spacing in chunk coordinates
+- Spawn list: `qf` (Blaze?), `jm` (ZombiePigman?), `aea` (unresolved) — full class names + `EnumCreatureType`
+- Nether-wart farm placement rules (soul sand + wart blocks)
+- Blaze spawner placement and spawn count
+
+**Resolution:** Spec at `Specs/NetherFortress_Spec.md`. 13 piece classes (ac/bw/ui/bl/kf/xr in corridor list; hg/yj/lu/ahw/tr/acs/io in room list) + ld (dead-end terminator) + gc (starting piece extending bw). Spawn: qf=Blaze, jm=ZombiePigman, aea=MagmaCube (NOT unresolved). Placement: 1/3 chance per chunk, seed=(chunkX^(chunkZ<<4))^worldSeed, offset [4,11]. Y=[48,70]. Radius ≤112 blocks. Nether wart farm in `io` class (soul sand + ID 115). Blaze spawner in `kf` (max 2 per fortress).
+
+---
+
+## WorldGenStructures
+[STATUS:PROVIDED]
+**Needed for:** `Core/WorldGen/WorldGenMineshaft.cs` + `Core/WorldGen/WorldGenStronghold.cs` + `Core/WorldGen/WorldGenVillage.cs`
+`ChunkProviderGenerate` has the comment "Structure generation (villages, strongholds) is not implemented."
+
+**Expected deliverable:** `Specs/WorldGenStructures_Spec.md` (three sections or three separate files)
+- **Mineshaft** (`wr`?): corridor-room recursive generator; rail + torch + chest-wagon placement; wooden plank supports; cobweb density; obf class name
+- **Stronghold** (`vn`?): large multi-room; portal room; library rooms; iron-bar cells; stone-brick staircase; chest loot table; 3 strongholds per world at radius 640-1152 blocks
+- **Village** (`acf`?): street/house/farm/well/church/library/butcher/blacksmith pieces; villager spawn list; call site in ChunkProviderGenerate
+- For each: Y range, attempt count, how populate triggers them
+
+**Resolution:** Spec at `Specs/WorldGenStructures_Spec.md`. All Coder class guesses wrong. Real names: `kd`=WorldGenMineshaft (NOT `wr`=ItemHoe), `dc`=WorldGenStronghold (NOT `vn`=StrongholdCorridor-piece), `xn`=WorldGenVillage (NOT `acf`=GUI class).
+Mineshaft: nextInt(100)==0 && nextInt(80)<max(|cX|,|cZ|); start=`ns`; piece factory `aez` gives `aba`/`ra`/`id` at 70%/10%/20%; max depth 8, radius 80; cave-spider spawner ~4.3% (not isMain + 1/23); 11-entry chest loot table.
+Stronghold: 3 per world; angular placement (2π/3 apart, randomised start angle); distance=(1.25+nextDouble())×32 chunks; 7 valid biomes; start=`kg`; opening piece=`aeh`; stone brick ID 98.
+Village: 32-chunk grid; offset nextInt(24) in X and Z; valid biomes sr.c+sr.d (plains+desert); cell RNG=world.x(gX,gZ,10387312); start=`yo`; starting piece=`yp`; returns boolean that suppresses dungeon spawn.
+
+---
+
+## ChunkProviderEnd
+[STATUS:PROVIDED]
+**Needed for:** `Core/ChunkProviderEnd.cs`
+The End dimension (dimension ID 1 in `WorldProvider`) has no chunk generator.
+
+**Expected deliverable:** `Specs/ChunkProviderEnd_Spec.md`
+- Obf class name (`io`?)
+- End island noise: parameters, floating island shape (sphere-like density function), main island radius
+- Obsidian platform placement (emergency spawn at 0, 55, 0)
+- Block palette: end stone (ID 121) fill
+- Populate: Ender Dragon boss spawn; obsidian pillars + End Crystal placement; no biome decoration
+- `BlockEndPortalFrame` (ID 120) + `BlockEndPortal` (ID 119): placement in stronghold, activation condition (all 12 frames with Eyes of Ender)
+
+**Resolution:** Spec at `Specs/ChunkProviderEnd_Spec.md`. Real obf name: `a` (NOT `io`; `io` is NetherWartRoom piece). 5 noise generators (eb octaves): j=16-oct, k=16-oct, l=8-oct, a=10-oct (public), b=16-oct (public). Density grid 3×33×3, 8-cell trilinear interpolation. Island shaping: `var22 = 100.0F - sqrt(x²+z²) * 8.0F`, clamped [-100,30]. Dead code: `var18 = 0.0` (noise b has no effect on output). Palette: pure end stone (yy.bJ.bM=121). Surface pass is a no-op loop. WorldProviderEnd=`ol` (dim=1, fog 0x808080×0.15F). BiomeSky=`uu`; WorldGenEndSpike=`oh` (height[6,37], radius[1,4], obsidian cylinder + EntityEnderCrystal `sf` + bedrock cap). BlockEndPortalFrame=`rl` (ID 120, meta bits 0-1=facing, bit 2=hasEye, AABB 0-0.8125, drops nothing). BlockEndPortal=`aid` (ID 119, TileEntity yg, 1/16 AABB, teleports via player.c(1), self-destructs outside overworld). ItemEnderEye=`aag`: sets meta|4, 12-frame ring (3+3+3+3), activates 3×3 interior with yy.bH.bM. Obsidian platform: `aim.java` places 5×5 floor + 3-high air column for dim==1.
+
+---
+
+## BlockRedstone
+[STATUS:IMPLEMENTED]
+**Needed for:** `Core/Blocks/BlockRedstoneWire.cs`, `BlockRedstoneTorch.cs`, `BlockRepeater.cs`, + simple redstone blocks
+`World.IsBlockIndirectlyReceivingPower` is a stub returning false. Blocks 55, 69, 70, 72, 75, 76, 77, 93, 94, 143 are all plain stubs in `BlockRegistry`.
+
+**Expected deliverable:** `Specs/BlockRedstone_Spec.md`
+- **BlockRedstoneWire** (`zl`, ID 55): BFS signal propagation (max strength 15, -1/block), cross-connections, texture by power level, dot vs line shape, `canProvidePower`
+- **BlockRedstoneTorch** (`wk`, IDs 75/76): power output direction (all faces except support), burnout mechanic (8 flips/60 ticks → goes out)
+- **BlockRepeater** (`ahl`, IDs 93/94): 1-4 tick delay (meta bits 0-1), facing (bits 2-3), lock behavior
+- **Buttons** (IDs 77/143), **Lever** (ID 69), **Pressure plates** (IDs 70/72): `onActivated` trigger, hold duration, power output
+- `World.isBlockIndirectlyGettingPowered` full algorithm: 6-face scan, direct vs indirect power, `getBlockPowerInput` vs `isProvidingWeakPower`
+
+**Resolution:** Spec delivered at `Specs/BlockRedstone_Spec.md` (13 sections).
+Real obf names: wire=`kw`, torch=`ku`, torch-base=`bg`, repeater=`mz`, lever=`aaa`, pressure-plate=`wx`, button=`ahv`, ore=`oc`. Coder guesses (`zl`,`wk`,`ahl`,`abr`) were all wrong.
+World power query chain: `k(face)`=getStrongPower → `u()`=isStronglyPowered (6-face OR) → `l(face)`=getPower (opaque→u() else weak) → `v()`=isBlockReceivingPower (6-face OR).
+Wire propagation: recursive DFS with anti-reentrance flag `a`; dirty HashSet `cb`; attenuation -1/block; 0-crossing notifies neighbours.
+Torch burnout: STATIC class-level list `cb` shared across ALL torch instances — vanilla bug, can cross-contaminate.
+Repeater delay: meta bits 2-3 = index into {1,2,3,4} × 2 = {2,4,6,8} ticks.
+Lever floor: meta 5 (pointing south) or meta 6 (pointing east) — random on placement.
+Pressure-plate xb enum: a=all entities (wood ID 72), b=living mobs (stone ID 70), c=players (unused in 1.0).
+**ID 143 (wood button) ABSENT in 1.0** — only ID 77 (stone button) exists. Added Beta 1.7+.
+Ore-redstone touch-to-glow: touch/walk/click → ID 74; randomTick → ID 73.
+
+---
+
+## BlockPiston
+[STATUS:IMPLEMENTED]
+**Needed for:** `Core/Blocks/BlockPiston.cs` + related
+IDs 29 (sticky), 33 (normal), 34 (extension), 36 (moving) are all plain stubs in `BlockRegistry`.
+
+**Expected deliverable:** `Specs/BlockPiston_Spec.md`
+- Obf class name (`abr`?): fields `_isSticky`, facing (meta 0-5)
+- Push logic: max 12 blocks, unpushable blocks list (bedrock, obsidian, piston head, moving block)
+- Pull logic: sticky piston pulls 1 block on retract
+- Extension block (`abq`?): face texture, AABB, drops nothing
+- Moving block (ID 36, `qz`?): tile entity with stored block ID/meta, facing, progress, isExtending
+- Neighbor-change trigger: `onNeighborBlockChange` checks `isBlockPowered` → extend/retract
+
+**Resolution:** Spec at `Specs/BlockPiston_Spec.md`. Real obf names: abr=BlockPiston ✓, acu=BlockPistonExtension (NOT abq), qz=BlockMovingPiston ✓, agb=TileEntityPiston. Push limit = 13 (not 12 — counter loops 0-12). Static `cb` anti-reentrance on abr. isPowered: 12-position check (6 sides + 6 overhead). Sticky pull via double-ahead block check. Animation: +0.5F/tick, 2-tick total. agb NBT saves n (prev progress) not m (current) — potential quirk.
+
+---
+
+## BlockBed
+[STATUS:IMPLEMENTED]
+**Spec:** `Specs/BlockBed_Spec.md`
+**Resolution:** `aab`=BlockBed confirmed. Metadata bits 0-1=facing, 2=occupied, 3=isHead. Static direction array `a={{0,1},{-1,0},{0,-1},{1,0}}`. AABB 9/16 height. onBlockActivated: foot→head redirect via meta bit 3, Nether explosion (`world.a(null,x,y,z,5.0F,true)`) when `world.y.c==true` (WorldProvider.c field, sleeping-disabled). trySleep (`vi.d`): 6 `qy` enum results (a=OK, b=NOT_POSSIBLE_HERE, c=NOT_POSSIBLE_NOW=daytime via `world.l()=skyDarkening<4`, d=TOO_FAR_AWAY, e=OTHER_PROBLEM, f=NOT_SAFE=monster `zo` within 8×5×8). wakeUpPlayer (`vi.a`): restore AABB 0.6×1.8, clear occupied flag, findWakeupPosition 3×3 scan (solid floor+2 air), optionally set spawn. Bed item=`kn`(99)=acy.aZ=bM 355; drops from foot half only. WorldProvider.d()=hasSky (default true; Nether=false). WorldProvider.c=boolean field (sleeping-disabled; default false; Nether sets true).
+
+---
+
+## BlockPortal
+[STATUS:PROVIDED]
+**Needed for:** `Core/Blocks/BlockPortal.cs` + `Core/WorldGen/PortalTravelAgent.cs`
+Nether portal creation and dimension travel are completely absent. `WorldProvider` dimension routing exists but no portal-linking logic.
+
+**Expected deliverable:** `Specs/BlockPortal_Spec.md`
+- Obf class name (`mc`?, ID 90): AABB, tick, entity teleport trigger
+- Frame detection (`tryToCreatePortal`): minimum 2×3 obsidian frame, both-orientation scan
+- `PortalTravelAgent` (`acx`?): find/create matching portal on destination side; search radius (128 overworld / 16 Nether); coordinate scale factor (÷8 / ×8)
+- Teleport cooldown (10 s / 200 tick `portalCooldown` on entity)
+- `BlockFlintAndSteel` (`ahe`?, item ID 259): `onItemUse` ignites adjacent obsidian frame
+
+**Resolution:** Spec at `Specs/BlockPortal_Spec.md`. Real obf names: BlockPortal=`sc` (NOT `mc`), PortalTravelAgent=`aim` (NOT `acx`), ItemFlintAndSteel=`ou` (NOT `ahe`). BlockPortal extends `aaf` (unknown base). `g()` tryToCreatePortal: 10 obsidian minimum (corners optional), 4×5 frame scan (var7=-1..2, var8=-1..3), places 2×3 portal interior at interior positions. onNeighborChange destroys invalid columns (all blocks in column must be portal or interior). Entity contact: `entity.S()` not direct teleport. `S()` in `vi`: if bY>0 → bY=10; else → bZ=true (bY=20 default, bZ=false). PortalTravelAgent `b()` findPortal radius=128; `c()` createPortal radius=16, 2-phase + emergency at Y=70, builds 4×5 obsidian frame with 2×3 interior; End arrival = 5×5 obsidian floor. ItemFlintAndSteel `ou`: durability 64, always damages 1 per use, places fire on adjacent air; portal ignition indirect via BlockFire→sc.g(). No coordinate scaling found in `aim` — scale likely in WorldServer dimension routing. Coder guesses for class names were all wrong.
+
+---
+
+## SnowIce_Generation
+[STATUS:IMPLEMENTED]
+**Needed for:** `Core/WorldGen/WorldGenSnowIce.cs` or inline in `BiomeDecorator`
+`BiomeDecorator_Spec.md` open question: is snow/ice a separate pass or decoration step 15? Snow and ice do not appear in cold biomes currently.
+
+**Expected deliverable:** `Specs/SnowIce_Spec.md`
+- Which class handles it: separate `WorldGenerator` or inline in `BiomeDecorator.decorate()`?
+- Obf method/class name
+- Snow layer (ID 78) placement: condition (solid opaque block, biome temp < 0.15, sky-exposed)
+- Ice (ID 79): replaces still-water (ID 9) in cold biome if sky-exposed
+- `BlockSnow` (`aak`?, ID 78): thin AABB, no collision, drops snowballs, melts at block-light > 11
+- `BlockIce` (`aaj`?, ID 79): melts to water at light > 11, slippery friction value (0.98?)
+
+**Resolution:** `Specs/SnowIce_Spec.md` written. Key findings: (1) NOT a WorldGenerator and NOT in BiomeDecorator — inline 16×16 loop at end of `xj.populateChunk` after all decoration; (2) real block classes: `aif`=BlockSnow (corrects guess `aak`), `ahq`=BlockIce (corrects guess `aaj`); (3) ice slipperiness confirmed 0.98F; (4) ice melt threshold = >10 (not >11 — subtract opacity 1); (5) snow has no collision for layers 0-2, collision up to 0.5F for layers 3-7; (6) no snow on ice (explicit guard in `ry.r()`); (7) snow always placed at layer 0 during generation.
+
+---
+
+## ItemRecord_Jukebox
+[STATUS:IMPLEMENTED]
+**Needed for:** `Core/Items/ItemRecord.cs` + `Core/Blocks/BlockJukebox.cs` + `Core/TileEntity/TileEntityJukebox.cs`
+`WorldGenDungeon` loot uses `MusicDisc13Id = 2256` / `MusicDiscCatId = 2257`. These item IDs exist in loot tables but have no `Item.d[]` entries. Jukebox (ID 84) is a plain `BlockBase` stub.
+
+**Expected deliverable:** `Specs/ItemRecord_Jukebox_Spec.md`
+- `ItemRecord` (`acb`?): `onItemUse` inserts disc into jukebox; `getRecordNameLocal` → disc name string
+- All record item IDs (2256–2267?) with obf field names and display names (13/cat/blocks/chirp/far/mall/mellohi/stal/strad/ward/11/wait)
+- `BlockJukebox` (`aas`?, ID 84): `onBlockActivated` = eject disc; `onBlockDestroyed` = eject item
+- `TileEntityJukebox`: single `ItemStack` field "RecordItem", write/read NBT
+
+**Resolution:** Spec at `Specs/ItemRecord_Jukebox_Spec.md`. Real obf names: ItemRecord=`pe` (NOT `acb`), BlockJukebox=`abl` (confirmed), TileEntityJukebox=`agc`.
+11 discs only (IDs 2256–2266); "wait" ABSENT in 1.0. TileEntity stores int (not ItemStack). Ejection RNG uses world.w (consumes 3 nextFloat calls in X/Y/Z order). Pickup delay = 10 ticks (not standard 40). Tooltip = "C418 - <name>". World event 1005: data=recordId → play, data=0 → stop.
+
+---
+
+## OpenQuestion_AcyAV
+[STATUS:PROVIDED]
+**Resolved:** `acy.aV = new xv(95)` — class `xv` = ItemDye; item ID = `bM = 256 + 95 = 351`. Name "dyePowder".
+Loot slot 10 drops `new dk(acy.aV, 1, 3)` = 1× Dye, damage 3 = **Cocoa Beans** (brown dye).
+Music disc open question also resolved: `acy.bB.bM = 2256` ("13") and bM+1 = 2257 ("cat").
+See `WorldGenDungeon_Spec.md §9` for the full answers. `WorldGenDungeon_Spec.md §9` updated from "Open Questions" to "Resolved Questions".

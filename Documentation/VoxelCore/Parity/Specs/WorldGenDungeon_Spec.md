@@ -232,10 +232,13 @@ No tick behaviour. The generator runs once during chunk populate and places a st
 
 ---
 
-## 9. Open Questions
+## 9. Resolved Questions
 
-1. **`acy.aV, count 1, damage 3`:** The loot slot 10 creates `new dk(acy.aV, 1, 3)`. `acy.aV`
-   is an item and damage=3 could indicate a variant or durability. Confirm from Item registry.
-2. **`acy.bB.bM + rng.nextInt(2)`:** Loot slot 9 uses `acy.d[acy.bB.bM + nextInt(2)]` —
-   a direct index into the Item registry at offset bB.bM and bB.bM+1. These should be the
-   two music discs available in 1.0. Confirm exact disc IDs.
+1. **`acy.aV` = Dye item (ID 351):** `acy.aV = new xv(95)` → `bM = 256 + 95 = 351`. Class `xv`
+   is `ItemDye`. Item name "dyePowder". Loot slot 10 places `new dk(acy.aV, 1, 3)` = 1× Dye with
+   damage 3. Damage value 3 = Cocoa Beans (brown dye). No open questions remain on this slot.
+
+2. **`acy.bB.bM` = 2256 ("13"), `acy.bB.bM + 1` = 2257 ("cat"):** `acy.bB = new pe(2000, "13")` →
+   bM = 256 + 2000 = 2256. `acy.bC = new pe(2001, "cat")` → bM = 2257. Loot slot 9 uses
+   `acy.d[2256 + rng.nextInt(2)]` = either record "13" (ID 2256) or record "cat" (ID 2257).
+   These are the two music discs available in 1.0.

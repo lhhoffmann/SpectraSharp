@@ -406,6 +406,25 @@ public sealed class ChunkProviderGenerate : IChunkLoader
                 new WorldGenSpring(10).Generate(_world, _rand, lx, ly, lz); // ID 10 = flowing lava
             }
         }
+
+        // ── Snow/Ice pass (SnowIce_Spec §8) ─────────────────────────────────
+        // Inline 16×16 pass at end of populateChunk — no separate WorldGenerator class.
+        // SpawnerAnimals.InitialPopulate is also called here per spec (after decoration).
+        for (int x = 0; x < 16; x++)
+        for (int z = 0; z < 16; z++)
+        {
+            int worldX = originX + x;
+            int worldZ = originZ + z;
+            int surfaceY = _world.GetHeightValue(worldX, worldZ);
+
+            // Ice pass: freeze surface water one block below height map
+            if (_world.CanFreezeAtLocation(worldX, surfaceY - 1, worldZ))
+                _world.SetBlockSilent(worldX, surfaceY - 1, worldZ, 79); // ice
+
+            // Snow pass: place snow layer at height map surface (if air)
+            if (_world.CanSnowAtLocation(worldX, surfaceY, worldZ))
+                _world.SetBlockSilent(worldX, surfaceY, worldZ, 78); // snow layer
+        }
     }
 
     /// <summary>

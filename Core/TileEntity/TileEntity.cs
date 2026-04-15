@@ -20,6 +20,29 @@ public abstract class TileEntity
     private static readonly Dictionary<string, Func<TileEntity>> _factories = [];
     private static readonly Dictionary<Type,   string>           _typeToId  = [];
 
+    // ── Block-ID → TE factory (spec: auto-creation on block placement) ─────────
+    private static readonly Dictionary<int, Func<TileEntity>> _blockIdFactories = new()
+    {
+        { 23, () => new TileEntityDispenser()  },  // dispenser
+        { 52, () => new TileEntityMobSpawner() },  // mob spawner
+        { 54, () => new TileEntityChest()      },  // chest
+        { 61, () => new TileEntityFurnace()    },  // furnace (off)
+        { 62, () => new TileEntityFurnace()    },  // furnace (on)
+        { 63, () => new TileEntitySign()       },  // standing sign
+        { 68, () => new TileEntitySign()       },  // wall sign
+        { 25, () => new TileEntityNote()       },  // note block
+        { 36, () => new TileEntityPiston()     },  // moving piston (blank — replaced by SetTileEntity)
+        { 84, () => new TileEntityJukebox()    },  // jukebox
+    };
+
+    /// <summary>
+    /// Creates the tile entity that belongs to <paramref name="blockId"/>,
+    /// or returns null if the block has no tile entity.
+    /// Called by <see cref="Chunk"/> when a block is placed.
+    /// </summary>
+    public static TileEntity? CreateForBlock(int blockId)
+        => _blockIdFactories.TryGetValue(blockId, out var f) ? f() : null;
+
     static TileEntity()
     {
         Register<TileEntityFurnace>  ("Furnace");
@@ -32,7 +55,7 @@ public abstract class TileEntity
         Register<TileEntityPiston>         ("Piston");
         Register<TileEntityBrewingStand>   ("Cauldron");
         Register<TileEntityEnchantTable>   ("EnchantTable");
-        Register<TileEntityRecordPlayer>   ("RecordPlayer");
+        Register<TileEntityJukebox>        ("RecordPlayer");
         Register<TileEntityEndPortal>      ("Airportal");
     }
 

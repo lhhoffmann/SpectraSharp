@@ -9,11 +9,16 @@ Obfuscated name (as found in `temp/decompiled/`) → MCP/human-readable name.
 | Obfuscated | Human name | Notes |
 |---|---|---|
 | `c` | `AxisAlignedBB` | Axis-aligned bounding box; 6 double fields; static object pool; sweep collision; ray trace |
+| `am` | `BlockPos` | Simple int triple (a=x, b=y, c=z); hashCode = `a*8976890 + b*981131 + c`; used as explosion block-set key |
+| `dh` | `BlockTriple` | Simple int triple (a=x, b=y, c=z); returned by `aab.f()` (findWakeupPosition) to report the safe spawn coord; distinct from `am` |
 | `bo` | `EnumMovingObjectType` | Java enum; two constants: `a`=TILE (0), `b`=ENTITY (1) |
 | `fb` | `Vec3` | 3D double vector; static object pool; geometric ops; segment-plane intersection |
 | `gv` | `MovingObjectPosition` | Ray-cast result; block-hit or entity-hit constructor; face ID 0–5 |
 | `yy` | `Block` | Block base class; static registry k[256]; 8 parallel arrays; builder pattern; virtual behaviour |
 | `me` | `MathHelper` | Static trig/numeric utilities; sine table (65536 entries); floor, sqrt, clamp, abs, floor-div, RNG range |
+| `lf` | `TorchHistory` | Record of one torch-flip event; fields: x, y, z (int), worldTime (long); stored in `ku.cb` burnout list |
+| `lz` | `Direction` (redstone helper) | Static arrays for redstone wire: `e[]={2,3,0,1}` opposite face mapping; `a[]`/`b[]` Z/X deltas for wire connectivity neighbours |
+| `xb` | `EnumPressurePlateType` | 3-value Java enum: `a`=ALL_ENTITIES (wood plate ID 72), `b`=MOBS (stone plate ID 70), `c`=PLAYERS_ONLY (unused in 1.0) |
 
 ## Core Game Classes
 
@@ -47,11 +52,11 @@ Obfuscated name (as found in `temp/decompiled/`) → MCP/human-readable name.
 | `ahh` | `BlockStairs` | Stair variants |
 | `xs` | `BlockSlab` | `"stoneSlab"` |
 | `abm` | `BlockTNT` | `"tnt"` |
-| `bg` | `BlockTorch` | `"torch"` |
+| `bg` | `BlockTorch` | `"torch"` (base class for torches); placement sets meta 1-5 from supported face (1=west wall, 2=east wall, 3=north wall, 4=south wall, 5=floor); canBlockStay checks 4 wall solids + solid below for floor; AABB: wall metas w=0.15F, floor meta 0.1F |
 | `wj` | `BlockFire` | `"fire"` |
 | `kk` | `BlockMobSpawner` | `"mobSpawner"` |
 | `au` | `BlockChest` | `"chest"` |
-| `kw` | `BlockRedstoneWire` | `"redstoneDust"` |
+| `kw` | `BlockRedstoneWire` | `"redstoneDust"` (ID 55); DFS propagation with anti-reentrance flag `a`; dirty-block HashSet `cb`; attenuation -1/block from 15; `f()` gets max wire-neighbor power; `h()` propagates to adjacent wire clusters; 0-crossing notifies neighbours; canBlockStay=solid below; canProvidePower=`this.a`; drops `acy.aB.bM` (redstone dust item) |
 | `aha` | `BlockCrops` | `"crops"` |
 | `ni` | `BlockFarmland` | `"farmland"` |
 | `eu` | `BlockFurnace` | `"furnace"` |
@@ -70,10 +75,10 @@ Obfuscated name (as found in `temp/decompiled/`) → MCP/human-readable name.
 | `sk` | `BlockGlowstone` | `"lightgem"` |
 | `sc` | `BlockPortal` | `"portal"` |
 | `aem` | `BlockCake` | `"cake"` |
-| `mz` | `BlockRedstoneDiode` | `"diode"` |
-| `aif` | `BlockSnow` | `"snow"` (layer) |
+| `mz` | `BlockRedstoneDiode` | `"diode"` (IDs 93=off, 94=on); meta bits 0-1=facing (output direction; 0=south,1=west,2=north,3=east), bits 2-3=delay index; static delay array cb={1,2,3,4} → {2,4,6,8} ticks; input check `f()` reads world.l() + wire; right-click cycles delay; isProvidingWeakPower/StrongPower on output face only; drops `acy.ba.bM` (off-repeater item) |
+| `aif` | `BlockSnow` | Snow layer (ID 78); `p.u` material; AABB height=(2*(1+layers))/16; collision only at layers≥3 (up to 0.5F); canBlockStay=solid renderNormal below; harvest drops 1 snowball; melt at blockLight>11 |
 | `jk` | `BlockSnowBlock` | `"snow"` (block) |
-| `ahq` | `BlockIce` | `"ice"` |
+| `ahq` | `BlockIce` | Ice (ID 79); `p.t` material; ca=0.98F slipperiness; opacity=1; drops nothing; melt at blockLight>10 → still water; mined over air/liquid → flowing water |
 | `ow` | `BlockCactus` | `"cactus"` |
 | `pc` | `BlockClay` | `"clay"` |
 | `md` | `BlockReed` | `"reeds"` |
@@ -99,14 +104,15 @@ Obfuscated name (as found in `temp/decompiled/`) → MCP/human-readable name.
 | `vj` | `BlockLockedChest` | `"lockedchest"` |
 | `uc` | `BlockDoor` | `"doorWood"` / `"doorIron"` |
 | `afu` | `BlockLadder` | `"ladder"` |
-| `aaa` | `BlockLever` | `"lever"` |
-| `oc` | `BlockOreRedstone` | `"oreRedstone"` |
-| `ku` | `BlockRedstoneTorch` | `"notGate"` |
-| `mf` | `BlockButton` | pressure plate / button |
+| `aaa` | `BlockLever` | `"lever"` (ID 69); meta bits 0-2=facing (1=east wall, 2=west wall, 3=south wall, 4=north wall, 5=floor-S, 6=floor-E, 7=ceiling); bit 3=isOn; floor metas 5/6 chosen at random on placement; `a()` toggles bit 3; `b()` weak power on all faces when on; `c()` strong power only on attached face when on; drops lever item |
+| `oc` | `BlockOreRedstone` | `"oreRedstone"` (ID 73=normal, 74=glowing); touch/walk/interact → switch to ID 74; randomTick → revert to ID 73; drops 4-6 redstone dust; `c_()` returns normal ore |
+| `ku` | `BlockRedstoneTorch` | `"notGate"` (extends `bg`; IDs 75=off, 76=on); isOn field `a`; STATIC burnout list `cb` shared across ALL torch instances (vanilla bug — can cross-contaminate other torches); tick delay 2; `g()` isPowered checks attached block; burnout: ≥8 entries in cb within 100-tick window → stays off; randomTick switches on↔off; drops always ID 76 (on-torch item) |
+| `ahv` | `BlockButton` | `"button"` (ID 77=stone only in 1.0; ID 143=wood button ABSENT in 1.0, added Beta 1.7+); wall-only, no floor placement; meta bits 0-2=facing (1=east,2=west,3=south,4=north), bit 3=isPressed; tick rate 20 (auto-release); right-click presses; randomTick releases; isProvidingStrongPower on attached face+front when pressed; dead meta 5 in `c()` is unreachable code |
+| `wx` | `BlockPressurePlate` | `"pressurePlate"` (ID 70=stone, ID 72=wood); field `a`=xb enum type; tick rate 20; sensor scan per type: a=all entities, b=living mobs only, c=players only; pressed=meta 1, unpressed=meta 0; canBlockStay also accepts wire (`yy.aZ`); strong power upward only (face 1) |
 | `cu` | `BlockDispenser` | `"dispenser"` |
 | `aat` | `BlockSandStone` | `"sandStone"` |
 | `yq` | `BlockNote` | `"musicBlock"` |
-| `aab` | `BlockBed` | `"bed"` |
+| `aab` | `BlockBed` | `"bed"` (ID 26); metadata bits 0-1=facing, 2=occupied, 3=isHead; static dir array `a={{0,1},{-1,0},{0,-1},{1,0}}`; AABB 9/16 height; onBlockActivated redirects foot→head, Nether explosion power 5 incendiary, calls `vi.d()` (trySleep); drops `kn`(99) from foot half only; orphan half removed on neighbor change |
 | `kv` | `BlockTallGrass` | `"tallgrass"` |
 | `jl` | `BlockDeadBush` | `"deadbush"` |
 | `ay` | `BlockBookshelf` | `"bookshelf"` |
@@ -136,6 +142,7 @@ Obfuscated name (as found in `temp/decompiled/`) → MCP/human-readable name.
 | Obfuscated | Human name | Notes |
 |---|---|---|
 | `ry` | `World` | 2788 lines; implements `kq`; root game object — chunks, entities, TEs, tick schedule |
+| `xp` | `Explosion` | Sphere ray-cast destructor; fields: `f`=power, `a`=isIncendiary, `b`=exploderEntity, `c/d/e`=XYZ, `g`=am HashSet of destroyed blocks; 1352 rays (16³ surface-only); local `Random h` for incendiary fire; called via `ry.world.a(entity, x, y, z, power[, isIncendiary])` |
 | `zx` | `Chunk` | 781 lines; 16×128×16 block/light/entity column; block index `x<<11|z<<7|y` |
 | `gy` | `ChunkLoader` | file-based chunk persistence |
 | `ia` | `Entity` | 1214 lines; abstract base for all in-world objects; fields s/t/u=pos, v/w/x=motion, K=isDead |
@@ -214,7 +221,24 @@ Obfuscated name (as found in `temp/decompiled/`) → MCP/human-readable name.
 | `pt` | `WorldGenGlowStone` | glowstone cluster type 1; 1500 downward attempts from netherrack ceiling; places at exactly-1-glowstone-neighbour cells |
 | `aew` | `WorldGenGlowStone2` | glowstone cluster type 2; identical logic to `pt`; separate class for RNG-state parity |
 | `cz` | `NetherMapGenCaves` | Nether cave carver; extends `bz` (MapGenBase); tunnel thickness = 0.5 (vs overworld 1.0) |
-| `ed` | `NetherFortressGenerator` | NetherFortress structure generator; spawn list: Blaze(`qf`)/PigZombie(`jm`)/MagmaCube(`aea`) |
+| `ed` | `MapGenNetherBridge` | NetherFortress structure generator; extends `hl`; 1/3 placement chance per chunk; seed=(cX^(cZ<<4))^worldSeed; spawn list: Blaze(`qf`)/PigZombie(`jm`)/MagmaCube(`aea`) |
+| `tg` | `NetherFortressStart` | StructureStart subclass; creates `gc` piece at (cX*16+2, cZ*16+2); generates within Y=[48,70], radius≤112 |
+| `rp` | `NetherFortressPieceRegistry` | Static piece lists; corridor list: ac/bw/ui/bl/kf/xr; room list: hg/yj/lu/ahw/tr/acs/io |
+| `gc` | `NF_EntryCollider` | Starting piece; extends `bw` (CorridorA); beginning of fortress generation tree |
+| `ac` | `NF_CorridorA` | 5×5×7 straight corridor |
+| `bw` | `NF_CorridorB` | 5×5×7 corridor with support beams |
+| `ui` | `NF_CorridorC` | 5×5×7 corridor staircase |
+| `bl` | `NF_CorridorD` | 5×5×7 corridor crossing |
+| `kf` | `NF_BlazeSpawnerCorridor` | 5×5×11; places MobSpawner "Blaze" at local (5,6,3); boolean `a` prevents re-placement |
+| `xr` | `NF_LavaFortressRoom` | 13×4×13 room with central lava pool; `world.f=true` flag wrap |
+| `hg` | `NF_RoomA` | 7×9×7 room |
+| `yj` | `NF_RoomB` | 9×7×9 room |
+| `lu` | `NF_RoomC` | 9×7×9 room staircase |
+| `ahw` | `NF_RoomD` | 5×5×7 room variant |
+| `tr` | `NF_Crossing5` | 5-way crossing room |
+| `acs` | `NF_Crossing5B` | 5-way crossing with central pillar |
+| `io` | `NF_NetherWartRoom` | 13×14×13; soul sand (ID 88) + nether wart (ID 115) farm |
+| `ld` | `NF_DeadEndTunnel` | Dead-end terminator piece; fallback when no piece fits |
 
 ## Chunk Provider / Cache Classes
 
@@ -313,6 +337,17 @@ Obfuscated name (as found in `temp/decompiled/`) → MCP/human-readable name.
 | `aha` | `BlockCrops` | Wheat crops (ID 59); extends `wg`; metadata 0-7 = growth stage; random-tick with growth factor; only survives on farmland |
 | `ni` | `BlockFarmland` | Farmland (ID 60); metadata 0-7 = moisture; reverts to dirt dry+cropless; 0.9375 visual height, full collision; 25% trample chance |
 
+## Pathfinding Classes
+
+| Obfuscated | Human name | Notes |
+|---|---|---|
+| `rw` | `PathFinder` | A* pathfinder; open set = `zs`; node cache = `ob`; world view = `xk`; 4-directional only; step-up/down; entity-bbox collision; partial-path fallback |
+| `mo` | `PathPoint` | Path graph node; fields a=x, b=y, c=z, j=hash, d=heapIndex(-1=not in heap), e=g_cost, f=h_cost, g=f_cost, h=parent, i=closed |
+| `dw` | `PathEntity` | Completed path container; b=mo[] ordered array, a=length, c=currentIndex; a(entity)=waypoint Vec3, a()=advance, b()=exhausted |
+| `zs` | `PathHeap` | Binary min-heap open set; sorted by mo.g; initial capacity 1024 (doubles on overflow); add/poll/update/isEmpty/clear |
+| `ob` | `PathNodeCache` | int-keyed hash map for node deduplication; load factor 0.75; initial capacity 16 |
+| `xk` | `ChunkCache` | IBlockAccess snapshot; pre-fetches chunks in bbox; used as world view for `rw`; created by `world.a(entity,target,range)` |
+
 ## Mob / AI Classes
 
 | Obfuscated | Human name | Notes |
@@ -332,8 +367,56 @@ Obfuscated name (as found in `temp/decompiled/`) → MCP/human-readable name.
 | `fq` | `EntityDamageSource` | Extends `pm`; stores attacker entity; `a()` returns attacker |
 | `qq` | `EntityDamageSourceIndirect` | Extends `fq`; stores owner entity; `a()` returns owner (not projectile) |
 | `agu` | `ItemFood` | Extends `acy`; healAmount `b`, satMod `bR`, wolfFood `bS`; eat animation 32 ticks; on-eat potion support |
+| `ads` | `ItemTool` | Extends `acy`; bR=effective blocks array; a=efficiency (from material); bS=weaponDamage=baseDmg+materialBonus; b=nu material; hitEntity costs 2 durability, onBlockDestroyed costs 1 |
+| `nu` | `EnumToolMaterial` | 5 constants: a=WOOD(0,59,2F,0,15), b=STONE(1,131,4F,1,5), c=IRON(2,250,6F,2,14), d=DIAMOND(3,1561,8F,3,10), e=GOLD(0,32,12F,0,22); fields f=harvestLevel, g=maxUses, h=efficiency, i=damageBonus, j=enchantability |
+| `zp` | `ItemSword` | Extends `acy` (NOT ads); a=4+material.damageBonus; getStrVsBlock=15F for cobweb/1.5F else; blocking action `ps.d`; hitEntity costs 1 durability |
+| `adb` | `ItemSpade` | Extends `ads`; baseDamage=1; 10 effective blocks (grass/dirt/sand/gravel/snow/clay/farmland/soulsand/mycelium); canHarvestBlock=snow_layer+snow_block only |
+| `zu` | `ItemPickaxe` | Extends `ads`; baseDamage=2; 22 effective blocks (all stone/ore/metal/rail); canHarvestBlock with harvest-level tier gates (obsidian=diamond, oreDiamond/oreGold=iron+, oreIron/oreLapis=stone+, oreRedstone=iron+) |
+| `ago` | `ItemAxe` | Extends `ads`; baseDamage=3; 8 effective blocks; efficiency for ANY wood-material block (overrides bR check) |
+| `wr` | `ItemHoe` | Extends `acy` (NOT ads); no weapon damage; tills grass (top face, air above) or dirt → farmland; costs 1 durability per till |
+| `agi` | `ItemArmor` | Extends `acy`; a=armorType(0-3), b=protection, bR=armorSlot, bT=dj material; maxDurability=bS[slot]*material.f; bS={11,16,15,13} |
+| `dj` | `EnumArmorMaterial` | 5 constants: a=LEATHER(5,[1,3,2,1],15), b=CHAIN(15,[2,5,4,1],12), c=IRON(15,[2,6,5,2],9), d=GOLD(7,[2,5,3,1],25), e=DIAMOND(33,[3,8,6,3],10) |
 | `sv` | `EnumArt` | **NOT ItemFood** — painting variant enum; 25 entries (Kebab…DonkeyKong) with width/height/atlas coords |
 | `ps` | `EnumAction` | Item use action enum; 5 values (a–e); value `b` = eat animation |
+| `qy` | `EnumSleepStatus` | 6-value enum returned by `vi.d()` (trySleep): `a`=OK, `b`=NOT_POSSIBLE_HERE (dimension), `c`=NOT_POSSIBLE_NOW (daytime), `d`=TOO_FAR_AWAY (>3 XZ / >2 Y), `e`=OTHER_PROBLEM (dead/already sleeping), `f`=NOT_SAFE (monster within 8×5×8) |
+| `kn` | `ItemBed` | Extends `acy`; bM=355; itemId=99 (=acy.aZ); `a(dk,ry,vi,int,int,int,int,float)` = `onItemUse`; places foot then head block; no special fields |
+
+## Piston Classes
+
+| Obfuscated | Human name | Notes |
+|---|---|---|
+| `abr` | `BlockPiston` | IDs 29 (sticky) / 33 (normal); field `a`=isSticky; static `cb`=anti-reentrance guard; meta bits 0-2=facing, bit3=isExtended; isPowered: 12-position check; push limit=13; canPush walkforward loop; doExtend: backward-pass block shifting via qz proxy |
+| `acu` | `BlockPistonExtension` | ID 34; field `a`=textureOverride (-1=default); two-part AABB (face plate + shaft) per facing; defers neighbor events to base piston |
+| `qz` | `BlockMovingPiston` | ID 36; extends `ba` (BlockContainer); hardness=-1 (indestructible while moving); dropBlockAsItem uses stored block; AABB animated from agb progress |
+| `agb` | `TileEntityPiston` | fields: a=storedBlockId, b=storedBlockMeta, j=facing, k=isExtending, l=isSource, m=currentProgress, n=prevProgress; tick advances m by 0.5F per tick; finalizes at 1.0F; NBT saves n (not m) — quirk; entity push uses static shared list `o` |
+| `ot` | `DirectionArrays` | Static facing utility; b[]={0,0,0,0,-1,1} (Y offsets), c[]={-1,1,0,0,0,0} (X offsets), d[]={0,0,-1,1,0,0} (Z offsets); face 0=down, 1=up, 2=north(-Z), 3=south(+Z), 4=west(-X), 5=east(+X) |
+
+## Overworld Structure Classes
+
+| Obfuscated | Human name | Notes |
+|---|---|---|
+| `hl` | `MapGenStructureBase` | Abstract base for structure generators; extends `bz`; handles piece registration/query |
+| `kd` | `MapGenMineshaft` | Mineshaft generator; extends `hl`; nextInt(100)==0 && nextInt(80)<max(|cX|,|cZ|); start=`ns` |
+| `ns` | `MineshaftStart` | StructureStart for mineshafts; starting piece=`uk` |
+| `aez` | `MineshaftPieceFactory` | Piece factory; aba=70%, ra=10%, id=20%; max depth=8, radius≤80 |
+| `uk` | `MineshaftStartPiece` | Initial mineshaft corridor piece |
+| `aba` | `MineshaftCorridor` | 70% of pieces; wooden support every 5 blocks (planks ID 5); fence posts ID 85; rails ID 66; cobweb ID 30; cave-spider spawner ~4.3% (when not isMain + 1/23 chance); chest wagon loot 1%/support |
+| `ra` | `MineshaftCrossing` | 10% of pieces; 4-way junction |
+| `id` | `MineshaftStaircase` | 20% of pieces; descending staircase segment |
+| `dc` | `MapGenStronghold` | Stronghold generator; extends `hl`; 3 per world; initial angle=nextDouble()×π×2; spacing 2π/3; distance=(1.25+nextDouble())×32 chunks; 7 valid biomes; search radius=112 blocks |
+| `kg` | `StrongholdStart` | StructureStart for strongholds; opening piece=`aeh` |
+| `aeh` | `StrongholdStaircase` | Stronghold opening staircase piece; stone brick (ID 98) |
+| `vn` | `StrongholdCorridor` | 5×5×N straight corridor piece in stronghold; **NOT** the generator (corrects Coder guess) |
+| `xn` | `MapGenVillage` | Village generator; extends `hl`; 32-chunk grid; offset nextInt(24) X and Z; valid biomes sr.c+sr.d (plains+desert); cell RNG=world.x(gX,gZ,10387312); returns boolean suppressing dungeon |
+| `yo` | `VillageStart` | StructureStart for villages; starting piece=`yp` |
+| `yp` | `VillageStartPiece` | Village initial road/well piece |
+
+## Item Classes — Records / Jukebox
+
+| Obfuscated | Human name | Notes |
+|---|---|---|
+| `pe` | `ItemRecord` | Extends `acy`; field `a`=String discName; bN=1 (no stacking); 11 discs acy.bB–bL (IDs 2256–2266); onItemUse inserts into jukebox (meta=0 check); fires event 1005 with bM; tooltip "C418 - <name>"; rarity RARE (aqua colour) |
+| `agc` | `TileEntityJukebox` | Extends `bq`; field `a`=int recordItemId (0=empty); NBT key "Record" as int (not written when 0) |
 
 ## Spawning / Creature Type Classes
 
@@ -358,6 +441,31 @@ Obfuscated name (as found in `temp/decompiled/`) → MCP/human-readable name.
 | `mt` | `FurnaceRecipes` | Static smelting table; 15 hardcoded input→output pairs; accessed via `mt.a()` singleton |
 | `eq` | `FoodStats` | Player food state; "foodLevel" int + "foodTickTimer" int + "foodSaturationLevel" float + "foodExhaustionLevel" float; only loaded if "foodLevel" key present |
 | `wq` | `PlayerAbilities` | Player ability flags: a=invulnerable, b=flying, c=allowFlying, d=instantBuild; **BUG**: `a(ik)` writes `this.a` (invulnerable) to "flying" key; `b(ik)` reads correctly |
+
+## End Dimension Classes
+
+| Obfuscated | Human name | Notes |
+|---|---|---|
+| `a` | `ChunkProviderEnd` | End chunk generator; implements `ej`; 5 noise generators (eb octaves); 3×33×3 density grid; island shaping `100-8*sqrt(x²+z²)`; `var18=0` dead code (noise `b` unused); pure end stone fill; surface pass is no-op; delegates populate to `uu` (BiomeSky) |
+| `ol` | `WorldProviderEnd` | End dimension provider; dim=1; `g()=new dh(100,50,0)`; fog=0x808080×0.15F; `e=true` (no sky), `c=true` (sleeping disabled), `g=1`; `c()=new a(world,seed)` |
+| `uu` | `BiomeSky` | End biome decorator; extends `ql`; field `L=new oh(yy.bJ.bM)` (spike generator); 1/5 chance spike per populate; spawns Ender Dragon `oo` at (0.0,128.0,0.0) only for chunk (0,0) |
+| `oh` | `WorldGenEndSpike` | End obsidian pillar generator; validates end stone floor; random height nextInt(32)+6=[6,37], radius nextInt(4)+1=[1,4]; obsidian cylinder (yy.ap.bM=49); EntityEnderCrystal `sf` on top; bedrock cap (yy.z.bM=7) |
+| `oo` | `EntityDragon` | Ender Dragon boss entity; spawned at (0.0,128.0,0.0) during End chunk populate (chunk 0,0 only) |
+| `sf` | `EntityEnderCrystal` | End crystal entity; placed on top of obsidian pillars by `oh` |
+| `rl` | `BlockEndPortalFrame` | BlockEndPortalFrame (ID 120); texture 159; meta bits 0-1=facing, bit 2=hasEye; `e(meta)=(meta&4)!=0`; AABB 0–0.8125; hardness=-1 (unbreakable); light 0.125F; drops nothing; facing set from player yaw on placement |
+| `aid` | `BlockEndPortal` | BlockEndPortal (ID 119); extends `ba` (TileEntityRegistry); TileEntity `yg`; AABB 1/16 thick; no collision; `onEntityCollided→player.c(1)` teleport; self-destructs in non-overworld on `onBlockAdded`; static `a` guard |
+| `yg` | `TileEntityEndPortal` | TileEntity for BlockEndPortal (ID 119); registered as "Airportal"; minimal implementation |
+| `aag` | `ItemEnderEye` | Eye of Ender item; `onItemUse`: validates frame+empty, sets meta\|4 (hasEye), checks 12-frame ring via `lz` arrays (3+3+3+3), fills 3×3 interior with yy.bH.bM; `onItemRightClick`: throws `bs` (EntityEnderEye) toward stronghold via `world.b("Stronghold",…)` |
+| `bs` | `EntityEnderEye` | Thrown Eye of Ender entity; flies toward nearest stronghold |
+
+## Portal / Travel Classes
+
+| Obfuscated | Human name | Notes |
+|---|---|---|
+| `sc` | `BlockPortal` | Nether portal block (ID 90); extends `aaf`; no collision `b()=null`; visual AABB 0.25 thick; `g()` tryToCreatePortal: 10 obsidian minimum (corners optional), 4×5 scan (var7=-1..2, var8=-1..3), places 2×3 interior; onNeighborChange destroys invalid columns; entity contact calls `entity.S()`; 1% sound + 4 portal particles per tick |
+| `aaf` | `BlockPortalBase` | Abstract base class for `sc` (BlockPortal); exact function unknown |
+| `aim` | `PortalTravelAgent` | Portal link manager; `a(world,entity)`: for dim==1 places 5×5 obsidian floor+3-high air; for Nether calls `b()` find then `c()` create; `b()` radius=128; `c()` radius=16, 2-phase + emergency at Y=70, builds 4×5 obsidian frame with 2×3 portal interior |
+| `ou` | `ItemFlintAndSteel` | Flint and Steel item (ID 259); bN=1; durability=64; `onItemUse` places fire on adjacent air; always damages 1 durability; portal ignition indirect via BlockFire→sc.g() |
 
 ---
 

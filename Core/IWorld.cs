@@ -61,6 +61,14 @@ public interface IWorld : IBlockAccess
     /// </summary>
     void SetBlockSilent(int x, int y, int z, int blockId);
 
+    // ── Snow / Ice helpers (SnowIce_Spec §9) ──────────────────────────────────
+
+    /// <summary>obf: <c>ry.p(x,y,z)</c> — true if water at (x,y,z) should freeze to ice.</summary>
+    bool CanFreezeAtLocation(int x, int y, int z);
+
+    /// <summary>obf: <c>ry.r(x,y,z)</c> — true if air at (x,y,z) should receive a snow layer.</summary>
+    bool CanSnowAtLocation(int x, int y, int z);
+
     // ── Tick scheduling ────────────────────────────────────────────────────────
 
     /// <summary>
@@ -140,4 +148,10 @@ public interface IWorld : IBlockAccess
     /// Spec: <c>world.y.g</c>.
     /// </summary>
     int DimensionId { get; }
+
+    /// <summary>
+    /// Creates an explosion centered at (x, y, z) with the given power and incendiary flag.
+    /// Stub until <c>xp</c> (Explosion) is implemented. Spec: BlockBed_Spec §7, Explosion_Spec.
+    /// </summary>
+    void CreateExplosion(EntityPlayer? player, double x, double y, double z, float power, bool isIncendiary);
 }

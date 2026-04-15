@@ -66,6 +66,15 @@ public abstract class EntityPlayer : LivingEntity
     /// <summary>obf: <c>a</c> (on vi, not Entity.a) — ticks spent sleeping (target: 100).</summary>
     public int SleepTimer;
 
+    /// <summary>obf: <c>bU</c> — head-block position of the bed the player is currently sleeping in. Null when awake.</summary>
+    public (int x, int y, int z)? BedPosition;
+
+    /// <summary>obf: <c>bV</c> — sleeping pose X offset (set by <see cref="SetSleepingPoseOffset"/>).</summary>
+    public float SleepPoseOffsetX;
+
+    /// <summary>obf: <c>bX</c> — sleeping pose Z offset (set by <see cref="SetSleepingPoseOffset"/>).</summary>
+    public float SleepPoseOffsetZ;
+
     /// <summary>obf: <c>cf</c> — XP progress within current level (0.0–1.0).</summary>
     public float XpProgress;
 
@@ -304,5 +313,132 @@ public abstract class EntityPlayer : LivingEntity
 
         if (tag.HasKey("foodLevel"))
             FoodStats.ReadFromNbt(tag);
+    }
+
+    // ── Chat / notifications ──────────────────────────────────────────────────
+
+    /// <summary>
+    /// obf: <c>vi.b(String)</c> — sends a localization key as a chat message to the player.
+    /// Stub in base class; concrete server/client player subclasses override to send to client.
+    /// </summary>
+    public virtual void SendMessage(string messageKey) { /* stub */ }
+
+    // ── Sleep (BlockBed_Spec §12-14) ──────────────────────────────────────────
+
+    /// <summary>
+    /// obf: <c>vi.d(int, int, int)</c> — trySleep. Attempts to enter sleep state.
+    /// Returns an <see cref="EnumSleepResult"/> describing the outcome.
+    /// All checks happen server-side; client always returns Ok immediately.
+    /// Spec: BlockBed_Spec §12.
+    /// </summary>
+    public EnumSleepResult TrySleep(int bedX, int bedY, int bedZ)
+    {
+        if (World == null) return EnumSleepResult.Ok;
+
+        if (!World.IsClientSide)
+        {
+            // Already sleeping or dead
+            if (IsSleeping || !IsEntityAlive()) return EnumSleepResult.AlreadySleeping;
+
+            // Wrong dimension
+            if (World.WorldProvider?.SleepingDisabled == true) return EnumSleepResult.WrongDimension;
+
+            // Not night
+            if (World.IsDaytime()) return EnumSleepResult.NotNight;
+
+            // Too far from bed
+            if (Math.Abs(PosX - bedX) > 3.0 || Math.Abs(PosY - bedY) > 2.0 || Math.Abs(PosZ - bedZ) > 3.0)
+                return EnumSleepResult.TooFar;
+
+            // Monsters nearby (±8 XZ, ±5 Y)
+            if (World.HasMonstersNearBed(bedX, bedY, bedZ))
+                return EnumSleepResult.NotSafe;
+        }
+
+        // Shrink player to sleeping size (spec §12 step 2)
+        SetSize(0.2f, 0.2f);
+
+        // Position inside bed based on facing (spec §12 step 3)
+        if (World.GetBlockId(bedX, bedY, bedZ) == 26)
+        {
+            int facing = BlockBed.GetFacing(World.GetBlockMetadata(bedX, bedY, bedZ));
+            float offsetX = 0.5f, offsetZ = 0.5f;
+            switch (facing)
+            {
+                case 0: offsetZ = 0.9f; break;
+                case 1: offsetX = 0.1f; break;
+                case 2: offsetZ = 0.1f; break;
+                case 3: offsetX = 0.9f; break;
+            }
+            SetSleepingPoseOffset(facing);
+            SetPosition(bedX + offsetX, bedY + 0.9375, bedZ + offsetZ);
+        }
+        else
+        {
+            SetPosition(bedX + 0.5, bedY + 0.9375, bedZ + 0.5);
+        }
+
+        IsSleeping   = true;
+        SleepTimer   = 0;
+        BedPosition  = (bedX, bedY, bedZ);
+        MotionX = MotionY = MotionZ = 0.0;
+
+        if (!World.IsClientSide)
+            World.CheckAllPlayersSleeping();
+
+        return EnumSleepResult.Ok;
+    }
+
+    /// <summary>
+    /// obf: <c>vi.a(bool, bool, bool)</c> — wakeUpPlayer. Restores player state after sleeping.
+    /// Spec: BlockBed_Spec §14.
+    /// </summary>
+    public void WakeUpPlayer(bool setSpawn, bool broadcastWake, bool setSpawnpoint)
+    {
+        // Restore normal player size (spec §14 step 1)
+        SetSize(0.6f, 1.8f);
+        ResetPositionToBoundingBox();
+
+        var bedPos = BedPosition;
+
+        if (bedPos.HasValue && World != null &&
+            World.GetBlockId(bedPos.Value.x, bedPos.Value.y, bedPos.Value.z) == 26)
+        {
+            // Clear occupied flag (spec §14 step 3a)
+            BlockBed.SetOccupied(World, bedPos.Value.x, bedPos.Value.y, bedPos.Value.z, false);
+
+            // Find safe wakeup position (spec §14 step 3b-d)
+            var wakePos = BlockBed.FindWakeupPosition(World, bedPos.Value.x, bedPos.Value.y, bedPos.Value.z, 0);
+            if (wakePos == null)
+                wakePos = (bedPos.Value.x, bedPos.Value.y + 1, bedPos.Value.z);
+
+            SetPosition(wakePos.Value.x + 0.5, wakePos.Value.y + YOffset + 0.1, wakePos.Value.z + 0.5);
+        }
+
+        IsSleeping = false;
+
+        if (World != null && !World.IsClientSide && broadcastWake)
+            World.CheckAllPlayersSleeping();
+
+        // Sleep counter: 0 = setSpawn path (just woke via natural dawn), 100 = manual wake
+        SleepTimer = setSpawn ? 0 : 100;
+
+        if (setSpawnpoint && bedPos.HasValue)
+            BedSpawn = bedPos;
+    }
+
+    /// <summary>
+    /// obf: <c>vi.b(int facing)</c> — sets bV/bX sleeping pose visual offsets.
+    /// Spec: BlockBed_Spec §13.
+    /// </summary>
+    public void SetSleepingPoseOffset(int facing)
+    {
+        switch (facing)
+        {
+            case 0: SleepPoseOffsetX =  0.0f; SleepPoseOffsetZ = -1.8f; break; // south
+            case 1: SleepPoseOffsetX =  1.8f; SleepPoseOffsetZ =  0.0f; break; // west
+            case 2: SleepPoseOffsetX =  0.0f; SleepPoseOffsetZ =  1.8f; break; // north
+            case 3: SleepPoseOffsetX = -1.8f; SleepPoseOffsetZ =  0.0f; break; // east
+        }
     }
 }

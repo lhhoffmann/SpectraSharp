@@ -263,10 +263,21 @@ public abstract class Entity
     /// Sets size (width × height) for the bounding box. Called by <see cref="EntityInit"/>.
     /// Spec: protected <c>a(float width, float height)</c>.
     /// </summary>
-    protected void SetSize(float width, float height)
+    public void SetSize(float width, float height)
     {
         Width  = width;
         Height = height;
+    }
+
+    /// <summary>
+    /// Resets PosX/Y/Z from the current BoundingBox center (inverse of SetPosition).
+    /// Spec: <c>aF()</c> — used after sleep/wake to reconcile AABB with position fields.
+    /// </summary>
+    public void ResetPositionToBoundingBox()
+    {
+        PosX = (BoundingBox.MinX + BoundingBox.MaxX) / 2.0;
+        PosY = BoundingBox.MinY + YOffset - YSize;
+        PosZ = (BoundingBox.MinZ + BoundingBox.MaxZ) / 2.0;
     }
 
     /// <summary>
@@ -470,6 +481,22 @@ public abstract class Entity
 
     /// <summary>True if entity is alive (not dead). Spec: <c>K()</c> → bool.</summary>
     public virtual bool IsEntityAlive() => !IsDead;
+
+    // ── Spawn validation (spec: SpawnerAnimals_Spec §4) ──────────────────────
+
+    /// <summary>
+    /// Returns true if this entity can spawn at its current position in the world.
+    /// Base implementation returns true (no restriction).
+    /// Overridden by LivingEntity subclasses to check light level and floor conditions.
+    /// Spec: <c>getCanSpawnHere()</c>.
+    /// </summary>
+    public virtual bool GetCanSpawnHere() => true;
+
+    /// <summary>
+    /// Maximum number of entities that can spawn in one pack.
+    /// Spec: <c>getMaxSpawnedInChunk()</c>. Default: 4.
+    /// </summary>
+    public virtual int GetMaxSpawnedInChunk() => 4;
 
     // ── Distance (spec §10) ───────────────────────────────────────────────────
 

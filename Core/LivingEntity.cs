@@ -342,6 +342,19 @@ public abstract class LivingEntity : Entity
     /// </summary>
     protected virtual void DropItems(bool playerKilled, int looting) { }
 
+    /// <summary>
+    /// Drops <paramref name="count"/> copies of item <paramref name="itemId"/> at this
+    /// entity's position. Convenience wrapper for mob-specific death drops.
+    /// Equivalent to Java <c>a(int, int)</c> (spawnDropItem).
+    /// </summary>
+    protected void SpawnDropItem(int itemId, int count)
+    {
+        if (World is not World concreteWorld) return;
+        var entity = new EntityItem(concreteWorld, PosX, PosY, PosZ, new ItemStack(itemId, count, 0));
+        entity.PickupDelay = 10;
+        concreteWorld.SpawnEntity(entity);
+    }
+
     // ── Movement (spec §8) ────────────────────────────────────────────────────
 
     /// <summary>

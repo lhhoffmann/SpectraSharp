@@ -202,11 +202,8 @@ public static class BlockRegistry
             .SetHasTileEntity()
             .SetBlockName("musicBlock");
 
-        // 26 — Bed (aab): hard 0.2, N+T — stub
-        new Block(26, 134, Material.Plants)
-            .SetHardness(0.2f)
-            .ClearNeedsRandomTick()
-            .SetHasTileEntity()
+        // 26 — Bed (aab): aab class, p.m, tex 134, hard 0.2, N flag
+        new BlockBed(26)
             .SetBlockName("bed");
 
         // 27 — Powered Rail (afr): texture 179, p.f(stone2), sound g, hard 0.7, T
@@ -223,11 +220,8 @@ public static class BlockRegistry
             .SetHasTileEntity()
             .SetBlockName("detectorRail");
 
-        // 29 — Sticky Piston (abr): texture 106, hard 0, T — stub
-        new Block(29, 106, Material.RockTransp)
-            .SetHardness(0.0f)
-            .SetHasTileEntity()
-            .SetBlockName("pistonStickyBase");
+        // 29 — Sticky Piston (abr): texture 106, hard 0.5
+        new BlockPiston(29, isSticky: true);
 
         // 30 — Web (kc): texture 11, opacity 1, hard 4.0
         new Block(30, 11, Material.RockTransp)
@@ -247,16 +241,11 @@ public static class BlockRegistry
             .SetStepSound(Block.SoundGrass)
             .SetBlockName("deadbush");
 
-        // 33 — Piston (abr): texture 107, hard 0, T
-        new Block(33, 107, Material.RockTransp)
-            .SetHardness(0.0f)
-            .SetHasTileEntity()
-            .SetBlockName("pistonBase");
+        // 33 — Piston (abr): texture 107, hard 0.5
+        new BlockPiston(33, isSticky: false);
 
-        // 34 — Piston Moving (acu): texture 107, T
-        new Block(34, 107, Material.RockTransp)
-            .SetHasTileEntity()
-            ;
+        // 34 — Piston Extension (acu): texture 107, hard 0.5
+        new BlockPistonExtension(34);
 
         // 35 — Wool (fr): p.i, sound i, hard 0.8, T
         new Block(35, 64, Material.Leaves)
@@ -265,8 +254,8 @@ public static class BlockRegistry
             .SetHasTileEntity()
             .SetBlockName("cloth");
 
-        // 36 — (qz): unknown stub
-        new Block(36, 0, Material.RockTransp);
+        // 36 — Moving Piston proxy (qz): hardness -1.0 (unmined), T
+        new BlockMovingPiston(36);
 
         // 37 — Dandelion (wg): texture 13, p.e, sound e, hard 0
         new Block(37, 13, Material.RockTransp)
@@ -323,11 +312,9 @@ public static class BlockRegistry
             .SetStepSound(Block.SoundStoneHighPitch)
             .SetBlockName("brick");
 
-        // 46 — TNT (abm): texture 8, p.e, sound e, hard 0
-        new Block(46, 8, Material.RockTransp)
-            .SetHardness(0.0f)
-            .SetStepSound(Block.SoundGrass)
-            .SetBlockName("tnt");
+        // 46 — TNT (abm): texture 8, p.r (Mat_R = flammable), sound e, hard 0
+        new BlockTNT(46)
+            .SetStepSound(Block.SoundGrass);
 
         // 47 — Bookshelf (ay): texture 35, p.d, sound c, hard 1.5
         new Block(47, 35, Material.Plants)
@@ -381,13 +368,8 @@ public static class BlockRegistry
             .SetHasTileEntity()
             .SetBlockName("chest");
 
-        // 55 — Redstone Dust (kw): texture 164, p.b, sound b, hard 0, N+T
-        new Block(55, 164, Material.Grass_)
-            .SetHardness(0.0f)
-            .SetStepSound(Block.SoundStone)
-            .ClearNeedsRandomTick()
-            .SetHasTileEntity()
-            .SetBlockName("redstoneDust");
+        // 55 — Redstone Dust (kw): BlockRedstoneWire
+        new BlockRedstoneWire(55);
 
         // 56 — Diamond Ore (v): p.e, texture 50, sound f, hard 3.0, res 5
         new Block(56, 50, Material.RockTransp)
@@ -475,19 +457,12 @@ public static class BlockRegistry
             .SetHasTileEntity()
             .SetBlockName("sign");
 
-        // 69 — Lever (aaa): texture 96, p.d, sound c, hard 0.5, T
-        new Block(69, 96, Material.Plants)
-            .SetHardness(0.5f)
-            .SetStepSound(Block.SoundWood)
-            .SetHasTileEntity()
-            .SetBlockName("lever");
+        // 69 — Lever (aaa): BlockLever
+        new BlockLever(69);
 
-        // 70 — Stone Pressure Plate (wx): p.e, sound f, hard 0.5, T
-        new Block(70, 1, Material.RockTransp)
-            .SetHardness(0.5f)
-            .SetStepSound(Block.SoundStoneHighPitch)
-            .SetHasTileEntity()
-            .SetBlockName("pressurePlate");
+        // 70 — Stone Pressure Plate (wx): BlockPressurePlate (living mobs sensor)
+        new BlockPressurePlate(70, 1, Material.RockTransp, detectAllEntities: false)
+            .SetStepSound(Block.SoundStoneHighPitch);
 
         // 71 — Iron Door (uc): p.f (RockTransp2 = iron material), sound g, hard 5.0
         new BlockDoor(71, Material.RockTransp2)
@@ -496,61 +471,38 @@ public static class BlockRegistry
             .ClearNeedsRandomTick()
             .SetBlockName("doorIron");
 
-        // 72 — Wood Pressure Plate (wx): p.d, sound c, hard 0.5, T
-        new Block(72, 4, Material.Plants)
-            .SetHardness(0.5f)
-            .SetStepSound(Block.SoundWood)
-            .SetHasTileEntity()
-            .SetBlockName("pressurePlate");
+        // 72 — Wood Pressure Plate (wx): BlockPressurePlate (all entities sensor)
+        new BlockPressurePlate(72, 4, Material.Plants, detectAllEntities: true)
+            .SetStepSound(Block.SoundWood);
 
-        // 73 — Redstone Ore Off (oc): texture 51, p.e, sound f, hard 3.0, res 5, T
-        new Block(73, 51, Material.RockTransp)
-            .SetHardness(3.0f).SetResistance(5.0f)
-            .SetStepSound(Block.SoundStoneHighPitch)
-            .SetHasTileEntity()
-            .SetBlockName("oreRedstone");
+        // 73 — Redstone Ore Off (oc): BlockOreRedstone (normal)
+        new BlockOreRedstone(73, isGlowing: false)
+            .SetStepSound(Block.SoundStoneHighPitch);
 
-        // 74 — Redstone Ore On (oc): texture 51, p.e, sound f, hard 3.0, res 5, light 9, T
-        new Block(74, 51, Material.RockTransp)
-            .SetHardness(3.0f).SetResistance(5.0f)
-            .SetLightValue(0.625f)
-            .SetStepSound(Block.SoundStoneHighPitch)
-            .SetHasTileEntity()
-            .SetBlockName("oreRedstone");
+        // 74 — Redstone Ore On (oc): BlockOreRedstone (glowing)
+        new BlockOreRedstone(74, isGlowing: true)
+            .SetStepSound(Block.SoundStoneHighPitch);
 
-        // 75 — Redstone Torch Off (ku): texture 115, p.d, sound c, hard 0, T
-        new Block(75, 115, Material.Plants)
-            .SetHardness(0.0f)
-            .SetStepSound(Block.SoundWood)
-            .SetHasTileEntity()
-            .SetBlockName("notGate");
+        // 75 — Redstone Torch Off (ku): BlockRedstoneTorch (off)
+        new BlockRedstoneTorch(75, 115, isOn: false)
+            .SetStepSound(Block.SoundWood);
 
-        // 76 — Redstone Torch On (ku): texture 99, p.d, sound c, hard 0, light 7, T
-        new Block(76, 99, Material.Plants)
-            .SetHardness(0.0f)
-            .SetLightValue(0.5f)
-            .SetStepSound(Block.SoundWood)
-            .SetHasTileEntity()
-            .SetBlockName("notGate");
+        // 76 — Redstone Torch On (ku): BlockRedstoneTorch (on)
+        new BlockRedstoneTorch(76, 99, isOn: true)
+            .SetStepSound(Block.SoundWood);
 
-        // 77 — Stone Button (ahv): p.e, sound f, hard 0.5, T
-        new Block(77, 1, Material.RockTransp)
-            .SetHardness(0.5f)
-            .SetStepSound(Block.SoundStoneHighPitch)
-            .SetHasTileEntity()
-            .SetBlockName("button");
+        // 77 — Stone Button (ahv): BlockButton
+        new BlockButton(77);
 
-        // 78 — Snow Layer (aif): texture 66, p.i, sound i, hard 0.1, opacity 0
-        new Block(78, 66, Material.Leaves)
+        // 78 — Snow Layer (aif) — full impl: BlockSnow
+        new BlockSnow(78)
             .SetHardness(0.1f)
-            .SetLightOpacity(0)
             .SetStepSound(Block.SoundCloth)
             .SetBlockName("snow");
 
-        // 79 — Ice (ahq): texture 67, p.q, sound h, hard 0.5, opacity 3
-        new Block(79, 67, Material.MatPass_Q)
+        // 79 — Ice (ahq) — full impl: BlockIce
+        new BlockIce(79)
             .SetHardness(0.5f)
-            .SetLightOpacity(3)
             .SetStepSound(Block.SoundGlass)
             .SetBlockName("ice");
 
@@ -579,12 +531,8 @@ public static class BlockRegistry
             .ClearNeedsRandomTick()
             .SetBlockName("reeds");
 
-        // 84 — Jukebox (abl): texture 74, p.e, sound f, hard 2.0, res 10, T
-        new Block(84, 74, Material.RockTransp)
-            .SetHardness(2.0f).SetResistance(10.0f)
-            .SetStepSound(Block.SoundStoneHighPitch)
-            .SetHasTileEntity()
-            .SetBlockName("jukebox");
+        // 84 — Jukebox (abl): BlockJukebox, p.d (wood), sound f, hard 2.0, res 10, T
+        new BlockJukebox(84);
 
         // 85 — Oak Fence (nz): concrete BlockFence, wood material
         new BlockFence(85, 4)
@@ -643,22 +591,13 @@ public static class BlockRegistry
             .SetHasTileEntity()
             .SetBlockName("cake");
 
-        // 93 — Repeater Off (mz): p.d, sound c, hard 0, N+T
-        new Block(93, 131, Material.Plants)
-            .SetHardness(0.0f)
-            .SetStepSound(Block.SoundWood)
-            .ClearNeedsRandomTick()
-            .SetHasTileEntity()
-            .SetBlockName("diode");
+        // 93 — Repeater Off (mz): BlockRedstoneDiode (off)
+        new BlockRedstoneDiode(93, isOn: false)
+            .SetStepSound(Block.SoundWood);
 
-        // 94 — Repeater On (mz): p.d, sound c, hard 0, light 9, N+T
-        new Block(94, 131, Material.Plants)
-            .SetHardness(0.0f)
-            .SetLightValue(0.625f)
-            .SetStepSound(Block.SoundWood)
-            .ClearNeedsRandomTick()
-            .SetHasTileEntity()
-            .SetBlockName("diode");
+        // 94 — Repeater On (mz): BlockRedstoneDiode (on)
+        new BlockRedstoneDiode(94, isOn: true)
+            .SetStepSound(Block.SoundWood);
 
         // 95 — Locked Chest (vj): p.d, sound c, hard 0, light 15, T
         new Block(95, 26, Material.Plants)

@@ -57,6 +57,7 @@ public sealed class Engine(AssetManager assets, TextureRegistry textures, Bridge
 
         SetWindowIcon();
         BlockRegistry.Initialize(); // must run before LoadAssets so Core block face tiles are known
+        Items.ItemRegistry.Initialize(); // must run after BlockRegistry (tool arrays reference block singletons)
         LoadAssets();
         SetupMaterials();
         SetupBridgeBlocks();

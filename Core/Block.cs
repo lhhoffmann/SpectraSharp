@@ -271,6 +271,29 @@ public class Block
     /// <summary>Default: returns false. Spec: <c>c(World,x,y,z,face)</c>.</summary>
     public virtual bool CanProvideSupport(IWorld world, int x, int y, int z, int face) => false;
 
+    // ── Redstone power API (spec: BlockRedstone_Spec §2) ─────────────────────
+
+    /// <summary>
+    /// obf: <c>b(kq,x,y,z,face)</c> — isProvidingWeakPower.
+    /// Returns true if this block provides weak redstone power toward <paramref name="face"/>.
+    /// Default: false. Overridden by redstone components.
+    /// </summary>
+    public virtual bool IsProvidingWeakPower(IBlockAccess world, int x, int y, int z, int face) => false;
+
+    /// <summary>
+    /// obf: <c>c(ry,x,y,z,face)</c> — isProvidingStrongPower.
+    /// Returns true if this block provides strong redstone power toward <paramref name="face"/>.
+    /// Default: false. Overridden by torches, levers, buttons, pressure plates.
+    /// </summary>
+    public virtual bool IsProvidingStrongPower(IWorld world, int x, int y, int z, int face) => false;
+
+    /// <summary>
+    /// obf: <c>g()</c> — canProvidePower.
+    /// True for all blocks that actively emit redstone power.
+    /// Default: false. Wire and powered blocks return true.
+    /// </summary>
+    public virtual bool CanProvidePower() => false;
+
     /// <summary>Returns the texture index for a given face. Default: ignores face. Spec: <c>b(int face)</c>.</summary>
     public virtual int GetTextureIndex(int face) => BlockIndexInTexture;
 
@@ -314,6 +337,13 @@ public class Block
     /// <summary>Called when removed. Default no-op. Spec: <c>d(World,x,y,z)</c>.</summary>
     public virtual void OnBlockRemoved(IWorld world, int x, int y, int z) { }
 
+    /// <summary>
+    /// Called immediately before a block is replaced in the world, while the tile entity
+    /// still exists. Container blocks (e.g. jukebox) use this to eject stored items.
+    /// Spec: <c>abl.d(ry,x,y,z)</c> — onBlockPreDestroy. Default no-op.
+    /// </summary>
+    public virtual void OnBlockPreDestroy(IWorld world, int x, int y, int z) { }
+
     /// <summary>Called when destroyed by player. Default no-op. Spec: <c>a(World,x,y,z,int meta)</c>.</summary>
     public virtual void OnBlockDestroyedByPlayer(IWorld world, int x, int y, int z, int meta) { }
 
@@ -340,7 +370,7 @@ public class Block
     /// Returns the world-space collision AABB (pooled) for this block at (x, y, z).
     /// Spec: <c>c_(World,x,y,z)</c>.
     /// </summary>
-    public virtual AxisAlignedBB GetCollisionBoundingBoxFromPool(IWorld world, int x, int y, int z)
+    public virtual AxisAlignedBB? GetCollisionBoundingBoxFromPool(IWorld world, int x, int y, int z)
         => AxisAlignedBB.GetFromPool(
             x + MinX, y + MinY, z + MinZ,
             x + MaxX, y + MaxY, z + MaxZ);
@@ -554,6 +584,21 @@ public class Block
             SpawnAsEntity(world, x, y, z, new ItemStack(itemId, 1, DamageDropped(meta)));
         }
     }
+
+    // ── Explosion interface (spec: Explosion_Spec §4, §6) ────────────────────
+
+    /// <summary>
+    /// obf: <c>yy.a(ia sourceEntity)</c> — blast resistance used by Explosion ray attenuation.
+    /// Returns <see cref="BlockResistance"/> / 5.0F per open question §4 resolution.
+    /// Can be overridden (e.g. Obsidian returns a very high value).
+    /// </summary>
+    public virtual float GetExplosionResistance(Entity? sourceEntity) => BlockResistance / 5.0f;
+
+    /// <summary>
+    /// obf: <c>yy.i(ry, x, y, z)</c> — called when another explosion destroys this block.
+    /// Default no-op; overridden by BlockTNT to chain-spawn a primed TNT.
+    /// </summary>
+    public virtual void OnBlockDestroyedByExplosion(IWorld world, int x, int y, int z) { }
 
     // ── toString ─────────────────────────────────────────────────────────────
 

@@ -138,6 +138,50 @@ public class BiomeGenBase
     /// <summary>obf: <c>B.K</c> — enable water+lava spring generation. Default: true.</summary>
     public bool EnableSprings    = true;
 
+    // ── Spawn lists (spec: SpawnerAnimals_Spec §3) ───────────────────────────
+
+    /// <summary>
+    /// One entry in a biome's creature spawn list.
+    /// Replica of <c>nc</c> (BiomeGenBase.SpawnListEntry).
+    /// </summary>
+    public sealed record SpawnListEntry(Type EntityType, int Weight, int MinCount, int MaxCount);
+
+    // Default spawn lists shared by all biomes unless overridden.
+    private static readonly List<SpawnListEntry> DefaultHostileSpawns =
+    [
+        new(typeof(Mobs.EntitySpider),   10, 4, 4),
+        new(typeof(Mobs.EntityZombie),   10, 4, 4),
+        new(typeof(Mobs.EntitySkeleton), 10, 4, 4),
+        new(typeof(Mobs.EntityCreeper),  10, 4, 4),
+    ];
+    private static readonly List<SpawnListEntry> DefaultPassiveSpawns =
+    [
+        new(typeof(Mobs.EntitySheep),   12, 4, 4),
+        new(typeof(Mobs.EntityPig),     10, 4, 4),
+        new(typeof(Mobs.EntityChicken), 10, 4, 4),
+        new(typeof(Mobs.EntityCow),      8, 4, 4),
+    ];
+    private static readonly List<SpawnListEntry> DefaultWaterSpawns = []; // Squid not yet implemented
+
+    /// <summary>obf: hostile spawn list — creatures that spawn at low light levels.</summary>
+    public List<SpawnListEntry> HostileSpawnList;
+    /// <summary>obf: passive spawn list — animals that spawn at high light levels.</summary>
+    public List<SpawnListEntry> PassiveSpawnList;
+    /// <summary>obf: water creature spawn list — squids etc.</summary>
+    public List<SpawnListEntry> WaterSpawnList;
+
+    /// <summary>
+    /// Returns the spawn list for the given creature type.
+    /// Used by <see cref="SpawnerAnimals"/>. Spec: <c>a(jf)</c>.
+    /// </summary>
+    public List<SpawnListEntry> GetSpawnList(EnumCreatureType type) => type switch
+    {
+        EnumCreatureType.Hostile => HostileSpawnList,
+        EnumCreatureType.Passive => PassiveSpawnList,
+        EnumCreatureType.Water   => WaterSpawnList,
+        _                        => [],
+    };
+
     // Shared generator instances (one per biome class, spec §10.3)
     private static readonly WorldGenTrees       _oakGen    = new(false); // G
     private static readonly WorldGenBigTree     _bigOakGen = new();      // H
@@ -166,6 +210,10 @@ public class BiomeGenBase
     {
         BiomeId = id;
         Biomes[id] = this;
+        // Default spawn lists — biome subclasses or builder can replace these
+        HostileSpawnList = DefaultHostileSpawns;
+        PassiveSpawnList = DefaultPassiveSpawns;
+        WaterSpawnList   = DefaultWaterSpawns;
     }
 
     // ── Builder methods (spec §6) ─────────────────────────────────────────────

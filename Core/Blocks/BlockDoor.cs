@@ -68,7 +68,7 @@ public class BlockDoor : Block
         SetBoundsForFacing(ComputeEffectiveFacing(meta));
     }
 
-    public override AxisAlignedBB GetCollisionBoundingBoxFromPool(IWorld world, int x, int y, int z)
+    public override AxisAlignedBB? GetCollisionBoundingBoxFromPool(IWorld world, int x, int y, int z)
     {
         SetBlockBoundsBasedOnState(world, x, y, z);
         return base.GetCollisionBoundingBoxFromPool(world, x, y, z);

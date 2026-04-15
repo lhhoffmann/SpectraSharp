@@ -39,7 +39,7 @@ public static class EntityRegistry
         RegisterId("ThrownExpBottle", 17);
         RegisterId("ItemFrame",    18);
         RegisterId("WitherSkull",  19);
-        RegisterId("PrimedTnt",    20);
+        Register<EntityTNTPrimed>("PrimedTnt", 20);
         RegisterId("FallingSand",  21);
         RegisterId("FireworksRocketEntity", 22);
         RegisterId("Minecart",     40);

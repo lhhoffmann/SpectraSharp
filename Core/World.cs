@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using SpectraSharp.Core.Mobs;
 
 namespace SpectraSharp.Core;
 
@@ -117,12 +118,22 @@ public class World : IWorld
     /// <summary>Dimension ID from the WorldProvider (0=Overworld, -1=Nether, 1=End).</summary>
     public int DimensionId => _worldProvider?.DimensionId ?? 0;
 
+    /// <summary>Exposes the WorldProvider for dimension-specific checks (e.g. SleepingDisabled).</summary>
+    public WorldProvider? WorldProvider => _worldProvider;
+
     /// <summary>
     /// obf: <c>v</c> — difficulty int (0=Peaceful, 1=Easy, 2=Normal, 3=Hard).
     /// Affects hunger drain, starvation damage, and mob spawn rates.
     /// Default: 2 (Normal).
     /// </summary>
     public int Difficulty { get; set; } = 2;
+
+    // ── World spawn point (spec: v — dh spawn coordinate) ────────────────────
+
+    /// <summary>obf: <c>v.a / .b / .c</c> — world spawn point coordinates.</summary>
+    public int SpawnX { get; set; }
+    public int SpawnY { get; set; } = 64;
+    public int SpawnZ { get; set; }
 
     // ── Save system (spec: WorldSave_Spec.md) ─────────────────────────────────
 
@@ -197,8 +208,29 @@ public class World : IWorld
     /// </summary>
     public object? GetTileEntity(int x, int y, int z)
     {
-        // Delegates to chunk.d(x&15, y, z&15) + M fallback — stub (bq spec pending)
-        return null;
+        if (!IsInBounds(x, y, z)) return null;
+        return GetChunkFromBlockCoords(x, z).GetTileEntity(x & 15, y, z & 15);
+    }
+
+    /// <summary>
+    /// Sets (or replaces) a TileEntity at world position (x, y, z).
+    /// Replica of <c>ry.a(bq te)</c> — used by piston extension to install a specific TE
+    /// after placing the moving-block proxy (ID 36) via SetBlockAndMetadata.
+    /// </summary>
+    public void SetTileEntity(int x, int y, int z, TileEntity.TileEntity te)
+    {
+        if (!IsInBounds(x, y, z)) return;
+        GetChunkFromBlockCoords(x, z).AddTileEntity(x & 15, y, z & 15, te);
+    }
+
+    /// <summary>
+    /// Removes the TileEntity at world position (x, y, z) without removing the block.
+    /// Replica of <c>ry.o(int x, int y, int z)</c> — used by TileEntityPiston finalisation.
+    /// </summary>
+    public void RemoveTileEntity(int x, int y, int z)
+    {
+        if (!IsInBounds(x, y, z)) return;
+        GetChunkFromBlockCoords(x, z).RemoveTileEntity(x & 15, y, z & 15);
     }
 
     /// <summary>
@@ -291,6 +323,8 @@ public class World : IWorld
         if (!IsInBounds(x, y, z)) return false;
         Chunk chunk   = GetChunkFromBlockCoords(x, z);
         int   oldId   = chunk.GetBlockId(x & 15, y, z & 15);
+        if (oldId != blockId && oldId != 0)
+            Block.BlocksList[oldId]?.OnBlockPreDestroy(this, x, y, z);
         bool  changed = chunk.SetBlock(x & 15, y, z & 15, blockId, meta);
         if (changed) OnBlockChanged(x, y, z, blockId, oldId);
         return changed;
@@ -305,6 +339,8 @@ public class World : IWorld
         if (!IsInBounds(x, y, z)) return false;
         Chunk chunk   = GetChunkFromBlockCoords(x, z);
         int   oldId   = chunk.GetBlockId(x & 15, y, z & 15);
+        if (oldId != blockId && oldId != 0)
+            Block.BlocksList[oldId]?.OnBlockPreDestroy(this, x, y, z);
         bool  changed = chunk.SetBlock(x & 15, y, z & 15, blockId);
         if (changed) OnBlockChanged(x, y, z, blockId, oldId);
         return changed;
@@ -318,6 +354,29 @@ public class World : IWorld
     {
         if (!IsInBounds(x, y, z)) return false;
         return GetChunkFromBlockCoords(x, z).SetMetadata(x & 15, y, z & 15, meta);
+    }
+
+    /// <summary>
+    /// Sets block metadata WITHOUT triggering neighbour notifications.
+    /// Replica of <c>ry.f(x,y,z,meta)</c> — setMetadataWithoutUpdate.
+    /// Used by redstone wire propagation during batch updates (spec §3.7).
+    /// </summary>
+    public void SetMetadataQuiet(int x, int y, int z, int meta)
+    {
+        if (!IsInBounds(x, y, z)) return;
+        GetChunkFromBlockCoords(x, z).SetMetadata(x & 15, y, z & 15, meta);
+    }
+
+    /// <summary>
+    /// Notifies one specific block at (x,y,z) that <paramref name="changedBlockId"/> changed nearby.
+    /// Replica of <c>ry.j(x,y,z,changedBlockId)</c> — markBlockForUpdate / notifyBlock.
+    /// Used by redstone blocks to trigger neighbour recalculation.
+    /// </summary>
+    public void NotifyBlock(int x, int y, int z, int changedBlockId)
+    {
+        if (!IsInBounds(x, y, z)) return;
+        int id = GetBlockId(x, y, z);
+        Block.BlocksList[id]?.OnNeighborBlockChange(this, x, y, z, changedBlockId);
     }
 
     /// <summary>
@@ -465,8 +524,75 @@ public class World : IWorld
     /// <summary>Stub — no-op until SoundManager is implemented. Spec: <c>world.playAuxSFX(...)</c>.</summary>
     public void PlayAuxSFX(EntityPlayer? player, int eventId, int x, int y, int z, int data) { }
 
-    /// <summary>Stub — returns false until redstone is implemented. Spec: <c>world.isBlockIndirectlyReceivingPower(x,y,z)</c>.</summary>
-    public bool IsBlockIndirectlyReceivingPower(int x, int y, int z) => false;
+    // ── Redstone power query chain (spec: BlockRedstone_Spec §2) ─────────────
+
+    /// <summary>
+    /// obf: <c>ry.k(x,y,z,face)</c> — getStrongPower.
+    /// Returns the strong power level provided by the block at (x,y,z) toward <paramref name="face"/>.
+    /// Spec §2.
+    /// </summary>
+    public bool GetStrongPower(int x, int y, int z, int face)
+    {
+        int id = GetBlockId(x, y, z);
+        if (id == 0) return false;
+        return Block.BlocksList[id]?.IsProvidingStrongPower(this, x, y, z, face) ?? false;
+    }
+
+    /// <summary>
+    /// obf: <c>ry.u(x,y,z)</c> — isStronglyPowered.
+    /// True if any of the 6 adjacent faces provides strong power to (x,y,z).
+    /// Spec §2.
+    /// </summary>
+    public bool IsStronglyPowered(int x, int y, int z)
+        => GetStrongPower(x, y - 1, z, 1)   // block below powers face 1 (up)
+        || GetStrongPower(x, y + 1, z, 0)    // block above powers face 0 (down)
+        || GetStrongPower(x, y, z - 1, 2)    // south powers face 2 (+Z)
+        || GetStrongPower(x, y, z + 1, 3)    // north powers face 3 (-Z)
+        || GetStrongPower(x - 1, y, z, 4)    // east powers face 4 (+X)
+        || GetStrongPower(x + 1, y, z, 5);   // west powers face 5 (-X)
+
+    /// <summary>
+    /// obf: <c>ry.l(x,y,z,face)</c> — getPower.
+    /// For opaque cubes: delegates to <see cref="IsStronglyPowered"/>; else calls IsProvidingWeakPower.
+    /// Spec §2.
+    /// </summary>
+    public bool GetPower(int x, int y, int z, int face)
+    {
+        int id = GetBlockId(x, y, z);
+        if (id == 0) return false;
+        Block? block = Block.BlocksList[id];
+        if (block == null) return false;
+        return block.IsOpaqueCube()
+            ? IsStronglyPowered(x, y, z)
+            : block.IsProvidingWeakPower(this, x, y, z, face);
+    }
+
+    /// <summary>
+    /// obf: <c>ry.v(x,y,z)</c> — isBlockReceivingPower.
+    /// True if any adjacent face provides power to (x,y,z). Used by wire + TNT.
+    /// Spec §2.
+    /// </summary>
+    public bool IsBlockReceivingPower(int x, int y, int z)
+        => GetPower(x, y - 1, z, 1)
+        || GetPower(x, y + 1, z, 0)
+        || GetPower(x, y, z - 1, 2)
+        || GetPower(x, y, z + 1, 3)
+        || GetPower(x - 1, y, z, 4)
+        || GetPower(x + 1, y, z, 5);
+
+    /// <summary>IWorld stub — delegates to <see cref="IsBlockReceivingPower"/>. Spec: <c>world.isBlockIndirectlyReceivingPower(x,y,z)</c>.</summary>
+    public bool IsBlockIndirectlyReceivingPower(int x, int y, int z) => IsBlockReceivingPower(x, y, z);
+
+    /// <summary>
+    /// obf: <c>ry.g(x,y,z)</c> — isBlockNormalCube: true if block at (x,y,z) is a full
+    /// opaque solid cube that can support placed blocks (torches, wire, plates, etc.).
+    /// Used by redstone canBlockStay checks. Spec: BlockRedstone_Spec §3.3, §4.4, §5.5, etc.
+    /// </summary>
+    public bool IsBlockNormalCube(int x, int y, int z)
+    {
+        int id = GetBlockId(x, y, z);
+        return id != 0 && Block.IsOpaqueCubeArr[id];
+    }
 
     /// <summary>
     /// Marks an entity for removal at the start of the next <see cref="TickEntities"/> call.
@@ -585,6 +711,56 @@ public class World : IWorld
     {
         foreach (Entity e in _playerList)
             yield return (e.PosX, e.PosZ);
+    }
+
+    /// <summary>Returns all loaded players as EntityPlayer instances.</summary>
+    public IReadOnlyList<Entity> GetPlayerList() => _playerList;
+
+    // ── Mob spawning helpers (spec: SpawnerAnimals_Spec) ─────────────────────
+
+    /// <summary>
+    /// Counts all loaded entities whose type is assignable to <paramref name="baseType"/>.
+    /// Spec: <c>world.b(jf.a())</c>.
+    /// </summary>
+    public int CountEntitiesOfType(Type baseType)
+    {
+        int count = 0;
+        foreach (Entity e in _loadedEntityList)
+            if (baseType.IsAssignableFrom(e.GetType())) count++;
+        return count;
+    }
+
+    /// <summary>
+    /// Returns the nearest EntityPlayer within <paramref name="range"/> blocks of (x,y,z),
+    /// or null if none found. Spec: <c>world.a(float x, float y, float z, float range)</c>.
+    /// </summary>
+    public EntityPlayer? FindNearestPlayerWithinRange(double x, double y, double z, double range)
+    {
+        double r2 = range * range;
+        EntityPlayer? nearest = null;
+        double nearest2 = double.MaxValue;
+        foreach (Entity e in _playerList)
+        {
+            if (e is not EntityPlayer ep) continue;
+            double dx = ep.PosX - x, dy = ep.PosY - y, dz = ep.PosZ - z;
+            double d2 = dx * dx + dy * dy + dz * dz;
+            if (d2 <= r2 && d2 < nearest2) { nearest = ep; nearest2 = d2; }
+        }
+        return nearest;
+    }
+
+    /// <summary>
+    /// Returns the biome's spawn list for the given creature type at world position (x,y,z).
+    /// Returns null if the list is empty or the biome has no spawns for that type.
+    /// Spec: <c>world.a(jf type, int x, int y, int z)</c>.
+    /// </summary>
+    public List<BiomeGenBase.SpawnListEntry>? GetSpawnableList(EnumCreatureType type, int x, int y, int z)
+    {
+        BiomeGenBase biome = ChunkManager != null
+            ? ChunkManager.GetBiomeAt(x, z)
+            : BiomeGenBase.Plains;
+        var list = biome.GetSpawnList(type);
+        return list.Count > 0 ? list : null;
     }
 
     // ── Collision query (spec §9 / Entity.Move) ───────────────────────────────
@@ -1028,6 +1204,48 @@ public class World : IWorld
     public bool IsRaining() => _rainStrength > 0.2f;
 
     /// <summary>
+    /// obf: <c>ry.p(x,y,z)</c> — canFreezeAtLocation.
+    /// Returns true if still/flowing water (meta=0) at (x,y,z) should freeze to ice.
+    /// Conditions: biome temp ≤ 0.15, block light &lt; 10. Spec: SnowIce_Spec §9.
+    /// </summary>
+    public bool CanFreezeAtLocation(int x, int y, int z)
+    {
+        if (ChunkManager == null) return false;
+        double temp = ChunkManager.GetTemperatureAtHeight(x, y, z);
+        if (temp > 0.15) return false;
+        if (y < 0 || y >= WorldHeight) return false;
+        int blockLight = GetLightBrightness(LightType.Block, x, y, z);
+        if (blockLight >= 10) return false;
+        int id = GetBlockId(x, y, z);
+        if (id != 8 && id != 9) return false; // only water
+        if (GetBlockMetadata(x, y, z) != 0) return false;
+        return true;
+    }
+
+    /// <summary>
+    /// obf: <c>ry.r(x,y,z)</c> — canSnowAtLocation.
+    /// Returns true if an air block at (x,y,z) should receive a snow layer.
+    /// Conditions: biome temp ≤ 0.15, block light &lt; 10, block below is solid (not ice).
+    /// Spec: SnowIce_Spec §9.
+    /// </summary>
+    public bool CanSnowAtLocation(int x, int y, int z)
+    {
+        if (ChunkManager == null) return false;
+        double temp = ChunkManager.GetTemperatureAtHeight(x, y, z);
+        if (temp > 0.15) return false;
+        if (y < 0 || y >= WorldHeight) return false;
+        int blockLight = GetLightBrightness(LightType.Block, x, y, z);
+        if (blockLight >= 10) return false;
+        int current = GetBlockId(x, y, z);
+        if (current != 0) return false; // must be air
+        int below = GetBlockId(x, y - 1, z);
+        if (below == 0) return false;     // nothing below
+        if (below == 79) return false;    // no snow on ice (quirk 4)
+        if (!Block.IsOpaqueCubeArr[below]) return false;
+        return GetBlockMaterial(x, y - 1, z).IsSolid();
+    }
+
+    /// <summary>
     /// True if the block at (x, y, z) is exposed to sky rainfall.
     /// Spec: BlockFire_Spec §11 <c>w(x,y,z)</c> — block is at or above the precipitation height map.
     /// </summary>
@@ -1075,6 +1293,235 @@ public class World : IWorld
         Block.BlocksList[GetBlockId(x, y + 1, z)]?.OnNeighborBlockChange(this, x, y + 1, z, changedBlockId);
         Block.BlocksList[GetBlockId(x, y, z - 1)]?.OnNeighborBlockChange(this, x, y, z - 1, changedBlockId);
         Block.BlocksList[GetBlockId(x, y, z + 1)]?.OnNeighborBlockChange(this, x, y, z + 1, changedBlockId);
+    }
+
+    // ── Sleep / bed helpers (BlockBed_Spec §12, §17) ─────────────────────────
+
+    /// <summary>
+    /// obf: <c>ry.l()</c> — isDaytime = skyDarkening &lt; 4.
+    /// Sleep is only possible when this returns false (k >= 4 = dark enough).
+    /// Spec: BlockBed_Spec §17.
+    /// </summary>
+    public bool IsDaytime() => SkyDarkening < 4;
+
+    /// <summary>
+    /// obf: <c>ry.A()</c> — checkAllPlayersSleeping stub.
+    /// When all players are sleeping this would advance time to dawn and wake everyone.
+    /// Full implementation pending (requires time-skip and wake-all-players logic).
+    /// </summary>
+    public void CheckAllPlayersSleeping() { /* stub — Explosion/WorldTick spec pending */ }
+
+    /// <summary>
+    /// Checks whether any <see cref="EntityMonster"/> is within the bed safety radius
+    /// (±8 XZ, ±5 Y) of the given bed position. Spec: BlockBed_Spec §12.1.e.
+    /// </summary>
+    public bool HasMonstersNearBed(int bedX, int bedY, int bedZ)
+    {
+        double minX = bedX - 8, maxX = bedX + 8;
+        double minY = bedY - 5, maxY = bedY + 5;
+        double minZ = bedZ - 8, maxZ = bedZ + 8;
+        foreach (Entity e in _loadedEntityList)
+        {
+            if (e is not EntityMonster) continue;
+            if (e.PosX >= minX && e.PosX <= maxX &&
+                e.PosY >= minY && e.PosY <= maxY &&
+                e.PosZ >= minZ && e.PosZ <= maxZ)
+                return true;
+        }
+        return false;
+    }
+
+    // ── Explosion helpers (Explosion_Spec §4, §5) ────────────────────────────
+
+    /// <summary>
+    /// obf: <c>ry.a(ia exclude, AxisAlignedBB box)</c> — returns all entities within
+    /// the given AABB, excluding <paramref name="exclude"/> (may be null).
+    /// Used by <see cref="Explosion"/> to query entities for damage.
+    /// </summary>
+    public List<Entity> GetEntitiesWithinAABBExcluding(Entity? exclude, AxisAlignedBB box)
+    {
+        var result = new List<Entity>();
+        foreach (Entity e in _loadedEntityList)
+        {
+            if (e == exclude || e.IsDead) continue;
+            if (e.BoundingBox.MaxX >= box.MinX && e.BoundingBox.MinX <= box.MaxX &&
+                e.BoundingBox.MaxY >= box.MinY && e.BoundingBox.MinY <= box.MaxY &&
+                e.BoundingBox.MaxZ >= box.MinZ && e.BoundingBox.MinZ <= box.MaxZ)
+                result.Add(e);
+        }
+        return result;
+    }
+
+    /// <summary>
+    /// obf: <c>ry.a(Vec3 start, Vec3 end)</c> — ray-trace through blocks.
+    /// Returns null if the ray reaches <paramref name="end"/> without hitting an opaque block.
+    /// Used by <see cref="Explosion.GetExposure"/> for line-of-sight checks.
+    /// Spec: Explosion_Spec §5.
+    /// </summary>
+    public MovingObjectPosition? RayTraceBlocks(Vec3 start, Vec3 end)
+    {
+        // Walk the ray in small steps along each axis using DDA traversal
+        double dx = end.X - start.X;
+        double dy = end.Y - start.Y;
+        double dz = end.Z - start.Z;
+        double dist = Math.Sqrt(dx * dx + dy * dy + dz * dz);
+        if (dist < 1e-4) return null;
+
+        // Walk in steps of at most 0.5 blocks
+        int steps = (int)(dist / 0.5) + 2;
+        double stepX = dx / steps;
+        double stepY = dy / steps;
+        double stepZ = dz / steps;
+
+        int prevBx = int.MinValue, prevBy = int.MinValue, prevBz = int.MinValue;
+        for (int i = 0; i <= steps; i++)
+        {
+            double rx = start.X + stepX * i;
+            double ry = start.Y + stepY * i;
+            double rz = start.Z + stepZ * i;
+            int bx = (int)Math.Floor(rx);
+            int by = (int)Math.Floor(ry);
+            int bz = (int)Math.Floor(rz);
+            if (bx == prevBx && by == prevBy && bz == prevBz) continue;
+            prevBx = bx; prevBy = by; prevBz = bz;
+            if (Block.IsOpaqueCubeArr[GetBlockId(bx, by, bz)])
+                return new MovingObjectPosition(bx, by, bz, 0, start);
+        }
+        return null;
+    }
+
+    /// <summary>
+    /// obf: <c>ry.a(Vec3 origin, AxisAlignedBB entityBounds)</c> — exposure fraction.
+    /// Samples a grid of rays from <paramref name="origin"/> to points on <paramref name="entityBounds"/>.
+    /// Returns [0, 1] fraction of rays that reach without hitting an opaque block.
+    /// Spec: Explosion_Spec §5.
+    /// </summary>
+    public float GetExplosionExposure(Vec3 origin, AxisAlignedBB entityBounds)
+    {
+        double sizeX = entityBounds.MaxX - entityBounds.MinX;
+        double sizeY = entityBounds.MaxY - entityBounds.MinY;
+        double sizeZ = entityBounds.MaxZ - entityBounds.MinZ;
+
+        double stepX = 1.0 / (sizeX * 2.0 + 1.0);
+        double stepY = 1.0 / (sizeY * 2.0 + 1.0);
+        double stepZ = 1.0 / (sizeZ * 2.0 + 1.0);
+
+        int total = 0, hits = 0;
+        for (double tx = 0.0; tx <= 1.0; tx += stepX)
+        for (double ty = 0.0; ty <= 1.0; ty += stepY)
+        for (double tz = 0.0; tz <= 1.0; tz += stepZ)
+        {
+            double px = entityBounds.MinX + sizeX * tx;
+            double py = entityBounds.MinY + sizeY * ty;
+            double pz = entityBounds.MinZ + sizeZ * tz;
+            if (RayTraceBlocks(Vec3.GetFromPool(px, py, pz), origin) == null)
+                hits++;
+            total++;
+        }
+        return total == 0 ? 0f : (float)hits / total;
+    }
+
+    // ── Pathfinding entry points (spec MobAI_PathFinder_Spec §4) ─────────────
+
+    /// <summary>
+    /// obf: <c>ry.a(ia entity, ia target, float range)</c> — request A* path to a target entity.
+    /// Builds a ChunkCache snapshot and delegates to <see cref="AI.PathFinder"/>.
+    /// margin = (int)(range + 16)
+    /// </summary>
+    public AI.PathEntity? GetPathToEntity(Entity entity, Entity target, float range)
+    {
+        int ex = (int)Math.Floor(entity.PosX);
+        int ey = (int)Math.Floor(entity.PosY);
+        int ez = (int)Math.Floor(entity.PosZ);
+        int margin = (int)(range + 16);
+
+        var cache = new AI.ChunkCache(this,
+            ex - margin, ey - margin, ez - margin,
+            ex + margin, ey + margin, ez + margin);
+
+        return new AI.PathFinder(cache).FindPath(entity, target, range);
+    }
+
+    /// <summary>
+    /// obf: <c>ry.a(ia entity, int x, int y, int z, float range)</c> — request A* path
+    /// to a fixed coordinate (used by stroll).
+    /// margin = (int)(range + 8)
+    /// </summary>
+    public AI.PathEntity? GetPathToCoords(Entity entity, int x, int y, int z, float range)
+    {
+        int ex = (int)Math.Floor(entity.PosX);
+        int ey = (int)Math.Floor(entity.PosY);
+        int ez = (int)Math.Floor(entity.PosZ);
+        int margin = (int)(range + 8);
+
+        var cache = new AI.ChunkCache(this,
+            ex - margin, ey - margin, ez - margin,
+            ex + margin, ey + margin, ez + margin);
+
+        return new AI.PathFinder(cache).FindPath(entity, x, y, z, range);
+    }
+
+    /// <summary>
+    /// obf: <c>ry.b(ia entity, double range)</c> — returns the nearest living EntityPlayer
+    /// that is not in creative mode and is within <paramref name="range"/> blocks.
+    /// Returns null if no such player exists.
+    /// </summary>
+    public EntityPlayer? GetClosestPlayer(Entity entity, double range)
+    {
+        double bestDist = range * range; // compare squared distances
+        EntityPlayer? best = null;
+
+        foreach (Entity e in _playerList)
+        {
+            if (e is not EntityPlayer player || player.IsDead) continue;
+
+            double dist2 = entity.SquaredDistanceTo(player.PosX, player.PosY, player.PosZ);
+            if (dist2 <= bestDist)
+            {
+                bestDist = dist2;
+                best = player;
+            }
+        }
+
+        return best;
+    }
+
+    /// <summary>
+    /// obf: <c>ry.a(ia entity, double range)</c> — returns the nearest EntityPlayer that
+    /// can be targeted (alive, not immune). Same as <see cref="GetClosestPlayer"/> for
+    /// 1.0 (no creative mode).
+    /// </summary>
+    public EntityPlayer? GetClosestVulnerablePlayer(Entity entity, double range)
+        => GetClosestPlayer(entity, range);
+
+    /// <summary>
+    /// Returns all entities of type <typeparamref name="T"/> whose bounding boxes intersect
+    /// the given AABB. Used by animal AI (breed partner / baby scan).
+    /// </summary>
+    public List<T> GetEntitiesWithinAABB<T>(AxisAlignedBB box) where T : Entity
+    {
+        var result = new List<T>();
+        foreach (Entity e in _loadedEntityList)
+        {
+            if (e is not T typed || e.IsDead) continue;
+            if (e.BoundingBox.MaxX >= box.MinX && e.BoundingBox.MinX <= box.MaxX &&
+                e.BoundingBox.MaxY >= box.MinY && e.BoundingBox.MinY <= box.MaxY &&
+                e.BoundingBox.MaxZ >= box.MinZ && e.BoundingBox.MinZ <= box.MaxZ)
+                result.Add(typed);
+        }
+        return result;
+    }
+
+    /// <summary>
+    /// obf: <c>ry.a(ia entity, double x, double y, double z, float power)</c> — creates
+    /// and immediately executes an explosion at the given position.
+    /// Spec: Explosion_Spec §1, §4, §6.
+    /// </summary>
+    public void CreateExplosion(EntityPlayer? player, double x, double y, double z, float power, bool isIncendiary)
+    {
+        var explosion = new Explosion(this, player, x, y, z, power, isIncendiary);
+        explosion.ComputeAffectedBlocksAndDamageEntities();
+        explosion.DestroyBlocksAndSpawnParticles(doParticles: !IsClientSide);
     }
 }
 
