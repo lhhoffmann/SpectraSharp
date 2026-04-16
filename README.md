@@ -36,9 +36,9 @@ The goal is to understand the complexities of voxel-based environments, efficien
 
 | Component | License | Usage |
 |---|---|---|
-| [Vineflower](https://github.com/Vineflower/vineflower) | LGPL 2.1 | Java decompiler used by the Mod Transpiler. Not bundled — downloaded automatically from Maven Central on first build. Can be replaced by the user at any time. |
 | [Raylib-cs](https://github.com/chrisdill/raylib-cs) | zlib | OpenGL rendering bindings |
-| [HarmonyLib](https://github.com/pardeike/Harmony) | MIT | Runtime method patching for mod hook injection |
+| [IKVM.NET](https://github.com/ikvm-revived/ikvm) | MIT | Compiles mod JARs to .NET IL at install time; provides Java runtime semantics (java.lang/util/io) on the CLR |
+| [HarmonyLib](https://github.com/pardeike/Harmony) | MIT | Runtime IL patching — implements Mixin-style injection for Fabric/Forge mods |
 
 ---
 
