@@ -1,7 +1,7 @@
 using System.Collections.Generic;
-using TileEntityBase = SpectraSharp.Core.TileEntity.TileEntity;
+using TileEntityBase = SpectraEngine.Core.TileEntity.TileEntity;
 
-namespace SpectraSharp.Core;
+namespace SpectraEngine.Core;
 
 /// <summary>
 /// Replica of <c>zx</c> (Chunk) — stores block IDs, metadata, light values, height map,

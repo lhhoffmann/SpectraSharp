@@ -1,4 +1,4 @@
-namespace SpectraSharp.Core.Blocks;
+namespace SpectraEngine.Core.Blocks;
 
 /// <summary>
 /// Still fluid block — replica of <c>add</c> (BlockStationary).

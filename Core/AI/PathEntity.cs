@@ -1,4 +1,4 @@
-namespace SpectraSharp.Core.AI;
+namespace SpectraEngine.Core.AI;
 
 /// <summary>
 /// Replica of <c>dw</c> (PathEntity) — an ordered array of <see cref="PathPoint"/> nodes

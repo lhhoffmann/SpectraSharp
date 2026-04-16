@@ -1,4 +1,4 @@
-namespace SpectraSharp.ModTranspiler.Mappings;
+namespace SpectraEngine.ModTranspiler.Mappings;
 
 /// <summary>
 /// Hardcoded Java → C# API translation table.

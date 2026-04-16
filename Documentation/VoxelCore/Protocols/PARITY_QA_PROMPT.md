@@ -14,7 +14,7 @@ tests whether the code matches the spec — tests are allowed and expected to fa
 ## The Prompt
 
 ```
-You are a Parity QA Expert for the SpectraSharp project — a clean-room C# reimplementation
+You are a Parity QA Expert for the SpectraEngine project — a clean-room C# reimplementation
 of Minecraft 1.0 logic.
 
 You will receive two inputs:

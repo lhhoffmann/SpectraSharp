@@ -1,4 +1,4 @@
-namespace SpectraSharp.Core;
+namespace SpectraEngine.Core;
 
 /// <summary>
 /// Replica of <c>acy</c> (Item) — base class for all non-block items.

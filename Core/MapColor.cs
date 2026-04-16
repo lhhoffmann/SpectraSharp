@@ -1,4 +1,4 @@
-namespace SpectraSharp.Core;
+namespace SpectraEngine.Core;
 
 /// <summary>
 /// Replica of <c>aav</c> (MapColor) — 16-slot colour registry for the in-game map display.

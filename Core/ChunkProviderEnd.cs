@@ -1,6 +1,6 @@
-using SpectraSharp.Core.WorldGen;
+using SpectraEngine.Core.WorldGen;
 
-namespace SpectraSharp.Core;
+namespace SpectraEngine.Core;
 
 /// <summary>
 /// Replica of <c>a</c> (ChunkProviderEnd) — End dimension terrain generator.

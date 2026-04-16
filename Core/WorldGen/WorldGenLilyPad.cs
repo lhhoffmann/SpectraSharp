@@ -1,4 +1,4 @@
-namespace SpectraSharp.Core.WorldGen;
+namespace SpectraEngine.Core.WorldGen;
 
 /// <summary>
 /// Places lily pads on water surfaces. 10 attempts per call.

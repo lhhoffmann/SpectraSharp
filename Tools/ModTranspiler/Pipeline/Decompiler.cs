@@ -1,6 +1,6 @@
 using System.Diagnostics;
 
-namespace SpectraSharp.ModTranspiler.Pipeline;
+namespace SpectraEngine.ModTranspiler.Pipeline;
 
 /// <summary>
 /// Phase 1 — Wraps Vineflower as a subprocess.

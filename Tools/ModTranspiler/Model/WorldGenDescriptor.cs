@@ -1,4 +1,4 @@
-namespace SpectraSharp.ModTranspiler.Model;
+namespace SpectraEngine.ModTranspiler.Model;
 
 sealed class WorldGenDescriptor
 {

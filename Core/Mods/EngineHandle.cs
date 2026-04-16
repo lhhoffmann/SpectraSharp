@@ -1,4 +1,4 @@
-namespace SpectraSharp.Core.Mods;
+namespace SpectraEngine.Core.Mods;
 
 /// <summary>
 /// Concrete implementation of <see cref="IEngine"/> passed to every mod's

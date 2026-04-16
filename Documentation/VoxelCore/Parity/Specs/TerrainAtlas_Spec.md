@@ -1,5 +1,5 @@
 # TerrainAtlas Spec
-Source: `terrain.png` (extracted from SpectraSharp-1.0.jar), `yy.java` (Block class), `jb.java` (GrassBlock), `aip.java` (LogBlock)
+Source: `terrain.png` (extracted from spectraengine-1.0.jar), `yy.java` (Block class), `jb.java` (GrassBlock), `aip.java` (LogBlock)
 Type: Visual / texture atlas reference
 
 ---

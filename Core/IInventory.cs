@@ -1,4 +1,4 @@
-namespace SpectraSharp.Core;
+namespace SpectraEngine.Core;
 
 /// <summary>
 /// Replica of <c>de</c> (IInventory) — interface implemented by all inventory containers.

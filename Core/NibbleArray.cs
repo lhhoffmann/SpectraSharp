@@ -1,4 +1,4 @@
-namespace SpectraSharp.Core;
+namespace SpectraEngine.Core;
 
 /// <summary>
 /// Replica of <c>up</c> — 4-bits-per-block nibble array used by <see cref="Chunk"/>

@@ -1,6 +1,6 @@
 using System.Reflection;
 
-namespace SpectraSharp.ModRuntime.Interop;
+namespace SpectraEngine.ModRuntime.Interop;
 
 /// <summary>How the mixin attaches to the target method.</summary>
 public enum InjectionKind

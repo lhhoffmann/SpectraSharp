@@ -1,4 +1,4 @@
-namespace SpectraSharp.Core.TileEntity;
+namespace SpectraEngine.Core.TileEntity;
 
 /// <summary>
 /// Chest tile entity. Replica of <c>tu</c> (TileEntityChest).

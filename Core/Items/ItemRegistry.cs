@@ -1,4 +1,4 @@
-namespace SpectraSharp.Core.Items;
+namespace SpectraEngine.Core.Items;
 
 /// <summary>
 /// Registers all tool, sword, hoe, and armor items into <see cref="Item.ItemsList"/>.

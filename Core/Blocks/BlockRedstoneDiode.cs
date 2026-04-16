@@ -1,4 +1,4 @@
-namespace SpectraSharp.Core;
+namespace SpectraEngine.Core;
 
 /// <summary>
 /// Replica of <c>mz</c> (BlockRedstoneDiode / Repeater) — Block IDs 93 (off) and 94 (on).

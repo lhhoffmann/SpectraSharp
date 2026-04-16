@@ -1,4 +1,4 @@
-namespace SpectraSharp.Core.WorldGen;
+namespace SpectraEngine.Core.WorldGen;
 
 /// <summary>
 /// Generates a giant brown or red mushroom.

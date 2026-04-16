@@ -1,4 +1,4 @@
-namespace SpectraSharp.Core.WorldSave;
+namespace SpectraEngine.Core.WorldSave;
 
 /// <summary>
 /// No-op save handler for worlds that should not persist to disk.

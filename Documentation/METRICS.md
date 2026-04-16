@@ -1,4 +1,4 @@
-# SpectraSharp — Development Metrics
+# SpectraEngine — Development Metrics
 
 Log of all development sessions. One entry per session, appended at the bottom.
 Written by the active role (Analyst / Coder / Mod Coder) at session end.
@@ -125,7 +125,7 @@ Update this table manually when a billing period ends or a charge appears.
 ## 2026-04-14 — [MOD-CODER] — ModRuntime foundation + JavaStubs v1_0
 
 **Worked on:**
-- `SpectraSharp.ModRuntime.csproj` — new project, refs IKVM + HarmonyLib + Core
+- `SpectraEngine.ModRuntime.csproj` — new project, refs IKVM + HarmonyLib + Core
 - `Mappings/VersionMapping.cs` + `VersionDetector.cs` — JAR fingerprint-based version detection
 - `Mappings/Data/1.0.json` — obfuscated class/method/field map for Minecraft 1.0
 - `Mappings/Data/1.12.2.json` — Forge/Searge class map for Minecraft 1.12.2
@@ -151,7 +151,7 @@ Update this table manually when a billing period ends or a charge appears.
 - `Documentation/VoxelCore/Protocols/ROLE_MOD_CODER.md` — complete rewrite with IKVM plan
 
 **Estimated effort:** ~6 hours equivalent
-**Notes:** SpectraSharp.ModRuntime builds clean (0 errors, 0 warnings). JavaStubs v1_0 not yet buildable — depends on IKVM NuGet restore and java.util.Random being available from IKVM.Runtime. MixinInterceptor and HarmonyBridge are planned for next session. CODER must implement BlockRegistry.RegisterMod() and any new IWorld methods flagged with TODO in the stubs.
+**Notes:** SpectraEngine.ModRuntime builds clean (0 errors, 0 warnings). JavaStubs v1_0 not yet buildable — depends on IKVM NuGet restore and java.util.Random being available from IKVM.Runtime. MixinInterceptor and HarmonyBridge are planned for next session. CODER must implement BlockRegistry.RegisterMod() and any new IWorld methods flagged with TODO in the stubs.
 
 ---
 
@@ -168,7 +168,7 @@ Update this table manually when a billing period ends or a charge appears.
 - `Core/WorldGen/WorldGenSandDisc.cs` — sand/gravel disk (`fc`): radius [2, size-2]; replaces grass/dirt in y±2 range
 - `Core/WorldGen/WorldGenClay.cs` — clay disk (`adp`): same as SandDisc but y±1 range; replaces grass/clay
 - `Core/BiomeGenBase.cs` — added `TreeCount`, `GetTreeGenerator()`, `SetTreeCount()`; `ForestBiome`/`TaigaBiome`/`SwamplandBiome` subclasses; per-biome tree counts and generator dispatch
-- `Core/ChunkProviderGenerate.cs` — added `using SpectraSharp.Core.WorldGen;`; added biome tree decoration loop in `PopulateChunk()` (spec §10.1): 10% bonus tree, random x/z offset, `GetTopSolidOrLiquidBlock` surface height
+- `Core/ChunkProviderGenerate.cs` — added `using SpectraEngine.Core.WorldGen;`; added biome tree decoration loop in `PopulateChunk()` (spec §10.1): 10% bonus tree, random x/z offset, `GetTopSolidOrLiquidBlock` surface height
 
 **Estimated effort:** ~3 hours equivalent
 **Notes:** `fc`/`adp` are disk patch generators (not trees) — corrected from earlier label error in ChunkProviderGenerate_Spec §10. Tree generation uses the center-chunk biome for simplicity (matches vanilla's single-biome-per-chunk decoration strategy). `_isGenerating` guard prevents stack overflow during ore placement; trees placed after ores so adjacent-chunk reads during tree clearance also hit the guard safely.
@@ -203,7 +203,7 @@ Additionally fixed:
 - `World.cs` — implemented `SpawnEntity()` with chunk-loaded guard and player-list tracking; `MarkEntityForRemoval()`; `TickEntityWithPartialTick()`
 - `World.cs` — implemented `TickChunks()` (LCG quirk 2), `NotifyNeighboursOfChange()`, `OnBlockChanged()` with `OnBlockRemoved`/`OnBlockAdded` hooks; `SetBlock`/`SetBlockAndMetadata` capture old ID before write
 - `ChunkProviderGenerate.cs` — fixed infinite recursion: `_isGenerating` guard prevents re-entrant chunk generation during ore placement; chunk stored in cache before `PopulateChunk()` runs
-- `SpectraSharp.csproj` — excluded `Bridge/JavaStubs/**` and `SpectraSharp.ModRuntime/**` (both need IKVM); `Bridge/Mods/**` kept in after mod cleanup
+- `SpectraEngine.csproj` — excluded `Bridge/JavaStubs/**` and `SpectraEngine.ModRuntime/**` (both need IKVM); `Bridge/Mods/**` kept in after mod cleanup
 - `REQUESTS.md` — filed `WorldGenTrees` spec request
 
 **Estimated effort:** ~3 hours equivalent
@@ -454,7 +454,7 @@ Additionally fixed:
 - `Core/ChunkProviderServer.cs` — full `jz` implementation: `IChunkLoader` wrapping `IChunkPersistence` + `ChunkProviderGenerate`; LongHashMap-equivalent Dictionary cache; `GetChunk` (cancels unload queue), `GetChunkOrLoad` (no cancel); `LoadOrCreateChunk` (disk → generate → EmptyChunk sentinel for ±1875004); 2×2 population trigger (chunk + +X, +Z, +XZ neighbours all cache-present); `Tick` (10-chunk-per-tick distance sweep with rolling cursor; 100 unloads/tick from queue; 288-block unload radius, 128-block safe zone); `SaveDirtyChunks` (24 chunks/tick throttle unless `saveAll`); `QueueForUnload` with player-proximity guard; EmptyChunk sentinel `NoSave=true`
 - `Core/ChunkProviderServer.cs` — two-phase construction pattern (mirrors `ChunkProviderGenerate.SetWorld`): `ChunkProviderServer(disk, generator)` + `SetWorld(world)` to break World↔Server circular dependency
 - `Core/Engine.cs` — wired `ChunkProviderServer` as the `IChunkLoader` for `World`: `var server = new ChunkProviderServer(NullSaveHandler.Instance.GetChunkPersistence(...), generator); _world = new World(server, ...); server.SetWorld(_world);`
-- `Core/Chunk.cs` — added `NoSave` field; `NeedsSaving` returns false when `NoSave`; TileEntity Dictionary map with `GetTileEntity`/`AddTileEntity`/`RemoveTileEntity`/`GetTileEntities`; `OnChunkLoad`/`OnChunkUnload` manage TE world-ref lifecycle; type alias `using TileEntityBase = SpectraSharp.Core.TileEntity.TileEntity` to resolve namespace/class-name collision
+- `Core/Chunk.cs` — added `NoSave` field; `NeedsSaving` returns false when `NoSave`; TileEntity Dictionary map with `GetTileEntity`/`AddTileEntity`/`RemoveTileEntity`/`GetTileEntities`; `OnChunkLoad`/`OnChunkUnload` manage TE world-ref lifecycle; type alias `using TileEntityBase = SpectraEngine.Core.TileEntity.TileEntity` to resolve namespace/class-name collision
 - `Core/World.cs` — added `GetLoadedPlayerPositions()` for ChunkProviderServer proximity checks
 - `Core/ChunkProviderGenerate.cs` — added `PopulateChunkFromServer(chunkX, chunkZ)` public method for 2×2 trigger
 - `Core/Entity.cs` — `SaveToNbt(NbtCompound)` gate (`!IsDead && EntityRegistry.GetEntityStringId != null`); base write (Pos/Motion/Rotation/FallDistance/Fire/Air/OnGround + Y-drift bug preserved: writes `posY+YOffset`, reads raw); `LoadFromNbt` with motion clamping ±10, rotation prev-sync, SetPosition call; abstract `WriteEntityToNBT`/`ReadEntityFromNBT`

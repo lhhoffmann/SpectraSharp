@@ -1,10 +1,10 @@
 using System;
 using System.Collections.Generic;
 using Xunit;
-using SpectraSharp.Core;
-using SpectraSharp.Core.Blocks;
+using SpectraEngine.Core;
+using SpectraEngine.Core.Blocks;
 
-namespace SpectraSharp.Tests.Blocks
+namespace SpectraEngine.Tests.Blocks
 {
     // ─────────────────────────────────────────────────────────────────────────
     // Hand-written fakes
@@ -89,7 +89,7 @@ namespace SpectraSharp.Tests.Blocks
 
         // ── IWorld stubs ──
         public bool         IsClientSide  { get; set; } = false;
-        public SpectraSharp.Core.JavaRandom Random { get; set; } = new SpectraSharp.Core.JavaRandom(0);
+        public SpectraEngine.Core.JavaRandom Random { get; set; } = new SpectraEngine.Core.JavaRandom(0);
         public bool         IsNether      { get; set; } = false;
         public bool         SuppressUpdates { get; set; } = false;
         public void SpawnEntity(Entity entity)                                           { }
@@ -1003,7 +1003,7 @@ namespace SpectraSharp.Tests.Blocks
 
         // ── IWorld stubs ──
         public bool         IsClientSide  { get; set; } = false;
-        public SpectraSharp.Core.JavaRandom Random { get; set; } = new SpectraSharp.Core.JavaRandom(0);
+        public SpectraEngine.Core.JavaRandom Random { get; set; } = new SpectraEngine.Core.JavaRandom(0);
         public bool         IsNether      { get; set; } = false;
         public bool         SuppressUpdates { get; set; } = false;
         public void SpawnEntity(Entity entity)                                           { }

@@ -1,4 +1,4 @@
-namespace SpectraSharp.Core.WorldSave;
+namespace SpectraEngine.Core.WorldSave;
 
 /// <summary>
 /// World-level save handler interface. Replica of <c>nh</c> (ISaveHandler).

@@ -1,4 +1,4 @@
-namespace SpectraSharp.Core.TileEntity;
+namespace SpectraEngine.Core.TileEntity;
 
 /// <summary>
 /// Dispenser tile entity. Replica of <c>bp</c> (TileEntityDispenser).

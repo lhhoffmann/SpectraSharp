@@ -1,12 +1,12 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Numerics;
 using Xunit;
-using SpectraSharp.Core;
-using SpectraSharp.Core.Mods;
-using SpectraSharp.Bridge.Overrides;
+using SpectraEngine.Core;
+using SpectraEngine.Core.Mods;
+using SpectraEngine.Bridge.Overrides;
 
-namespace SpectraSharp.Tests.Bridge.Overrides
+namespace SpectraEngine.Tests.Bridge.Overrides
 {
     // ── Hand-written fakes ────────────────────────────────────────────────────
 
@@ -40,10 +40,10 @@ namespace SpectraSharp.Tests.Bridge.Overrides
         public override int BlockId => 5;
         public override int TextureIndex => 3;
 
-        public override IEnumerable<SpectraSharp.Core.Mods.ItemStack> GetDrops(int meta, Random rng)
+        public override IEnumerable<SpectraEngine.Core.Mods.ItemStack> GetDrops(int meta, Random rng)
         {
-            yield return new SpectraSharp.Core.Mods.ItemStack(BlockId, 2);
-            yield return new SpectraSharp.Core.Mods.ItemStack(BlockId + 1, 1);
+            yield return new SpectraEngine.Core.Mods.ItemStack(BlockId, 2);
+            yield return new SpectraEngine.Core.Mods.ItemStack(BlockId + 1, 1);
         }
     }
 
@@ -316,7 +316,7 @@ namespace SpectraSharp.Tests.Bridge.Overrides
         {
             var block = new ConcreteBlock();
             var rng = new Random(12345);
-            var drops = new List<SpectraSharp.Core.Mods.ItemStack>(block.GetDrops(0, rng));
+            var drops = new List<SpectraEngine.Core.Mods.ItemStack>(block.GetDrops(0, rng));
             Assert.Single(drops);
             Assert.Equal(block.BlockId, drops[0].Id);
             Assert.Equal(1, drops[0].Count);
@@ -327,7 +327,7 @@ namespace SpectraSharp.Tests.Bridge.Overrides
         {
             var block = new ConcreteBlockWithOverrides();
             var rng = new Random(99);
-            var drops = new List<SpectraSharp.Core.Mods.ItemStack>(block.GetDrops(0, rng));
+            var drops = new List<SpectraEngine.Core.Mods.ItemStack>(block.GetDrops(0, rng));
             Assert.Single(drops);
             Assert.Equal(1, drops[0].Id); // BlockId == 1
         }
@@ -337,9 +337,9 @@ namespace SpectraSharp.Tests.Bridge.Overrides
         {
             var block = new ConcreteBlock();
             var rng = new Random(0);
-            var drops0 = new List<SpectraSharp.Core.Mods.ItemStack>(block.GetDrops(0, rng));
+            var drops0 = new List<SpectraEngine.Core.Mods.ItemStack>(block.GetDrops(0, rng));
             rng = new Random(0);
-            var drops15 = new List<SpectraSharp.Core.Mods.ItemStack>(block.GetDrops(15, rng));
+            var drops15 = new List<SpectraEngine.Core.Mods.ItemStack>(block.GetDrops(15, rng));
             Assert.Equal(drops0.Count, drops15.Count);
             Assert.Equal(drops0[0].Id, drops15[0].Id);
             Assert.Equal(drops0[0].Count, drops15[0].Count);
@@ -350,7 +350,7 @@ namespace SpectraSharp.Tests.Bridge.Overrides
         {
             var block = new ConcreteBlockCustomDrops();
             var rng = new Random(42);
-            var drops = new List<SpectraSharp.Core.Mods.ItemStack>(block.GetDrops(0, rng));
+            var drops = new List<SpectraEngine.Core.Mods.ItemStack>(block.GetDrops(0, rng));
             Assert.Equal(2, drops.Count);
         }
 

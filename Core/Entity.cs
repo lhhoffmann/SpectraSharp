@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 
-namespace SpectraSharp.Core;
+namespace SpectraEngine.Core;
 
 /// <summary>
 /// Replica of <c>ia</c> (Entity) — abstract base class for every in-world object.

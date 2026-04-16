@@ -1,4 +1,4 @@
-namespace SpectraSharp.Core.WorldGen.Structure;
+namespace SpectraEngine.Core.WorldGen.Structure;
 
 /// <summary>
 /// World-space axis-aligned bounding box for structure pieces. Replica of <c>nl</c>.

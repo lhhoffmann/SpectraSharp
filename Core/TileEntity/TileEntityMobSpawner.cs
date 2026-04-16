@@ -1,4 +1,4 @@
-namespace SpectraSharp.Core.TileEntity;
+namespace SpectraEngine.Core.TileEntity;
 
 /// <summary>
 /// Mob spawner tile entity. Replica of <c>ze</c> (TileEntityMobSpawner).

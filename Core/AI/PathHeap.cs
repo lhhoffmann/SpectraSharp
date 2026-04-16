@@ -1,4 +1,4 @@
-namespace SpectraSharp.Core.AI;
+namespace SpectraEngine.Core.AI;
 
 /// <summary>
 /// Replica of <c>zs</c> (PathHeap) — binary min-heap of <see cref="PathPoint"/> nodes,

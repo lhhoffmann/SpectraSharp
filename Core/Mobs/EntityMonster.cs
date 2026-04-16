@@ -1,4 +1,4 @@
-namespace SpectraSharp.Core.Mobs;
+namespace SpectraEngine.Core.Mobs;
 
 /// <summary>
 /// Replica of <c>zo</c> (EntityMonster) — abstract base for all hostile mobs.

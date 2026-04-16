@@ -1,10 +1,10 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using Xunit;
 
-namespace SpectraSharp.Tests.Explosion
+namespace SpectraEngine.Tests.Explosion
 {
     // ─────────────────────────────────────────────────────────────────────────
     // Fakes / Stubs
@@ -176,7 +176,7 @@ namespace SpectraSharp.Tests.Explosion
             // This is the spec-mandated behaviour: non-deterministic local RNG.
             // We verify via reflection that the field exists and is a separate instance
             // from any world RNG.
-            var explosionType = typeof(SpectraSharp.Core.Explosion);
+            var explosionType = typeof(SpectraEngine.Core.Explosion);
             var field = explosionType.GetField("_localRng",
                 BindingFlags.NonPublic | BindingFlags.Instance);
             Assert.NotNull(field);
@@ -541,7 +541,7 @@ namespace SpectraSharp.Tests.Explosion
         public void Power_IsReadWrite_NotReadonly()
         {
             // Spec §2: Power is mutable (doubled and restored during entity pass)
-            var t = typeof(SpectraSharp.Core.Explosion);
+            var t = typeof(SpectraEngine.Core.Explosion);
             var prop = t.GetField("Power", BindingFlags.Public | BindingFlags.Instance);
             Assert.NotNull(prop);
             Assert.False(prop!.IsInitOnly, "Power must be mutable (not readonly) per spec §2");
@@ -550,7 +550,7 @@ namespace SpectraSharp.Tests.Explosion
         [Fact]
         public void IsIncendiary_IsPublicReadonlyField()
         {
-            var t = typeof(SpectraSharp.Core.Explosion);
+            var t = typeof(SpectraEngine.Core.Explosion);
             var field = t.GetField("IsIncendiary", BindingFlags.Public | BindingFlags.Instance);
             Assert.NotNull(field);
             Assert.True(field!.IsInitOnly, "IsIncendiary must be readonly per spec §2");
@@ -559,7 +559,7 @@ namespace SpectraSharp.Tests.Explosion
         [Fact]
         public void OriginXYZ_ArePublicReadonlyFields()
         {
-            var t = typeof(SpectraSharp.Core.Explosion);
+            var t = typeof(SpectraEngine.Core.Explosion);
             foreach (var name in new[] { "OriginX", "OriginY", "OriginZ" })
             {
                 var field = t.GetField(name, BindingFlags.Public | BindingFlags.Instance);
@@ -571,7 +571,7 @@ namespace SpectraSharp.Tests.Explosion
         [Fact]
         public void SourceEntity_IsPublicReadonlyField()
         {
-            var t = typeof(SpectraSharp.Core.Explosion);
+            var t = typeof(SpectraEngine.Core.Explosion);
             var field = t.GetField("SourceEntity", BindingFlags.Public | BindingFlags.Instance);
             Assert.NotNull(field);
             Assert.True(field!.IsInitOnly, "SourceEntity must be readonly per spec §2");

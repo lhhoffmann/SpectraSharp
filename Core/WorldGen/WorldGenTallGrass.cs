@@ -1,4 +1,4 @@
-namespace SpectraSharp.Core.WorldGen;
+namespace SpectraEngine.Core.WorldGen;
 
 /// <summary>
 /// Scatters tall grass (or fern) over the surface. 128 attempts per call.

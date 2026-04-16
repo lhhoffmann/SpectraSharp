@@ -1,6 +1,6 @@
-using SpectraSharp.Core.WorldGen.Structure;
+using SpectraEngine.Core.WorldGen.Structure;
 
-namespace SpectraSharp.Core.WorldGen.NetherFortress;
+namespace SpectraEngine.Core.WorldGen.NetherFortress;
 
 /// <summary>
 /// Nether Fortress structure generator. Replica of <c>ed</c> (MapGenNetherBridge).

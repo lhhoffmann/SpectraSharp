@@ -3,8 +3,8 @@
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFramework>net10.0</TargetFramework>
-    <RootNamespace>SpectraSharp</RootNamespace>
-    <AssemblyName>SpectraSharp</AssemblyName>
+    <RootNamespace>SpectraEngine</RootNamespace>
+    <AssemblyName>SpectraEngine</AssemblyName>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
@@ -14,7 +14,7 @@
   <ItemGroup>
     <Compile Remove="Tools/**" />
     <Compile Remove="Bridge/JavaStubs/**" />
-    <Compile Remove="SpectraSharp.ModRuntime/**" />
+    <Compile Remove="SpectraEngine.ModRuntime/**" />
     <Compile Remove="Tests/**" />
   </ItemGroup>
 

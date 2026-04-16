@@ -1,8 +1,8 @@
 using System.Numerics;
-using SpectraSharp.Core;
-using SpectraSharp.Core.Mods;
+using SpectraEngine.Core;
+using SpectraEngine.Core.Mods;
 
-namespace SpectraSharp.Bridge.Overrides;
+namespace SpectraEngine.Bridge.Overrides;
 
 /// <summary>
 /// Abstract base for every hand-written Block override in the compatibility layer.
@@ -40,9 +40,9 @@ public abstract class BlockBase : BridgeStubBase
     // ── Drops ─────────────────────────────────────────────────────────────────
 
     /// <summary>Returns the item stacks dropped when this block is broken.</summary>
-    public virtual IEnumerable<SpectraSharp.Core.Mods.ItemStack> GetDrops(int meta, Random rng)
+    public virtual IEnumerable<SpectraEngine.Core.Mods.ItemStack> GetDrops(int meta, Random rng)
     {
-        yield return new SpectraSharp.Core.Mods.ItemStack(BlockId, 1);
+        yield return new SpectraEngine.Core.Mods.ItemStack(BlockId, 1);
     }
 
     // ── Texture ───────────────────────────────────────────────────────────────
@@ -82,7 +82,7 @@ public abstract class BlockBase : BridgeStubBase
     /// with the appropriate biome color so the extracted GPU texture appears correct.
     ///
     /// Multiplication formula: outChannel = (texChannel * tintChannel) / 255
-    /// Applied once by <see cref="SpectraSharp.Graphics.TerrainAtlas.ExtractAndRegister"/>.
+    /// Applied once by <see cref="SpectraEngine.Graphics.TerrainAtlas.ExtractAndRegister"/>.
     /// </summary>
     public virtual Raylib_cs.Color BiomeTintColor => new(255, 255, 255, 255);
 

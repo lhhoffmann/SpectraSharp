@@ -1,9 +1,9 @@
 using System.Text.RegularExpressions;
-using SpectraSharp.ModTranspiler.Mappings;
-using SpectraSharp.ModTranspiler.Model;
-using SpectraSharp.ModTranspiler.Templates;
+using SpectraEngine.ModTranspiler.Mappings;
+using SpectraEngine.ModTranspiler.Model;
+using SpectraEngine.ModTranspiler.Templates;
 
-namespace SpectraSharp.ModTranspiler.Pipeline;
+namespace SpectraEngine.ModTranspiler.Pipeline;
 
 /// <summary>
 /// Phase 4 — Converts a ModManifest into a list of (filename, C# source) pairs.

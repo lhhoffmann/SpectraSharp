@@ -19,7 +19,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\SpectraSharp.csproj" />
+    <ProjectReference Include="..\..\SpectraEngine.csproj" />
   </ItemGroup>
 
 </Project>

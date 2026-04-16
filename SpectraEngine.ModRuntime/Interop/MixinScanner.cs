@@ -1,6 +1,6 @@
 using System.Reflection;
 
-namespace SpectraSharp.ModRuntime.Interop;
+namespace SpectraEngine.ModRuntime.Interop;
 
 /// <summary>
 /// Scans an IKVM-compiled assembly for Mixin annotations.

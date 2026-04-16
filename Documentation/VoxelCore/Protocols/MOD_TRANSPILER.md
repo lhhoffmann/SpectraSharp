@@ -1,6 +1,6 @@
 # MOD TRANSPILER — Full Pipeline Reference
 
-The Mod Transpiler is a **standalone C# program** that ships with SpectraSharp.
+The Mod Transpiler is a **standalone C# program** that ships with SpectraEngine.
 It requires no AI, no API keys, and no internet connection.
 The AI's role is only to **write this program** during development — once built,
 it runs fully autonomously on the end-user's machine.
@@ -107,7 +107,7 @@ Compiled directly into the transpiler — no runtime file reads needed.
 static class VanillaApiMap
 {
     // Key:   Java method call as it appears in decompiled source
-    // Value: C# equivalent call in SpectraSharp
+    // Value: C# equivalent call in SpectraEngine
     public static readonly Dictionary<string, string> MethodCalls = new()
     {
         ["world.getBlockId(?,?,?)"]          = "world.GetBlockId(?,?,?)",
@@ -241,7 +241,7 @@ The transpiler handles ~80% of typical 1.0-era mods automatically.
 ## File Layout
 
 ```
-SpectraSharp/
+SpectraEngine/
 ├── Tools/
 │   └── ModTranspiler/              ← the transpiler program (committed, built once)
 │       ├── ModTranspiler.csproj

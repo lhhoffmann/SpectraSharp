@@ -1,4 +1,4 @@
-namespace SpectraSharp.Core.Blocks;
+namespace SpectraEngine.Core.Blocks;
 
 /// <summary>
 /// Replica of <c>ahh</c> (BlockStairs) — L-shaped stair block.

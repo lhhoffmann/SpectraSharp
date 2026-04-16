@@ -1,4 +1,4 @@
-namespace SpectraSharp.Core;
+namespace SpectraEngine.Core;
 
 /// <summary>
 /// Replica of <c>cr</c> (DataWatcher) — per-entity typed data dictionary that synchronises

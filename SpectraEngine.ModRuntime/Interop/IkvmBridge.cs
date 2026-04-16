@@ -1,7 +1,7 @@
 using System.Reflection;
 using System.Runtime.Loader;
 
-namespace SpectraSharp.ModRuntime.Interop;
+namespace SpectraEngine.ModRuntime.Interop;
 
 /// <summary>
 /// Prepares the IKVM.Runtime environment for mod hosting.

@@ -1,4 +1,4 @@
-namespace SpectraSharp.Core.WorldGen;
+namespace SpectraEngine.Core.WorldGen;
 
 /// <summary>
 /// Replica of <c>oh</c> (WorldGenEndSpike) — places a cylindrical obsidian pillar

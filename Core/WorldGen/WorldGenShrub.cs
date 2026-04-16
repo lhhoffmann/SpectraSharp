@@ -1,4 +1,4 @@
-namespace SpectraSharp.Core.WorldGen;
+namespace SpectraEngine.Core.WorldGen;
 
 /// <summary>
 /// Scatters a single block type (dead bush) over a small surface area. 4 attempts per call.

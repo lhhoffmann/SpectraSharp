@@ -1,9 +1,9 @@
 using System;
 using System.Collections.Generic;
 using Xunit;
-using SpectraSharp.Core.Blocks;
+using SpectraEngine.Core.Blocks;
 
-namespace SpectraSharp.Tests.Blocks;
+namespace SpectraEngine.Tests.Blocks;
 
 // ── Hand-written fakes ────────────────────────────────────────────────────────
 

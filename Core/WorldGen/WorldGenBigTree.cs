@@ -1,4 +1,4 @@
-namespace SpectraSharp.Core.WorldGen;
+namespace SpectraEngine.Core.WorldGen;
 
 /// <summary>
 /// Fancy branching oak tree generator. Spec: <c>yd</c> (WorldGenBigTree).

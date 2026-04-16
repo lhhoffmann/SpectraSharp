@@ -1,4 +1,4 @@
-namespace SpectraSharp.Core.Mods;
+namespace SpectraEngine.Core.Mods;
 
 /// <summary>
 /// Stores mod-registered furnace smelting recipes at load time.

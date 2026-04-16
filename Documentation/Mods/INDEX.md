@@ -1,4 +1,4 @@
-# SpectraSharp Mod Documentation — Index
+# SpectraEngine Mod Documentation — Index
 
 This folder documents the **Mod Runtime**: the system that runs Java mod JARs of any
 Minecraft version natively on .NET without decompilation or source translation.
@@ -35,7 +35,7 @@ User drops mod.jar into /mods/
         │
         ├─ Phase 4: MixinInterceptor.Intercept(asm)
         │           Scans for @Mixin annotations (Fabric/Forge mods)
-        │           ClassMapping.Resolve(javaClass) → SpectraSharp.Core type
+        │           ClassMapping.Resolve(javaClass) → SpectraEngine.Core type
         │           HarmonyBridge applies Harmony patches BEFORE OnLoad()
         │
         ├─ Phase 5: ClassMapping.ScanAssembly(asm)
@@ -60,7 +60,7 @@ mod.jar  ──ikvmc──►  Mod.dll
                         │
                         │  delegates
                         ▼
-               SpectraSharp.Core
+               SpectraEngine.Core
                (IWorld, IEngine, etc.)
 
   Mixin patches (Fabric/Forge mods only):
@@ -80,10 +80,10 @@ mod.jar  ──ikvmc──►  Mod.dll
 
 | Component | Path |
 |---|---|
-| Mod Runtime (loader, sandbox, AllocGuard) | `SpectraSharp.ModRuntime/` |
-| IKVM init + ClassMapping + Mixin pipeline | `SpectraSharp.ModRuntime/Interop/` |
-| Mod compiler (ikvmc wrapper) | `SpectraSharp.ModRuntime/Compiler/` |
-| Version mappings JSON | `SpectraSharp.ModRuntime/Mappings/Data/` |
+| Mod Runtime (loader, sandbox, AllocGuard) | `SpectraEngine.ModRuntime/` |
+| IKVM init + ClassMapping + Mixin pipeline | `SpectraEngine.ModRuntime/Interop/` |
+| Mod compiler (ikvmc wrapper) | `SpectraEngine.ModRuntime/Compiler/` |
+| Version mappings JSON | `SpectraEngine.ModRuntime/Mappings/Data/` |
 | MinecraftStubs v1.0 | `Bridge/JavaStubs/v1_0/` |
 
 ---

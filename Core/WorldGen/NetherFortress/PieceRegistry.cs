@@ -1,6 +1,6 @@
-using SpectraSharp.Core.WorldGen.Structure;
+using SpectraEngine.Core.WorldGen.Structure;
 
-namespace SpectraSharp.Core.WorldGen.NetherFortress;
+namespace SpectraEngine.Core.WorldGen.NetherFortress;
 
 /// <summary>
 /// Factory and metadata for a single piece type. Replica of <c>aaz</c>.

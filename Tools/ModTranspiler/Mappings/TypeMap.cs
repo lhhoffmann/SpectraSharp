@@ -1,4 +1,4 @@
-namespace SpectraSharp.ModTranspiler.Mappings;
+namespace SpectraEngine.ModTranspiler.Mappings;
 
 /// <summary>
 /// Maps Java primitive and common types to C# equivalents.

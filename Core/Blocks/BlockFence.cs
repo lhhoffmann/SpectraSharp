@@ -1,4 +1,4 @@
-namespace SpectraSharp.Core.Blocks;
+namespace SpectraEngine.Core.Blocks;
 
 /// <summary>
 /// Replica of <c>nz</c> (BlockFence) — tall thin post that expands toward adjacent

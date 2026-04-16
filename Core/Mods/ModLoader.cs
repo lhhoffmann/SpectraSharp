@@ -1,7 +1,7 @@
 using System.Reflection;
 using System.Runtime.Loader;
 
-namespace SpectraSharp.Core.Mods;
+namespace SpectraEngine.Core.Mods;
 
 /// <summary>
 /// Scans mods/compiled/ at startup, loads every mod DLL into its own

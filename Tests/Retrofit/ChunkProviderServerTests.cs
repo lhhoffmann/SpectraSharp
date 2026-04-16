@@ -1,12 +1,12 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Security.Cryptography;
 using System.Text;
 using Xunit;
-using SpectraSharp.Core;
-using SpectraSharp.Core.WorldSave;
+using SpectraEngine.Core;
+using SpectraEngine.Core.WorldSave;
 
-namespace SpectraSharp.Tests
+namespace SpectraEngine.Tests
 {
     // ─────────────────────────────────────────────────────────────────────────
     // Fakes / Stubs

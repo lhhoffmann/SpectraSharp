@@ -1,4 +1,4 @@
-namespace SpectraSharp.ModRuntime.Sandbox;
+namespace SpectraEngine.ModRuntime.Sandbox;
 
 /// <summary>
 /// Detects and heals thread violations from mods.

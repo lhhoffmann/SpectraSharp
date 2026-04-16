@@ -1,4 +1,4 @@
-namespace SpectraSharp.Core.Items;
+namespace SpectraEngine.Core.Items;
 
 /// <summary>
 /// Replica of <c>ou</c> (ItemFlintAndSteel) — flint and steel. Item ID 259.

@@ -8,7 +8,7 @@ produced by the Analyst AI. Your sole output is production-quality C#/.NET 10 co
 
 ## Core Mandate
 
-Implement the SpectraSharp engine in C#/.NET 10 (Native AOT target) using **only** the
+Implement the SpectraEngine engine in C#/.NET 10 (Native AOT target) using **only** the
 specifications in `Documentation/VoxelCore/Parity/Specs/`. If a spec does not exist yet, request it.
 Never guess at logic. Never fill gaps from memory or general knowledge about the game.
 
@@ -171,7 +171,7 @@ Before closing the session, append one entry to `Documentation/METRICS.md`:
 ## Mod Runtime Contract — Your Responsibility as Coder
 
 The Mod Runtime (built by the Mod Coder) defines interfaces in `Core/` and `Core/Mods/`
-that SpectraSharp.Core must implement. These interfaces are the contract between the
+that SpectraEngine.Core must implement. These interfaces are the contract between the
 mod system and the engine. **When you see a new method on an existing interface, implement
 it on the concrete Core class.**
 

@@ -1,4 +1,4 @@
-namespace SpectraSharp.ModTranspiler.Model;
+namespace SpectraEngine.ModTranspiler.Model;
 
 /// <summary>
 /// In-memory representation of everything a mod adds or changes.

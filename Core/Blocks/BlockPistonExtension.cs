@@ -1,6 +1,6 @@
-using SpectraSharp.Core.TileEntity;
+using SpectraEngine.Core.TileEntity;
 
-namespace SpectraSharp.Core.Blocks;
+namespace SpectraEngine.Core.Blocks;
 
 /// <summary>
 /// Replica of <c>acu</c> (BlockPistonExtension) — Block ID 34.

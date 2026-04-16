@@ -1,4 +1,4 @@
-namespace SpectraSharp.Core.Items;
+namespace SpectraEngine.Core.Items;
 
 /// <summary>
 /// Replica of <c>agu</c> (ItemFood) — base class for all edible items.

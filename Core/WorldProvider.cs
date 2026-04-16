@@ -1,4 +1,4 @@
-namespace SpectraSharp.Core;
+namespace SpectraEngine.Core;
 
 /// <summary>
 /// Replica of <c>k</c> (WorldProvider) — abstract base class encapsulating dimension-specific

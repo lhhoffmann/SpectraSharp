@@ -1,4 +1,4 @@
-namespace SpectraSharp.Core;
+namespace SpectraEngine.Core;
 
 /// <summary>
 /// Replica of <c>wu</c> (StepSound) — immutable descriptor for block walk/place/break sounds.

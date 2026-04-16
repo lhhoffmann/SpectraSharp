@@ -1,4 +1,4 @@
-namespace SpectraSharp.ModTranspiler.Pipeline;
+namespace SpectraEngine.ModTranspiler.Pipeline;
 
 sealed class PipelineResult
 {

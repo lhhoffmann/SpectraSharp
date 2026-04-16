@@ -1,4 +1,4 @@
-namespace SpectraSharp.Core;
+namespace SpectraEngine.Core;
 
 /// <summary>
 /// Interface for <c>ry</c> (World) — the mutable world, extending the read-only

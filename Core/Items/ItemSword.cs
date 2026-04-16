@@ -1,4 +1,4 @@
-namespace SpectraSharp.Core.Items;
+namespace SpectraEngine.Core.Items;
 
 /// <summary>
 /// Replica of <c>zp</c> (ItemSword) — direct Item subclass (NOT ItemTool).

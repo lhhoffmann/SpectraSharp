@@ -1,4 +1,4 @@
-namespace SpectraSharp.Core.WorldGen;
+namespace SpectraEngine.Core.WorldGen;
 
 /// <summary>
 /// Abstract base for all world feature generators. Spec: <c>ig</c> (WorldGenerator).

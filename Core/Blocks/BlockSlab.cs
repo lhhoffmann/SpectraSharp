@@ -1,4 +1,4 @@
-namespace SpectraSharp.Core.Blocks;
+namespace SpectraEngine.Core.Blocks;
 
 /// <summary>
 /// Replica of <c>xs</c> (BlockSlab) — handles both single slab (ID 44) and double slab (ID 43).

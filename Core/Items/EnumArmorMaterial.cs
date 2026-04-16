@@ -1,4 +1,4 @@
-namespace SpectraSharp.Core.Items;
+namespace SpectraEngine.Core.Items;
 
 /// <summary>
 /// Replica of <c>dj</c> (EnumArmorMaterial) — five armor-material constants.

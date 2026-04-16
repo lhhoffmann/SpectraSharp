@@ -1,6 +1,6 @@
-using SpectraSharp.Core.TileEntity;
+using SpectraEngine.Core.TileEntity;
 
-namespace SpectraSharp.Core;
+namespace SpectraEngine.Core;
 
 /// <summary>
 /// Replica of <c>abl</c> (BlockJukebox) — Block ID 84.

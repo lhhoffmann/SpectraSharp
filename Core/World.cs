@@ -1,7 +1,7 @@
 using System.Collections.Generic;
-using SpectraSharp.Core.Mobs;
+using SpectraEngine.Core.Mobs;
 
-namespace SpectraSharp.Core;
+namespace SpectraEngine.Core;
 
 /// <summary>
 /// Replica of <c>ry</c> (World) — root game object.

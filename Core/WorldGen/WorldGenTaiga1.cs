@@ -1,4 +1,4 @@
-namespace SpectraSharp.Core.WorldGen;
+namespace SpectraEngine.Core.WorldGen;
 
 /// <summary>
 /// Thin spruce (Christmas tree) generator. Spec: <c>ty</c> (WorldGenTaiga1).

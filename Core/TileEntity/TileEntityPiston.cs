@@ -1,6 +1,6 @@
-using SpectraSharp.Core.Blocks;
+using SpectraEngine.Core.Blocks;
 
-namespace SpectraSharp.Core.TileEntity;
+namespace SpectraEngine.Core.TileEntity;
 
 /// <summary>
 /// Replica of <c>agb</c> (TileEntityPiston) — attached to BlockMovingPiston (ID 36).

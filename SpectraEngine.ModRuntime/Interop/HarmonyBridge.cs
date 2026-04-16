@@ -2,11 +2,11 @@ using System.Reflection;
 using System.Reflection.Emit;
 using HarmonyLib;
 
-namespace SpectraSharp.ModRuntime.Interop;
+namespace SpectraEngine.ModRuntime.Interop;
 
 /// <summary>
 /// Converts <see cref="MixinDescriptor"/> injections into live Harmony patches
-/// applied to SpectraSharp.Core types (resolved via <see cref="ClassMapping"/>).
+/// applied to SpectraEngine.Core types (resolved via <see cref="ClassMapping"/>).
 ///
 /// Patch translation:
 /// ┌─────────────────────────────┬──────────────────────────────────────────────┐

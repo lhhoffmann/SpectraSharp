@@ -1,6 +1,6 @@
-using SpectraSharp.Core.WorldSave;
+using SpectraEngine.Core.WorldSave;
 
-namespace SpectraSharp.Core;
+namespace SpectraEngine.Core;
 
 /// <summary>
 /// Replica of <c>jz</c> (ChunkProviderServer) — the live-world chunk manager.

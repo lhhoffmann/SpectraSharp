@@ -1,14 +1,14 @@
 using System.IO.Compression;
 using System.Reflection;
 using System.Runtime.Loader;
-using SpectraSharp.Core.Mods;
-using SpectraSharp.ModRuntime.AllocGuard;
-using SpectraSharp.ModRuntime.Compiler;
-using SpectraSharp.ModRuntime.Interop;
-using SpectraSharp.ModRuntime.Mappings;
-using SpectraSharp.ModRuntime.Sandbox;
+using SpectraEngine.Core.Mods;
+using SpectraEngine.ModRuntime.AllocGuard;
+using SpectraEngine.ModRuntime.Compiler;
+using SpectraEngine.ModRuntime.Interop;
+using SpectraEngine.ModRuntime.Mappings;
+using SpectraEngine.ModRuntime.Sandbox;
 
-namespace SpectraSharp.ModRuntime;
+namespace SpectraEngine.ModRuntime;
 
 /// <summary>
 /// Discovers, compiles (if needed), and loads mod JARs and DLLs.

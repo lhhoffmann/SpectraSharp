@@ -1,4 +1,4 @@
-namespace SpectraSharp.Core;
+namespace SpectraEngine.Core;
 
 /// <summary>
 /// Replica of <c>wx</c> (BlockPressurePlate) — Block IDs 70 (stone) and 72 (wood).

@@ -1,4 +1,4 @@
-namespace SpectraSharp.Core.Mobs;
+namespace SpectraEngine.Core.Mobs;
 
 /// <summary>
 /// Replica of <c>fx</c> (EntityAnimal) — abstract base for all breedable animals.

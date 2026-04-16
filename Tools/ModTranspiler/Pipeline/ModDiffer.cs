@@ -1,7 +1,7 @@
 using System.IO.Compression;
-using SpectraSharp.ModTranspiler.Mappings;
+using SpectraEngine.ModTranspiler.Mappings;
 
-namespace SpectraSharp.ModTranspiler.Pipeline;
+namespace SpectraEngine.ModTranspiler.Pipeline;
 
 enum ClassTag { NewContent, Override, Passthrough, Library }
 

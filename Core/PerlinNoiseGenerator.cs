@@ -1,4 +1,4 @@
-namespace SpectraSharp.Core;
+namespace SpectraEngine.Core;
 
 /// <summary>
 /// Replica of <c>agk</c> (PerlinNoiseGenerator) — single-octave classic Perlin noise.

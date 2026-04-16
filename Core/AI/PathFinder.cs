@@ -1,4 +1,4 @@
-namespace SpectraSharp.Core.AI;
+namespace SpectraEngine.Core.AI;
 
 /// <summary>
 /// Replica of <c>rw</c> (PathFinder) — A* pathfinder used by all AI mobs.

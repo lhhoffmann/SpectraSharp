@@ -1,6 +1,6 @@
-using SpectraSharp.Core.WorldGen.Structure;
+using SpectraEngine.Core.WorldGen.Structure;
 
-namespace SpectraSharp.Core.WorldGen.NetherFortress;
+namespace SpectraEngine.Core.WorldGen.NetherFortress;
 
 /// <summary>
 /// The root piece of every Nether Fortress. Replica of <c>gc</c> (StartingPiece).

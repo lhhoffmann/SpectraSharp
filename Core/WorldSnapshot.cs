@@ -1,7 +1,7 @@
 using System.Numerics;
 using Raylib_cs;
 
-namespace SpectraSharp.Core;
+namespace SpectraEngine.Core;
 
 /// <summary>
 /// Immutable snapshot of a single block's render state (Bridge stubs or World blocks).

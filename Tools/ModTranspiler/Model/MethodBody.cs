@@ -1,4 +1,4 @@
-namespace SpectraSharp.ModTranspiler.Model;
+namespace SpectraEngine.ModTranspiler.Model;
 
 /// <summary>
 /// A raw Java method captured from the decompiled source.

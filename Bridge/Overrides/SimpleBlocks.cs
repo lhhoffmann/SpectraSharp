@@ -1,4 +1,4 @@
-namespace SpectraSharp.Bridge.Overrides;
+namespace SpectraEngine.Bridge.Overrides;
 
 // Blocks with no custom behaviour — only a Java class name and a terrain.png tile index.
 // BridgeRegistry discovers these automatically via reflection at boot; no registration needed.
@@ -16,7 +16,7 @@ sealed class GrassBlock    : BlockBase {
     public override int    TextureIndexBottom => 2;  // bottom = dirt (no tint)
     public override Raylib_cs.Color BiomeTintColor {
         get {
-            int rgb = SpectraSharp.Core.GrassColorizer.GetGrassColor(0.8, 0.4);
+            int rgb = SpectraEngine.Core.GrassColorizer.GetGrassColor(0.8, 0.4);
             return new Raylib_cs.Color((byte)(rgb >> 16), (byte)(rgb >> 8), (byte)rgb, (byte)255);
         }
     }
@@ -35,7 +35,7 @@ sealed class LeavesBlock   : BlockBase {
     public override int    TextureIndex  => 52;
     public override Raylib_cs.Color BiomeTintColor {
         get {
-            int rgb = SpectraSharp.Core.FoliageColorizer.GetFoliageColor(0.7, 0.8);
+            int rgb = SpectraEngine.Core.FoliageColorizer.GetFoliageColor(0.7, 0.8);
             return new Raylib_cs.Color((byte)(rgb >> 16), (byte)(rgb >> 8), (byte)rgb, (byte)255);
         }
     }

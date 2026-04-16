@@ -1,4 +1,4 @@
-namespace SpectraSharp.Core;
+namespace SpectraEngine.Core;
 
 /// <summary>
 /// Replica of <c>vi</c> (EntityPlayer) — abstract base for all player-controlled entities.

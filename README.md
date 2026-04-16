@@ -1,14 +1,14 @@
-# SpectraSharp 🧪
+# SpectraEngine 🧪
 
 **Status: Active Research & Learning Phase**
 
-SpectraSharp is an experimental engine core built with **.NET 10** and **C# 14**. This project serves as my personal deep-dive into high-performance systems architecture and managed code optimization.
+SpectraEngine is an experimental engine core built with **.NET 10** and **C# 14**. This project serves as my personal deep-dive into high-performance systems architecture and managed code optimization.
 
 ---
 
 ## 📖 About the Project
 
-I am currently an IT student specializing in **System Integration**. SpectraSharp is my hands-on laboratory where I explore how to bridge the gap between low-level system resources and high-level application logic. 
+I am currently an IT student specializing in **System Integration**. SpectraEngine is my hands-on laboratory where I explore how to bridge the gap between low-level system resources and high-level application logic. 
 
 The goal is to understand the complexities of voxel-based environments, efficient memory management, and modern transpilation concepts.
 
@@ -26,7 +26,7 @@ The goal is to understand the complexities of voxel-based environments, efficien
 
 ## ⚖️ Legal Disclaimer
 
-**SpectraSharp is an independent educational project.** - **No Affiliation:** This project is not affiliated with, associated with, authorized by, or in any way officially connected with **Microsoft Corporation**, **Mojang AB**, or any of their subsidiaries or affiliates.
+**SpectraEngine is an independent educational project.** - **No Affiliation:** This project is not affiliated with, associated with, authorized by, or in any way officially connected with **Microsoft Corporation**, **Mojang AB**, or any of their subsidiaries or affiliates.
 - **No Assets:** This repository does **not** contain any proprietary assets, textures, sounds, or code from the game "Minecraft". 
 - **Purpose:** This is a "clean-room" research project created for educational purposes only. It is intended to explore engine technology, not to infringe on any existing copyrights or trademarks.
 
@@ -47,7 +47,7 @@ The goal is to understand the complexities of voxel-based environments, efficien
 This project is licensed under the **GNU Affero General Public License v3.0 (AGPL-3.0)**. 
 
 - **Open Source:** You are free to study, modify, and distribute this code under the terms of the AGPL-3.0.
-- **Commercial Use:** If you are a company or individual interested in using SpectraSharp technology for commercial purposes or within a proprietary environment, please reach out for a separate licensing agreement.
+- **Commercial Use:** If you are a company or individual interested in using SpectraEngine technology for commercial purposes or within a proprietary environment, please reach out for a separate licensing agreement.
 
 ---
 

@@ -1,4 +1,4 @@
-namespace SpectraSharp.Core;
+namespace SpectraEngine.Core;
 
 /// <summary>
 /// Replica of <c>kb</c> (BlockGravel) — Block ID 13. Extends BlockSand (same gravity logic).

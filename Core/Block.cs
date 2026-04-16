@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 
-namespace SpectraSharp.Core;
+namespace SpectraEngine.Core;
 
 /// <summary>
 /// Bit-exact replica of <c>yy</c> (Block) — base class for all block types.

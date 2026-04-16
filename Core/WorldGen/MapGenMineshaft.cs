@@ -1,6 +1,6 @@
-using SpectraSharp.Core.WorldGen.Structure;
+using SpectraEngine.Core.WorldGen.Structure;
 
-namespace SpectraSharp.Core.WorldGen;
+namespace SpectraEngine.Core.WorldGen;
 
 /// <summary>
 /// Replica of <c>kd</c> (MapGenMineshaft) — Mineshaft structure generator.

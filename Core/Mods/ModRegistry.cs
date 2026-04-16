@@ -1,4 +1,4 @@
-namespace SpectraSharp.Core.Mods;
+namespace SpectraEngine.Core.Mods;
 
 /// <summary>
 /// Runtime registry mods use to register blocks, items, and world/tick hooks.

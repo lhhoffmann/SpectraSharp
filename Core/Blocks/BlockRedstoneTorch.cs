@@ -1,4 +1,4 @@
-namespace SpectraSharp.Core;
+namespace SpectraEngine.Core;
 
 /// <summary>
 /// Replica of <c>ku</c> (BlockRedstoneTorch) — Block IDs 75 (off) and 76 (on).

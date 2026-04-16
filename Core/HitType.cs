@@ -1,4 +1,4 @@
-namespace SpectraSharp.Core;
+namespace SpectraEngine.Core;
 
 /// <summary>
 /// Replica of <c>bo</c> (EnumMovingObjectType) — discriminates block hits from entity hits

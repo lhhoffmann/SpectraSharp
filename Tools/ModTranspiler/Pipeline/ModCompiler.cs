@@ -1,9 +1,9 @@
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
-using SpectraSharp.Core.Mods;
+using SpectraEngine.Core.Mods;
 using HarmonyLib;
 
-namespace SpectraSharp.ModTranspiler.Pipeline;
+namespace SpectraEngine.ModTranspiler.Pipeline;
 
 /// <summary>
 /// Phase 6 — Compiles the generated C# source files to a DLL using Roslyn in-process.
@@ -72,7 +72,7 @@ static class ModCompiler
             catch { /* native or unreadable — skip */ }
         }
 
-        // SpectraSharp engine (contracts: ISpectraMod, BlockBase, etc.)
+        // SpectraEngine engine (contracts: ISpectraMod, BlockBase, etc.)
         refs.Add(MetadataReference.CreateFromFile(typeof(ISpectraMod).Assembly.Location));
 
         // HarmonyLib

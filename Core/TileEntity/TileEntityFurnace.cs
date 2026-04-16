@@ -1,4 +1,4 @@
-namespace SpectraSharp.Core.TileEntity;
+namespace SpectraEngine.Core.TileEntity;
 
 /// <summary>
 /// Smelting furnace tile entity. Replica of <c>oe</c> (TileEntityFurnace).

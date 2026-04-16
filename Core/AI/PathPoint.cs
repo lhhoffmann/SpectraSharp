@@ -1,4 +1,4 @@
-namespace SpectraSharp.Core.AI;
+namespace SpectraEngine.Core.AI;
 
 /// <summary>
 /// Replica of <c>mo</c> (PathPoint) — A* graph node used by <see cref="PathFinder"/>.

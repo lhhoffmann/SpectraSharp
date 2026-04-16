@@ -1,4 +1,4 @@
-namespace SpectraSharp.Core.WorldGen;
+namespace SpectraEngine.Core.WorldGen;
 
 /// <summary>
 /// Underground cave carver. Spec: <c>ln</c> (MapGenCaves), <c>bz</c> (MapGenBase).

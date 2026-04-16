@@ -1,4 +1,4 @@
-namespace SpectraSharp.Core.Nbt;
+namespace SpectraEngine.Core.Nbt;
 
 // ── Abstract base ──────────────────────────────────────────────────────────────
 

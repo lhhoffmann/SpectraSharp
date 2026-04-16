@@ -1,4 +1,4 @@
-# SpectraSharp Parity Documentation
+# SpectraEngine Parity Documentation
 
 This folder is the communication hub between the two AIs in the clean-room workflow.
 

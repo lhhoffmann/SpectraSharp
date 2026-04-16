@@ -1,4 +1,4 @@
-namespace SpectraSharp.Core;
+namespace SpectraEngine.Core;
 
 /// <summary>
 /// Replica of <c>oc</c> (BlockOreRedstone) — Block IDs 73 (normal) and 74 (glowing).

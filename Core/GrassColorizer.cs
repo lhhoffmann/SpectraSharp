@@ -1,4 +1,4 @@
-namespace SpectraSharp.Core;
+namespace SpectraEngine.Core;
 
 /// <summary>
 /// Replica of <c>ha</c> (GrassColorizer) — maps (temperature, rainfall) to a packed RGB

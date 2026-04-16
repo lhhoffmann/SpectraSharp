@@ -1,4 +1,4 @@
-namespace SpectraSharp.Core;
+namespace SpectraEngine.Core;
 
 /// <summary>
 /// Interface for <c>ej</c> (ChunkLoader) — loads, caches, and saves chunks on behalf of World.

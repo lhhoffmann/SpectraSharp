@@ -1,4 +1,4 @@
-namespace SpectraSharp.Core;
+namespace SpectraEngine.Core;
 
 /// <summary>
 /// Replica of <c>qy</c> (EnumStatus / EnumSleepResult) — result of a sleep attempt.

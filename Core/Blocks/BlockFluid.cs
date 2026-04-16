@@ -1,4 +1,4 @@
-namespace SpectraSharp.Core.Blocks;
+namespace SpectraEngine.Core.Blocks;
 
 /// <summary>
 /// Flowing fluid block — replica of <c>ahx</c> (BlockFluid).

@@ -1,6 +1,6 @@
 # Vanilla API Translation Table
 
-Maps Java method calls commonly used by mods to their SpectraSharp C# equivalents.
+Maps Java method calls commonly used by mods to their SpectraEngine C# equivalents.
 The Mod Analyst uses this table when writing injection descriptions in Mod Specs.
 
 > All Java names are the MCP-style human-readable names as found after deobfuscation.
@@ -8,7 +8,7 @@ The Mod Analyst uses this table when writing injection descriptions in Mod Specs
 
 ## World / Block Access
 
-| Java (Mod Code) | C# (SpectraSharp) | Notes |
+| Java (Mod Code) | C# (SpectraEngine) | Notes |
 |---|---|---|
 | `world.getBlockId(x, y, z)` | `World.GetBlockId(x, y, z)` | Returns `int` block ID (0–255) |
 | `world.setBlock(x, y, z, id)` | `World.SetBlock(x, y, z, id)` | Queues block update |
@@ -21,7 +21,7 @@ The Mod Analyst uses this table when writing injection descriptions in Mod Specs
 
 ## Entity / Player
 
-| Java (Mod Code) | C# (SpectraSharp) | Notes |
+| Java (Mod Code) | C# (SpectraEngine) | Notes |
 |---|---|---|
 | `player.inventory.addItemStackToInventory(stack)` | `Player.Inventory.TryAdd(stack)` | Returns `bool` |
 | `player.sendChatMessage(text)` | `Player.SendChat(text)` | |
@@ -32,7 +32,7 @@ The Mod Analyst uses this table when writing injection descriptions in Mod Specs
 
 ## Item / ItemStack
 
-| Java (Mod Code) | C# (SpectraSharp) | Notes |
+| Java (Mod Code) | C# (SpectraEngine) | Notes |
 |---|---|---|
 | `new ItemStack(Item.someItem, count, damage)` | `new ItemStack(itemId, count, damage)` | |
 | `stack.getItem()` | `stack.Item` | Returns `ItemBase` |
@@ -42,7 +42,7 @@ The Mod Analyst uses this table when writing injection descriptions in Mod Specs
 
 ## Block Registration
 
-| Java (Mod Code) | C# (SpectraSharp) | Notes |
+| Java (Mod Code) | C# (SpectraEngine) | Notes |
 |---|---|---|
 | `Block.blocksList[id] = new MyBlock(id)` | Derive from `BlockBase`, set `BlockId` | Auto-registered via `BridgeRegistry` |
 | `block.setHardness(f)` | `BlockBase.Hardness = f` | Float, mining time multiplier |
@@ -53,7 +53,7 @@ The Mod Analyst uses this table when writing injection descriptions in Mod Specs
 
 ## Rendering / Texture
 
-| Java (Mod Code) | C# (SpectraSharp) | Notes |
+| Java (Mod Code) | C# (SpectraEngine) | Notes |
 |---|---|---|
 | `block.blockIndexInTexture` | `BlockBase.TextureIndex` | Row-major index into terrain.png (16×16 grid) |
 | `ModLoader.addOverride("/terrain.png", "/mymod/mytex.png", slot)` | `TerrainAtlas.RegisterOverride(slot, texturePath)` | `slot` = terrain.png index |
@@ -62,7 +62,7 @@ The Mod Analyst uses this table when writing injection descriptions in Mod Specs
 
 ## Sound
 
-| Java (Mod Code) | C# (SpectraSharp) | Notes |
+| Java (Mod Code) | C# (SpectraEngine) | Notes |
 |---|---|---|
 | `world.playSoundAtEntity(entity, "step.stone", vol, pitch)` | `Audio.PlayAt(entity.Position, "step.stone", vol, pitch)` | |
 | `world.playSoundEffect(x,y,z, name, vol, pitch)` | `Audio.PlayAt(x, y, z, name, vol, pitch)` | |

@@ -1,7 +1,7 @@
-using SpectraSharp.Core.WorldGen.Structure;
-using SpectraSharp.Core.TileEntity;
+using SpectraEngine.Core.WorldGen.Structure;
+using SpectraEngine.Core.TileEntity;
 
-namespace SpectraSharp.Core.WorldGen.NetherFortress;
+namespace SpectraEngine.Core.WorldGen.NetherFortress;
 
 // ── Corridor list pieces ──────────────────────────────────────────────────────
 // Spec §7.1-§7.6: ac, bw, ui, bl, kf, xr

@@ -1,6 +1,6 @@
 // Stub for ModLoader — Minecraft 1.0 static API
 
-using SpectraSharp.Core.Mods;
+using SpectraEngine.Core.Mods;
 using JavaBlock     = net.minecraft.block.Block;
 using JavaItem      = net.minecraft.item.Item;
 using JavaItemStack = net.minecraft.item.ItemStack;
@@ -19,7 +19,7 @@ namespace net.minecraft.src;
 /// </summary>
 public static class ModLoader
 {
-    // Set by SpectraSharp.ModRuntime.ModLoader before calling BaseMod.OnLoad()
+    // Set by SpectraEngine.ModRuntime.ModLoader before calling BaseMod.OnLoad()
     internal static IEngine? Engine { get; set; }
 
     static ICraftingManager Crafting =>
@@ -42,7 +42,7 @@ public static class ModLoader
         if (pattern.Length == 0) return;
 
         Crafting.AddShapedRecipe(
-            new SpectraSharp.Core.Mods.ItemStack(output.itemID, output.stackSize),
+            new SpectraEngine.Core.Mods.ItemStack(output.itemID, output.stackSize),
             pattern,
             key);
     }
@@ -61,7 +61,7 @@ public static class ModLoader
         if (ids.Length == 0) return;
 
         Crafting.AddShapelessRecipe(
-            new SpectraSharp.Core.Mods.ItemStack(output.itemID, output.stackSize),
+            new SpectraEngine.Core.Mods.ItemStack(output.itemID, output.stackSize),
             ids);
     }
 
@@ -73,7 +73,7 @@ public static class ModLoader
     {
         Smelting.AddSmeltingRecipe(
             inputId,
-            new SpectraSharp.Core.Mods.ItemStack(output.itemID, output.stackSize),
+            new SpectraEngine.Core.Mods.ItemStack(output.itemID, output.stackSize),
             xp);
     }
 

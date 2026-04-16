@@ -1,4 +1,4 @@
-namespace SpectraSharp.Core.WorldSave;
+namespace SpectraEngine.Core.WorldSave;
 
 /// <summary>
 /// Per-dimension chunk disk I/O interface. Replica of <c>d</c> (IChunkLoader) in the save system.

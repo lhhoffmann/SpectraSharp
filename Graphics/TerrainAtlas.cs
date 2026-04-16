@@ -1,8 +1,8 @@
 using Raylib_cs;
 using System.Numerics;
-using SpectraSharp.IO;
+using SpectraEngine.IO;
 
-namespace SpectraSharp.Graphics;
+namespace SpectraEngine.Graphics;
 
 /// <summary>
 /// Utilities for slicing individual block tiles out of terrain.png.

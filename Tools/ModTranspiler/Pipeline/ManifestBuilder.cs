@@ -1,8 +1,8 @@
 using System.Text.RegularExpressions;
-using SpectraSharp.ModTranspiler.Mappings;
-using SpectraSharp.ModTranspiler.Model;
+using SpectraEngine.ModTranspiler.Mappings;
+using SpectraEngine.ModTranspiler.Model;
 
-namespace SpectraSharp.ModTranspiler.Pipeline;
+namespace SpectraEngine.ModTranspiler.Pipeline;
 
 /// <summary>
 /// Phase 3 — Parses decompiled Java source and builds a ModManifest.

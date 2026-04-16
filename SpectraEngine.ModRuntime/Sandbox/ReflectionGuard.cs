@@ -1,19 +1,19 @@
-namespace SpectraSharp.ModRuntime.Sandbox;
+namespace SpectraEngine.ModRuntime.Sandbox;
 
 /// <summary>
 /// Intercepts java.lang.reflect calls from IKVM-compiled mod code.
 /// Allows reflection on JavaStub fields/methods.
-/// Blocks reflection on SpectraSharp.Core internals.
+/// Blocks reflection on SpectraEngine.Core internals.
 /// </summary>
 public static class ReflectionGuard
 {
     // Namespaces mods must never reflect into
     static readonly HashSet<string> Blocked =
     [
-        "SpectraSharp.Core",
-        "SpectraSharp.Graphics",
-        "SpectraSharp.IO",
-        "SpectraSharp.ModRuntime",
+        "SpectraEngine.Core",
+        "SpectraEngine.Graphics",
+        "SpectraEngine.IO",
+        "SpectraEngine.ModRuntime",
     ];
 
     // Namespaces always allowed (stub layer + IKVM java.*)

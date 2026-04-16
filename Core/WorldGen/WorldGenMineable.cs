@@ -1,4 +1,4 @@
-namespace SpectraSharp.Core.WorldGen;
+namespace SpectraEngine.Core.WorldGen;
 
 /// <summary>
 /// Universal ore / patch vein generator. Spec: <c>ky</c> (WorldGenMineable).

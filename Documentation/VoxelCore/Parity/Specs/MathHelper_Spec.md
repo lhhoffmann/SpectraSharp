@@ -312,7 +312,7 @@ Step-by-step:
 ### getRandomIntegerInRange — `a(Random var0, int var1, int var2)` → `int`
 
 **Parameters:**  
-- `var0` — `java.util.Random` instance (not SpectraSharp's `JavaRandom`)  
+- `var0` — `java.util.Random` instance (not SpectraEngine's `JavaRandom`)  
 - `var1` — minimum value (inclusive)  
 - `var2` — maximum value (inclusive)  
 

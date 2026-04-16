@@ -13,15 +13,15 @@ This repository uses a dual-license model:
 
 ## Creative Commons Attribution 4.0 International (CC BY 4.0)
 
-Copyright © 2026 lhhoffmann / SpectraSharp Contributors
+Copyright © 2026 lhhoffmann / SpectraEngine Contributors
 
 You are free to:
 - **Share** — copy and redistribute this material in any medium or format
 - **Adapt** — remix, transform, and build upon this material for any purpose
 
 Under the following terms:
-- **Attribution** — You must give appropriate credit to the **SpectraSharp project**
-  (`github.com/lhhoffmann/SpectraSharp`), provide a link to the license, and indicate
+- **Attribution** — You must give appropriate credit to the **SpectraEngine project**
+  (`github.com/lhhoffmann/SpectraEngine`), provide a link to the license, and indicate
   if changes were made.
 
 No additional restrictions — you may not apply legal terms or technological measures
@@ -55,5 +55,5 @@ Full license text: https://creativecommons.org/licenses/by/4.0/legalcode
 If you use these specifications to build a compatible engine or tool, include the following
 notice in your project's documentation or about screen:
 
-> Parity specifications based on the SpectraSharp project
-> (github.com/lhhoffmann/SpectraSharp), licensed under CC BY 4.0.
+> Parity specifications based on the SpectraEngine project
+> (github.com/lhhoffmann/SpectraEngine), licensed under CC BY 4.0.

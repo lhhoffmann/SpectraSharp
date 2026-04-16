@@ -1,4 +1,4 @@
-# SpectraSharp — Engine Architecture & Extension Guide
+# SpectraEngine — Engine Architecture & Extension Guide
 
 ## Table of Contents
 
@@ -6,7 +6,7 @@
 2. [Adding a New Block (Step by Step)](#2-adding-a-new-block-step-by-step)
 3. [Adding a New Item](#3-adding-a-new-item)
 4. [Extending to a New Version](#4-extending-to-a-new-version--how-it-works)
-5. [SpectraSharp vs. Vanilla Java 1.0 — Benchmark Table](#5-spectrasharp-vs-vanilla-java-10--benchmark-table)
+5. [SpectraEngine vs. Vanilla Java 1.0 — Benchmark Table](#5-SpectraEngine-vs-vanilla-java-10--benchmark-table)
 6. [Module Checklist](#6-module-checklist)
 
 ---
@@ -78,7 +78,7 @@ The entire change is **one new file**. Nothing else needs to be touched.
 Create `Bridge/Overrides/GrassBlock.cs`:
 
 ```csharp
-namespace SpectraSharp.Bridge.Overrides;
+namespace SpectraEngine.Bridge.Overrides;
 
 /// <summary>
 /// Parity override for net.minecraft.src.BlockGrass.
@@ -129,7 +129,7 @@ Items follow the same pattern but derive from `ItemBase` instead of `BlockBase`.
 **Step 1** — Create `Bridge/Overrides/ItemBase.cs`:
 
 ```csharp
-namespace SpectraSharp.Bridge.Overrides;
+namespace SpectraEngine.Bridge.Overrides;
 
 public abstract class ItemBase : BridgeStubBase
 {
@@ -194,12 +194,12 @@ Block and item logic lives entirely in the Bridge layer. `Engine.FixedUpdate` ca
 
 ---
 
-## 5. SpectraSharp vs. Vanilla Java 1.0 — Benchmark Table
+## 5. SpectraEngine vs. Vanilla Java 1.0 — Benchmark Table
 
 > **Status: to be filled once the full 1.0 world render is running.**
 > Methodology: same machine, same scene (flat world, render distance 8), averaged over 60 s.
 
-| Metric | Vanilla Java 1.0 | SpectraSharp (Debug) | SpectraSharp (AOT) |
+| Metric | Vanilla Java 1.0 | SpectraEngine (Debug) | SpectraEngine (AOT) |
 |---|---|---|---|
 | Startup time | — ms | — ms | — ms |
 | Idle frame time (20 chunks loaded) | — ms | — ms | — ms |
@@ -210,8 +210,8 @@ Block and item logic lives entirely in the Bridge layer. `Engine.FixedUpdate` ca
 
 Numbers will be measured with:
 - Vanilla: `-Xmx512m -Xms512m`, Java 8, no mods
-- SpectraSharp Debug: `dotnet run`, no AOT
-- SpectraSharp AOT: `dotnet publish -r win-x64 -c Release`
+- SpectraEngine Debug: `dotnet run`, no AOT
+- SpectraEngine AOT: `dotnet publish -r win-x64 -c Release`
 
 ---
 

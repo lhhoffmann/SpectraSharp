@@ -1,7 +1,7 @@
 // Stub for obfuscated class yy (Block) — Minecraft 1.0
-// Maps to SpectraSharp.Core.BlockBase
+// Maps to SpectraEngine.Core.BlockBase
 
-using SpectraSharp.Core;
+using SpectraEngine.Core;
 
 namespace net.minecraft.block;
 

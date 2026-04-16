@@ -1,6 +1,6 @@
-using SpectraSharp.Core.AI;
+using SpectraEngine.Core.AI;
 
-namespace SpectraSharp.Core.Mobs;
+namespace SpectraEngine.Core.Mobs;
 
 /// <summary>
 /// Replica of <c>ww</c> (EntityAI) — abstract base for all AI-driven mobs.

@@ -1,4 +1,4 @@
-namespace SpectraSharp.Core;
+namespace SpectraEngine.Core;
 
 /// <summary>
 /// Replica of <c>cj</c> (BlockSand) — Block ID 12. Gravity-based falling block.

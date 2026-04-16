@@ -1,8 +1,8 @@
-namespace SpectraSharp.IO;
+namespace SpectraEngine.IO;
 
 /// <summary>
-/// Thrown when SpectraSharp cannot locate the legacy game JAR that supplies
-/// all runtime assets.  The user must own and supply this file; SpectraSharp
+/// Thrown when SpectraEngine cannot locate the legacy game JAR that supplies
+/// all runtime assets.  The user must own and supply this file; SpectraEngine
 /// never distributes or modifies game files.
 /// </summary>
 public sealed class VanillaNotFoundException : FileNotFoundException
@@ -11,7 +11,7 @@ public sealed class VanillaNotFoundException : FileNotFoundException
         : base(BuildMessage(jarPath), jarPath) { }
 
     private static string BuildMessage(string jarPath) => $"""
-        SpectraSharp could not find the legacy game JAR (1.0).
+        SpectraEngine could not find the legacy game JAR (1.0).
 
         Expected location:
           {jarPath}
@@ -19,8 +19,8 @@ public sealed class VanillaNotFoundException : FileNotFoundException
         To fix this:
           1. Install the original game through its official launcher.
           2. Launch version 1.0 at least once so the launcher downloads the JAR.
-          3. Start SpectraSharp again.
+          3. Start SpectraEngine again.
 
-        SpectraSharp never distributes or modifies game files.
+        SpectraEngine never distributes or modifies game files.
         """;
 }

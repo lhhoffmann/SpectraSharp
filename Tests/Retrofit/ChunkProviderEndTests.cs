@@ -1,10 +1,10 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Security.Cryptography;
-using SpectraSharp.Core;
-using SpectraSharp.Core.WorldGen;
+using SpectraEngine.Core;
+using SpectraEngine.Core.WorldGen;
 using Xunit;
 
 // ─── Hand-written fakes ───────────────────────────────────────────────────────
@@ -16,7 +16,7 @@ file sealed class FakeWorld : World
     // Block storage: (x * 16 + z) * Height + y — matches chunk layout
     private readonly byte[] _blocks = new byte[256 * Height];
 
-    public FakeWorld(long seed) : base(new SpectraSharp.Tests.NullChunkLoader(), seed) { }
+    public FakeWorld(long seed) : base(new SpectraEngine.Tests.NullChunkLoader(), seed) { }
 
     // Height map: find topmost non-air block
     public new int GetHeightValue(int x, int z)

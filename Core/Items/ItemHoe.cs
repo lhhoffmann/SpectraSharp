@@ -1,4 +1,4 @@
-namespace SpectraSharp.Core.Items;
+namespace SpectraEngine.Core.Items;
 
 /// <summary>
 /// Replica of <c>wr</c> (ItemHoe) — direct Item subclass (NOT ItemTool).

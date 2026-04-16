@@ -1,4 +1,4 @@
-namespace SpectraSharp.Core;
+namespace SpectraEngine.Core;
 
 /// <summary>
 /// Bit-exact replica of <c>java.util.Random</c> (Java SE specification).

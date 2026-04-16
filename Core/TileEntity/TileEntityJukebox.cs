@@ -1,4 +1,4 @@
-namespace SpectraSharp.Core.TileEntity;
+namespace SpectraEngine.Core.TileEntity;
 
 /// <summary>
 /// Jukebox tile entity. Replica of <c>agc</c>. NBT registry key: "RecordPlayer".

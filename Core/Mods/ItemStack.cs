@@ -1,4 +1,4 @@
-namespace SpectraSharp.Core.Mods;
+namespace SpectraEngine.Core.Mods;
 
 /// <summary>
 /// An item together with a count and damage value.

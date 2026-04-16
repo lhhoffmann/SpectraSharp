@@ -1,7 +1,7 @@
 using Raylib_cs;
-using SpectraSharp.IO;
+using SpectraEngine.IO;
 
-namespace SpectraSharp.Graphics;
+namespace SpectraEngine.Graphics;
 
 /// <summary>
 /// Owns all GPU-side textures for the lifetime of the window.

@@ -4,7 +4,7 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-    <AssemblyName>SpectraSharp.ModRuntime</AssemblyName>
+    <AssemblyName>SpectraEngine.ModRuntime</AssemblyName>
   </PropertyGroup>
   <ItemGroup>
     <!-- IKVM runtime — provides Java semantics on .NET CLR -->
@@ -12,6 +12,6 @@
     <!-- HarmonyLib — runtime IL patching (Mixin equivalent for .NET) -->
     <PackageReference Include="Lib.Harmony" Version="2.3.*" />
     <!-- Reference Core for IWorld, IEngine, etc. interfaces -->
-    <ProjectReference Include="..\SpectraSharp.csproj" />
+    <ProjectReference Include="..\SpectraEngine.csproj" />
   </ItemGroup>
 </Project>

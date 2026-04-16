@@ -1,4 +1,4 @@
-namespace SpectraSharp.Bridge.Overrides;
+namespace SpectraEngine.Bridge.Overrides;
 
 /// <summary>
 /// Hand-written parity override keyed to <c>net.minecraft.src.BlockStone</c>.

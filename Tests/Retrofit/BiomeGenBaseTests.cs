@@ -1,11 +1,11 @@
 using System;
 using System.Collections.Generic;
 using Xunit;
-using SpectraSharp.Core;
-using SpectraSharp.Core.WorldGen;
-using Mobs = SpectraSharp.Core.Mobs;
+using SpectraEngine.Core;
+using SpectraEngine.Core.WorldGen;
+using Mobs = SpectraEngine.Core.Mobs;
 
-namespace SpectraSharp.Tests
+namespace SpectraEngine.Tests
 {
     // ─────────────────────────────────────────────────────────────────────────
     // Hand-written fakes

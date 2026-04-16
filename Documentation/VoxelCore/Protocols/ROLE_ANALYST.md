@@ -86,8 +86,8 @@ Omitting the header is not permitted — it is the project's copyright and clean
 
 ```
 <!--
-  SpectraSharp Parity Documentation
-  Copyright © 2026 lhhoffmann / SpectraSharp Contributors
+  SpectraEngine Parity Documentation
+  Copyright © 2026 lhhoffmann / SpectraEngine Contributors
   Licensed under CC BY 4.0 — https://creativecommons.org/licenses/by/4.0/
   See Documentation/LICENSE.md for full terms.
 

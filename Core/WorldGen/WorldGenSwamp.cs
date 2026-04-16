@@ -1,4 +1,4 @@
-namespace SpectraSharp.Core.WorldGen;
+namespace SpectraEngine.Core.WorldGen;
 
 /// <summary>
 /// Swamp oak with vine draping. Spec: <c>qj</c> (WorldGenSwamp).

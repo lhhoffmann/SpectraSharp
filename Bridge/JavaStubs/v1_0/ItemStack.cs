@@ -1,6 +1,6 @@
 // Stub for obfuscated class dk (ItemStack) — Minecraft 1.0
 
-using SpectraSharp.ModRuntime.AllocGuard;
+using SpectraEngine.ModRuntime.AllocGuard;
 
 namespace net.minecraft.item;
 

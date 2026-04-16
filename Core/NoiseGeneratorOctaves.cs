@@ -1,4 +1,4 @@
-namespace SpectraSharp.Core;
+namespace SpectraEngine.Core;
 
 /// <summary>
 /// Replica of <c>eb</c> (NoiseGeneratorOctaves) — N-octave fractional Brownian motion Perlin noise.

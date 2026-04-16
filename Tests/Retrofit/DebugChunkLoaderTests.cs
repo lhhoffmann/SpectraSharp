@@ -1,10 +1,10 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Xunit;
-using SpectraSharp.Core;
+using SpectraEngine.Core;
 
-namespace SpectraSharp.Tests;
+namespace SpectraEngine.Tests;
 
 // ---------------------------------------------------------------------------
 // Hand-written fakes

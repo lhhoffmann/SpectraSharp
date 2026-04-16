@@ -1,6 +1,6 @@
-using SpectraSharp.Core.Nbt;
+using SpectraEngine.Core.Nbt;
 
-namespace SpectraSharp.Core.WorldSave;
+namespace SpectraEngine.Core.WorldSave;
 
 /// <summary>
 /// Per-chunk .dat file reader/writer. Replica of <c>gy</c> (ChunkLoader).

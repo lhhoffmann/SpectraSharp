@@ -1,4 +1,4 @@
-namespace SpectraSharp.ModRuntime.AllocGuard;
+namespace SpectraEngine.ModRuntime.AllocGuard;
 
 /// <summary>
 /// Tracks allocations that escape the FramePool (DEBUG builds only).

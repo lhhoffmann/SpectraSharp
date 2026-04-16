@@ -1,4 +1,4 @@
-namespace SpectraSharp.Core.Blocks;
+namespace SpectraEngine.Core.Blocks;
 
 /// <summary>
 /// Abstract base for fluid blocks. Replica of <c>agw</c> (BlockFluidBase).

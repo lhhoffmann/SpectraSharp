@@ -1,7 +1,7 @@
-namespace SpectraSharp.Bridge;
+namespace SpectraEngine.Bridge;
 
 // ─────────────────────────────────────────────────────────────────────────────
-//  SpectraSharp.Bridge — AOT Transpiler Scaffold
+//  SpectraEngine.Bridge — AOT Transpiler Scaffold
 //
 //  PURPOSE
 //  -------

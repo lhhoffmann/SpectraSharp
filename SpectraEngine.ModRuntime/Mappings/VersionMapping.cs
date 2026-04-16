@@ -1,7 +1,7 @@
 using System.IO.Compression;
 using System.Text.Json;
 
-namespace SpectraSharp.ModRuntime.Mappings;
+namespace SpectraEngine.ModRuntime.Mappings;
 
 /// <summary>
 /// Loaded from Data/{version}.json.

@@ -45,7 +45,7 @@ HashSet<string> PriorityFiles =
 
 const string SystemPrompt =
     """
-    You are a Parity QA Expert for the SpectraSharp project — a clean-room C# reimplementation
+    You are a Parity QA Expert for the SpectraEngine project — a clean-room C# reimplementation
     of Minecraft 1.0 logic.
 
     You will receive two inputs:
@@ -79,11 +79,11 @@ bool dryRun = args.Contains("--dry-run");
 // ── Locate repo root ─────────────────────────────────────────────────────────
 
 string root = AppContext.BaseDirectory;
-while (!File.Exists(Path.Combine(root, "SpectraSharp.csproj")))
+while (!File.Exists(Path.Combine(root, "SpectraEngine.csproj")))
 {
     string? parent = Path.GetDirectoryName(root);
     if (parent is null || parent == root)
-        throw new InvalidOperationException("Repo root not found (SpectraSharp.csproj missing).");
+        throw new InvalidOperationException("Repo root not found (SpectraEngine.csproj missing).");
     root = parent;
 }
 

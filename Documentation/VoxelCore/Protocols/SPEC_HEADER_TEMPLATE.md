@@ -8,8 +8,8 @@ Copy it verbatim — only fill in the bracketed fields.
 
 ```markdown
 <!--
-  SpectraSharp Parity Documentation
-  Copyright © 2026 lhhoffmann / SpectraSharp Contributors
+  SpectraEngine Parity Documentation
+  Copyright © 2026 lhhoffmann / SpectraEngine Contributors
   Licensed under CC BY 4.0 — https://creativecommons.org/licenses/by/4.0/
   See Documentation/LICENSE.md for full terms.
 

@@ -1,10 +1,10 @@
 {
-  "id": "SpectraSharp-1.0",
+  "id": "spectraengine-1.0",
   "type": "release",
   "time": "2011-11-18T00:00:00+0000",
   "releaseTime": "2011-11-18T00:00:00+0000",
   "inheritsFrom": "1.0",
-  "mainClass": "io.spectrasharp.Bootstrap",
+  "mainClass": "io.spectraengine.Bootstrap",
   "assets": "pre-1.6",
   "assetIndex": {
     "id": "pre-1.6",
@@ -15,7 +15,7 @@
   },
   "libraries": [
     {
-      "name": "io.spectrasharp:bootstrap:1.0"
+      "name": "io.spectraengine:bootstrap:1.0"
     }
   ]
 }

@@ -1,4 +1,4 @@
-namespace SpectraSharp.Core.Mods;
+namespace SpectraEngine.Core.Mods;
 
 /// <summary>
 /// Base class for all mod items.

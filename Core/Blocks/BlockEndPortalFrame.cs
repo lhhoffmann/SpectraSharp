@@ -1,4 +1,4 @@
-namespace SpectraSharp.Core.Blocks;
+namespace SpectraEngine.Core.Blocks;
 
 /// <summary>
 /// Replica of <c>rl</c> (BlockEndPortalFrame) — the stronghold frame block. ID 120.

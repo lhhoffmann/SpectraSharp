@@ -7,7 +7,7 @@
 
 ## The Core Principle — Read This First
 
-**The Mod Runtime is built BEFORE and INDEPENDENTLY of SpectraSharp.Core.**
+**The Mod Runtime is built BEFORE and INDEPENDENTLY of SpectraEngine.Core.**
 
 Core is not finished and will not be finished for a long time — especially not for versions
 above 1.0. That is intentional. The Mod Runtime defines the *interfaces* that Core must
@@ -18,21 +18,21 @@ Mod Runtime defines:   IWorld, IPlayer, IChunk, IBlockRegistry, ...
 Core implements:       World : IWorld, Player : IPlayer, ...
 ```
 
-MinecraftStubs NEVER import `SpectraSharp.Core` directly.
-They ONLY reference `SpectraSharp.Contracts` (interfaces).
+MinecraftStubs NEVER import `SpectraEngine.Core` directly.
+They ONLY reference `SpectraEngine.Contracts` (interfaces).
 This means the entire Mod Runtime compiles and runs even when Core is empty.
 
 ---
 
 ## What You Are Building
 
-The SpectraSharp Mod Runtime — a system that:
+The SpectraEngine Mod Runtime — a system that:
 
 1. Takes any Minecraft mod `.jar` from any version
 2. Compiles it to a `.dll` via IKVM (`ikvmc`)
 3. Loads it at game runtime with full Java semantics via `IKVM.Runtime`
-4. Routes all `net.minecraft.*` API calls through `MinecraftStubs` → `SpectraSharp.Contracts`
-5. Intercepts Mixin/ASM patches and redirects them to Harmony patches on SpectraSharp classes
+4. Routes all `net.minecraft.*` API calls through `MinecraftStubs` → `SpectraEngine.Contracts`
+5. Intercepts Mixin/ASM patches and redirects them to Harmony patches on SpectraEngine classes
 6. Catches allocations before they hit the GC (AllocGuard)
 7. Isolates mods from each other and from the engine (ModSandbox)
 
@@ -157,11 +157,11 @@ Mod.dll
   ╚═════════════════════════════════════════════════════════╝
                              │
                              ▼
-                  SpectraSharp.Contracts
+                  SpectraEngine.Contracts
                   (interfaces only — no Core dependency)
                              │
                              ▼
-                  SpectraSharp.Core
+                  SpectraEngine.Core
                   (implements contracts — built separately, later)
 ```
 
@@ -170,7 +170,7 @@ Mod.dll
 ## Project Structure
 
 ```
-SpectraSharp.Contracts/              ← interfaces only, NO implementation
+SpectraEngine.Contracts/              ← interfaces only, NO implementation
   IWorld.cs                          defines what world can do
   IChunk.cs
   IPlayer.cs
@@ -184,7 +184,7 @@ SpectraSharp.Contracts/              ← interfaces only, NO implementation
   IEngine.cs
   ISpectraMod.cs
 
-SpectraSharp.ModRuntime/             ← the runtime, refs Contracts only
+SpectraEngine.ModRuntime/             ← the runtime, refs Contracts only
   ModLoader.cs                       discovers JARs/DLLs, dependency sort
   ModLifecycle.cs                    load / unload / reload per mod
   VersionDetector.cs                 JAR → GameVersion enum
@@ -250,11 +250,11 @@ Bridge/JavaStubs/                    MinecraftStubs — one folder per MC versio
 
 ## The Contracts Layer — Define It First
 
-Before writing any stub, define the interface in `SpectraSharp.Contracts`.
+Before writing any stub, define the interface in `SpectraEngine.Contracts`.
 This is the contract that Core must implement. Keep it minimal and stable.
 
 ```csharp
-// SpectraSharp.Contracts/IWorld.cs
+// SpectraEngine.Contracts/IWorld.cs
 public interface IWorld
 {
     int  GetBlockId(int x, int y, int z);
@@ -345,7 +345,7 @@ public class World
 }
 ```
 
-ReflectionGuard allows this. Access to `SpectraSharp.Core.*` internals is blocked.
+ReflectionGuard allows this. Access to `SpectraEngine.Core.*` internals is blocked.
 
 ### Thread violations
 
@@ -555,7 +555,7 @@ Build in this sequence — each phase is independently useful:
 
 | Phase | What | Result |
 |---|---|---|
-| **1** | `SpectraSharp.Contracts` interfaces | compile target for everything |
+| **1** | `SpectraEngine.Contracts` interfaces | compile target for everything |
 | **2** | `VersionDetector` + Mapping JSON for 1.0 | knows what version a JAR is |
 | **3** | `ModCompiler` (ikvmc wrapper) | turns JAR → DLL |
 | **4** | `MinecraftStubs v1_0` + `ModLoader` | 1.0 mods load |
@@ -594,7 +594,7 @@ JNI is the only hard limit. Less than 1% of mods use it.
 
 ## What Must NOT Be Done
 
-- Do NOT import `SpectraSharp.Core` from `MinecraftStubs` — only `SpectraSharp.Contracts`
+- Do NOT import `SpectraEngine.Core` from `MinecraftStubs` — only `SpectraEngine.Contracts`
 - Do NOT throw unhandled exceptions from stubs — always catch and log
 - Do NOT silently drop mod calls — either route them or log a warning
 - Do NOT apply Harmony patches outside of `HarmonyBridge` — mod patches must be trackable and removable
@@ -636,7 +636,7 @@ of the following criteria:
 **MinecraftStubs criteria:**
 
 5. **Stub delegation chain:** Any `MinecraftStub` class that delegates a Java API call to a
-   `SpectraSharp.Contracts` interface. Test that the correct interface method is called with
+   `SpectraEngine.Contracts` interface. Test that the correct interface method is called with
    the correct arguments. Use a hand-written fake that implements the interface and records
    calls (e.g., `class FakeWorld : IWorld`).
 

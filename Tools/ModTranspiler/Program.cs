@@ -1,6 +1,6 @@
-using SpectraSharp.ModTranspiler.Pipeline;
+using SpectraEngine.ModTranspiler.Pipeline;
 
-namespace SpectraSharp.ModTranspiler;
+namespace SpectraEngine.ModTranspiler;
 
 static class Program
 {

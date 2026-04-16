@@ -2,7 +2,7 @@ using System.Reflection;
 using System.Reflection.Emit;
 using HarmonyLib;
 
-namespace SpectraSharp.ModRuntime.Interop;
+namespace SpectraEngine.ModRuntime.Interop;
 
 /// <summary>
 /// Static helper called by the DynamicMethod transpilers emitted in

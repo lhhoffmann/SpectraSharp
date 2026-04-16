@@ -1,14 +1,14 @@
 using System.Reflection;
 using HarmonyLib;
 
-namespace SpectraSharp.ModRuntime.Interop;
+namespace SpectraEngine.ModRuntime.Interop;
 
 /// <summary>
 /// Orchestrates the Mixin → Harmony pipeline for one mod assembly.
 ///
 /// Flow:
 ///   1. <see cref="MixinScanner.Scan"/>   — locate all @Mixin-annotated types in the DLL
-///   2. <see cref="ClassMapping.Resolve"/> — map each target Java class → SpectraSharp.Core type
+///   2. <see cref="ClassMapping.Resolve"/> — map each target Java class → SpectraEngine.Core type
 ///   3. <see cref="HarmonyBridge.Apply"/> — emit Harmony patches for every injection
 ///
 /// All patches go through the caller-supplied <see cref="Harmony"/> instance, so that

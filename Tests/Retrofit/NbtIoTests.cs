@@ -1,11 +1,11 @@
-﻿using System;
+using System;
 using System.IO;
 using System.IO.Compression;
 using System.Text;
 using Xunit;
-using SpectraSharp.Core.Nbt;
+using SpectraEngine.Core.Nbt;
 
-namespace SpectraSharp.Tests.Nbt
+namespace SpectraEngine.Tests.Nbt
 {
     // ─────────────────────────────────────────────────────────────────────────
     // Hand-written helpers (no mocking libraries)
@@ -196,7 +196,7 @@ namespace SpectraSharp.Tests.Nbt
 
         public NbtIoTests()
         {
-            _tempDir = Path.Combine(Path.GetTempPath(), "SpectraSharp_NbtIo_" + Guid.NewGuid().ToString("N"));
+            _tempDir = Path.Combine(Path.GetTempPath(), "SpectraEngine_NbtIo_" + Guid.NewGuid().ToString("N"));
             Directory.CreateDirectory(_tempDir);
         }
 

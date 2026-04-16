@@ -1,12 +1,12 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Security.Cryptography;
-using SpectraSharp.Core;
-using SpectraSharp.Core.WorldGen;
+using SpectraEngine.Core;
+using SpectraEngine.Core.WorldGen;
 using Xunit;
 
-namespace SpectraSharp.Tests.WorldGen;
+namespace SpectraEngine.Tests.WorldGen;
 
 // ── Hand-written fakes ────────────────────────────────────────────────────────
 

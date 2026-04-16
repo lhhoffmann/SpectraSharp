@@ -1,11 +1,11 @@
-namespace SpectraSharp.Core;
+namespace SpectraEngine.Core;
 
 /// <summary>
 /// Replica of <c>afw</c> — static entity registry used for NBT serialization.
 /// Maps between entity class types, string IDs, and integer IDs.
 ///
 /// The 35-entry table matches the Minecraft 1.0 entity list exactly (spec §8).
-/// Only the string IDs that appear in NBT and the classes SpectraSharp implements
+/// Only the string IDs that appear in NBT and the classes SpectraEngine implements
 /// are registered; others exist as type-only entries so the int ID stays consistent.
 ///
 /// Source spec: Documentation/VoxelCore/Parity/Specs/EntityNBT_Spec.md §8
@@ -20,7 +20,7 @@ public static class EntityRegistry
     static EntityRegistry()
     {
         // ── Registered entries (spec §8 table, 35 rows) ───────────────────────
-        // Rows that SpectraSharp has implemented get a full type ↔ string mapping.
+        // Rows that SpectraEngine has implemented get a full type ↔ string mapping.
         // Rows for unimplemented entities only register the int ID → placeholder type.
 
         Register<EntityItem>("Item", 1);

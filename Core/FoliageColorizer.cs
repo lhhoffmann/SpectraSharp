@@ -1,4 +1,4 @@
-namespace SpectraSharp.Core;
+namespace SpectraEngine.Core;
 
 /// <summary>
 /// Replica of <c>db</c> (FoliageColorizer) — maps (temperature, rainfall) to a packed RGB

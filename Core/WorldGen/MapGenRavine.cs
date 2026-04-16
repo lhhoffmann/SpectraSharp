@@ -1,4 +1,4 @@
-namespace SpectraSharp.Core.WorldGen;
+namespace SpectraEngine.Core.WorldGen;
 
 /// <summary>
 /// Ravine carver. Replica of <c>rf</c> (MapGenRavine), based on <c>bz</c> (MapGenBase).

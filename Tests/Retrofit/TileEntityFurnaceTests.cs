@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Reflection;
 using Xunit;
@@ -7,7 +7,7 @@ using Xunit;
 // Hand-written fakes / stubs
 // ---------------------------------------------------------------------------
 
-namespace SpectraSharp.Core.TileEntity.Tests
+namespace SpectraEngine.Core.TileEntity.Tests
 {
     // ── Minimal NBT stubs ────────────────────────────────────────────────────
 

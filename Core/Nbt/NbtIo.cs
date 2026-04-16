@@ -1,6 +1,6 @@
 using System.IO.Compression;
 
-namespace SpectraSharp.Core.Nbt;
+namespace SpectraEngine.Core.Nbt;
 
 /// <summary>
 /// Static NBT serializer. Replica of <c>vx</c> (NbtIo).

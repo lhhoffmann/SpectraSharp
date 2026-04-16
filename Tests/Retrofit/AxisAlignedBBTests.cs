@@ -1,9 +1,9 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
-using SpectraSharp.Core;
+using SpectraEngine.Core;
 using Xunit;
 
-namespace SpectraSharp.Tests;
+namespace SpectraEngine.Tests;
 
 // ---------------------------------------------------------------------------
 // Hand-written fakes required by AxisAlignedBB.RayTrace / IsVecInside
@@ -11,7 +11,7 @@ namespace SpectraSharp.Tests;
 
 // The real Vec3 and MovingObjectPosition are referenced by the implementation.
 // We cannot mock them, so these tests rely on the real types existing in the
-// SpectraSharp.Core assembly. If they do not exist yet the tests will fail to
+// SpectraEngine.Core assembly. If they do not exist yet the tests will fail to
 // compile — that is intentional (compile failure == parity bug of missing type).
 // The tests below only create Vec3 / MovingObjectPosition via their public
 // constructors; no other dependencies are introduced.

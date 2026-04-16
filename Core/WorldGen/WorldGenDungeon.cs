@@ -1,6 +1,6 @@
-using SpectraSharp.Core.TileEntity;
+using SpectraEngine.Core.TileEntity;
 
-namespace SpectraSharp.Core.WorldGen;
+namespace SpectraEngine.Core.WorldGen;
 
 /// <summary>
 /// Replica of <c>acj</c> (WorldGenDungeon) — underground dungeon room generator.

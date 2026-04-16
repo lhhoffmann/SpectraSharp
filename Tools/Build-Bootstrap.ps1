@@ -1,14 +1,14 @@
 #Requires -Version 5.1
 <#
 .SYNOPSIS
-    Compiles Bootstrap.java and packages it as SpectraSharp-1.0.jar.
+    Compiles Bootstrap.java and packages it as spectraengine-1.0.jar.
 
 .DESCRIPTION
     Locates javac on PATH or via JAVA_HOME, compiles the tiny Bootstrap class,
     then packages the resulting .class file as a JAR using .NET's ZIP support
     (no jar.exe dependency).
 
-    Output: Tools\launcher\SpectraSharp-1.0.jar
+    Output: Tools\launcher\spectraengine-1.0.jar
 #>
 
 Set-StrictMode -Version Latest
@@ -18,7 +18,7 @@ $ErrorActionPreference = 'Stop'
 $ScriptDir   = $PSScriptRoot
 $LauncherDir = Join-Path $ScriptDir 'launcher'
 $JavaSrc     = Join-Path $LauncherDir 'Bootstrap.java'
-$OutJar      = Join-Path $LauncherDir 'SpectraSharp-1.0.jar'
+$OutJar      = Join-Path $LauncherDir 'spectraengine-1.0.jar'
 $TmpDir      = Join-Path $ScriptDir  '.build-tmp'
 
 # -- Locate javac --------------------------------------------------------------

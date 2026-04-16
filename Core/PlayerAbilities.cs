@@ -1,4 +1,4 @@
-namespace SpectraSharp.Core;
+namespace SpectraEngine.Core;
 
 /// <summary>
 /// Player abilities flags (creative mode etc.). Replica of <c>wq</c> (PlayerAbilities).

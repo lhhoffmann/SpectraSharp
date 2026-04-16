@@ -1,12 +1,12 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Security.Cryptography;
 using Xunit;
-using SpectraSharp.Core;
-using SpectraSharp.Core.WorldGen;
-using SpectraSharp.Core.WorldGen.NetherFortress;
+using SpectraEngine.Core;
+using SpectraEngine.Core.WorldGen;
+using SpectraEngine.Core.WorldGen.NetherFortress;
 
-namespace SpectraSharp.Tests
+namespace SpectraEngine.Tests
 {
     // ─────────────────────────────────────────────────────────────────────────
     // Hand-written fakes

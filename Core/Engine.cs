@@ -1,12 +1,12 @@
 using System.Diagnostics;
 using System.Numerics;
 using Raylib_cs;
-using SpectraSharp.Bridge;
-using SpectraSharp.Bridge.Overrides;
-using SpectraSharp.Graphics;
-using SpectraSharp.IO;
+using SpectraEngine.Bridge;
+using SpectraEngine.Bridge.Overrides;
+using SpectraEngine.Graphics;
+using SpectraEngine.IO;
 
-namespace SpectraSharp.Core;
+namespace SpectraEngine.Core;
 
 /// <summary>
 /// Main engine — owns the window and coordinates two threads:
@@ -52,7 +52,7 @@ public sealed class Engine(AssetManager assets, TextureRegistry textures, Bridge
     public void Run()
     {
         Raylib.SetConfigFlags(ConfigFlags.AlwaysRunWindow);
-        Raylib.InitWindow(1280, 720, "SpectraSharp — Core Debug World");
+        Raylib.InitWindow(1280, 720, "SpectraEngine — Core Debug World");
         Raylib.SetTargetFPS(0);
 
         SetWindowIcon();
@@ -67,7 +67,7 @@ public sealed class Engine(AssetManager assets, TextureRegistry textures, Bridge
 
         Thread gameThread = new(GameLoop)
         {
-            Name         = "SpectraSharp-GameThread",
+            Name         = "SpectraEngine-GameThread",
             IsBackground = true
         };
         gameThread.Start();
@@ -489,7 +489,7 @@ public sealed class Engine(AssetManager assets, TextureRegistry textures, Bridge
 
     private static void SetWindowIcon()
     {
-        string path = Path.Combine(AppContext.BaseDirectory, "Assets", "Branding", "SpectraSharpLogo256x256.png");
+        string path = Path.Combine(AppContext.BaseDirectory, "Assets", "Branding", "SpectraEngineLogo256x256.png");
         if (!File.Exists(path)) return;
         Image icon = Raylib.LoadImage(path);
         Raylib.SetWindowIcon(icon);

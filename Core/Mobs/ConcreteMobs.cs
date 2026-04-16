@@ -1,4 +1,4 @@
-namespace SpectraSharp.Core.Mobs;
+namespace SpectraEngine.Core.Mobs;
 
 // ── Hostile mobs ─────────────────────────────────────────────────────────────
 

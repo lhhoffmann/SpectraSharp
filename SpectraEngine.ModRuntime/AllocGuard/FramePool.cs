@@ -1,4 +1,4 @@
-namespace SpectraSharp.ModRuntime.AllocGuard;
+namespace SpectraEngine.ModRuntime.AllocGuard;
 
 /// <summary>
 /// Thread-local object pool reset at every tick boundary (Engine.FixedUpdate end).

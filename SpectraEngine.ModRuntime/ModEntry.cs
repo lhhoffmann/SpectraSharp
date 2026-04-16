@@ -1,8 +1,8 @@
-using SpectraSharp.ModRuntime.Interop;
-using SpectraSharp.ModRuntime.Mappings;
-using SpectraSharp.ModRuntime.Sandbox;
+using SpectraEngine.ModRuntime.Interop;
+using SpectraEngine.ModRuntime.Mappings;
+using SpectraEngine.ModRuntime.Sandbox;
 
-namespace SpectraSharp.ModRuntime;
+namespace SpectraEngine.ModRuntime;
 
 /// <summary>
 /// Represents one loaded mod. Owns its sandbox, Mixin interceptor,

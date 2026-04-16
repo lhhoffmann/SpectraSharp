@@ -1,4 +1,4 @@
-namespace SpectraSharp.Core;
+namespace SpectraEngine.Core;
 
 /// <summary>
 /// Replica of <c>dd</c> (EntityTNTPrimed) — the entity spawned when TNT is ignited.

@@ -1,4 +1,4 @@
-namespace SpectraSharp.Core.TileEntity;
+namespace SpectraEngine.Core.TileEntity;
 
 /// <summary>
 /// Singleton smelting recipe table. Replica of <c>mt</c> (FurnaceRecipes).

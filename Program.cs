@@ -1,11 +1,11 @@
 using System.Text;
-using SpectraSharp.Bridge;
-using SpectraSharp.Core;
-using SpectraSharp.Graphics;
-using SpectraSharp.IO;
+using SpectraEngine.Bridge;
+using SpectraEngine.Core;
+using SpectraEngine.Graphics;
+using SpectraEngine.IO;
 
 Console.OutputEncoding = Encoding.UTF8;
-Console.WriteLine("[SpectraSharp] Boot sequence starting...");
+Console.WriteLine("[SpectraEngine] Boot sequence starting...");
 
 // ── IO ────────────────────────────────────────────────────────────────────────
 AssetManager assets = new();

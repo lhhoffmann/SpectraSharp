@@ -1,10 +1,10 @@
 using System.Reflection;
 
-namespace SpectraSharp.ModRuntime.Interop;
+namespace SpectraEngine.ModRuntime.Interop;
 
 /// <summary>
 /// Maps Java/Minecraft class names (all versions, obfuscated and named) to
-/// live SpectraSharp .NET types at runtime.
+/// live SpectraEngine .NET types at runtime.
 ///
 /// Used by MixinInterceptor to find the .NET type a @Mixin annotation targets,
 /// and by MinecraftStubs to verify routing at load time.
@@ -66,13 +66,13 @@ public static class ClassMapping
         if (_map.TryGetValue(javaName, out var t))  return t;
         if (_shortMap.TryGetValue(javaName, out t)) return t;
 
-        // Try to find a SpectraSharp.Core type whose name matches the short name
-        // (e.g. "World" → SpectraSharp.Core.World)
+        // Try to find a SpectraEngine.Core type whose name matches the short name
+        // (e.g. "World" → SpectraEngine.Core.World)
         string shortName = javaName.Contains('.')
             ? javaName[(javaName.LastIndexOf('.') + 1)..]
             : javaName;
 
-        var coreType = typeof(SpectraSharp.Core.IWorld).Assembly
+        var coreType = typeof(SpectraEngine.Core.IWorld).Assembly
             .GetTypes()
             .FirstOrDefault(t => t.Name == shortName || t.Name == "I" + shortName);
 
@@ -88,30 +88,30 @@ public static class ClassMapping
     // ── Startup registration ──────────────────────────────────────────────────
 
     /// <summary>
-    /// Registers all well-known SpectraSharp.Core types.
+    /// Registers all well-known SpectraEngine.Core types.
     /// Call once at engine startup before any mod loads.
     /// </summary>
     public static void RegisterCoreTypes()
     {
         // 1.0 obfuscated → Core type
-        Register("ry",  typeof(SpectraSharp.Core.IWorld));
-        Register("yy",  typeof(SpectraSharp.Core.Block));
-        Register("kq",  typeof(SpectraSharp.Core.IBlockAccess));
+        Register("ry",  typeof(SpectraEngine.Core.IWorld));
+        Register("yy",  typeof(SpectraEngine.Core.Block));
+        Register("kq",  typeof(SpectraEngine.Core.IBlockAccess));
 
         // Human-readable 1.0–1.7 names → Core type
-        Register("net.minecraft.world.World",       typeof(SpectraSharp.Core.IWorld));
-        Register("net.minecraft.block.Block",        typeof(SpectraSharp.Core.Block));
-        Register("net.minecraft.world.IBlockAccess", typeof(SpectraSharp.Core.IBlockAccess));
-        Register("net.minecraft.entity.Entity",      typeof(SpectraSharp.Core.Entity));
+        Register("net.minecraft.world.World",       typeof(SpectraEngine.Core.IWorld));
+        Register("net.minecraft.block.Block",        typeof(SpectraEngine.Core.Block));
+        Register("net.minecraft.world.IBlockAccess", typeof(SpectraEngine.Core.IBlockAccess));
+        Register("net.minecraft.entity.Entity",      typeof(SpectraEngine.Core.Entity));
 
         // 1.12 names
-        Register("net.minecraft.world.WorldServer",  typeof(SpectraSharp.Core.IWorld));
-        Register("net.minecraft.world.chunk.Chunk",  typeof(SpectraSharp.Core.Chunk));
+        Register("net.minecraft.world.WorldServer",  typeof(SpectraEngine.Core.IWorld));
+        Register("net.minecraft.world.chunk.Chunk",  typeof(SpectraEngine.Core.Chunk));
 
         // 1.17+ renamed
-        Register("net.minecraft.world.level.Level",          typeof(SpectraSharp.Core.IWorld));
-        Register("net.minecraft.world.level.block.Block",    typeof(SpectraSharp.Core.Block));
-        Register("net.minecraft.world.level.chunk.LevelChunk", typeof(SpectraSharp.Core.Chunk));
+        Register("net.minecraft.world.level.Level",          typeof(SpectraEngine.Core.IWorld));
+        Register("net.minecraft.world.level.block.Block",    typeof(SpectraEngine.Core.Block));
+        Register("net.minecraft.world.level.chunk.LevelChunk", typeof(SpectraEngine.Core.Chunk));
     }
 }
 

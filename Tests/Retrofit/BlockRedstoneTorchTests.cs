@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Reflection;
 using Xunit;
 
-namespace SpectraSharp.Core.Tests;
+namespace SpectraEngine.Core.Tests;
 
 // ─── Fake infrastructure ────────────────────────────────────────────────────
 
@@ -130,7 +130,7 @@ internal sealed class FakeConcreteWorld : World
     private readonly Dictionary<(int, int, int), int> _meta = new();
     private readonly Dictionary<(int, int, int, int), bool> _facePower = new();
 
-    public FakeConcreteWorld() : base(new SpectraSharp.Tests.NullChunkLoader(), 0L) { }
+    public FakeConcreteWorld() : base(new SpectraEngine.Tests.NullChunkLoader(), 0L) { }
 
     public new long WorldTime { get; set; } = 1000L;
 

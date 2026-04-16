@@ -1,9 +1,9 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Reflection;
 using Xunit;
 
-namespace SpectraSharp.Tests.AI
+namespace SpectraEngine.Tests.AI
 {
     // ────────────────────────────────────────────────────────────────────────────
     // Hand-written fakes / stubs required by the PathFinder tests
@@ -255,7 +255,7 @@ namespace SpectraSharp.Tests.AI
     // ────────────────────────────────────────────────────────────────────────────
     // The PathFinder under test (re-declared inline so the test project is
     // self-contained and the real implementation is exercised via reflection
-    // or a direct copy; here we reference the SpectraSharp.Core.AI namespace).
+    // or a direct copy; here we reference the SpectraEngine.Core.AI namespace).
     // Because the implementation class is internal, tests live in the same
     // assembly-under-test or use InternalsVisibleTo.  We use reflection to
     // access the internal type without altering production code.
@@ -273,7 +273,7 @@ namespace SpectraSharp.Tests.AI
         private static object MakePathFinder(FakeChunkCache fake)
         {
             var cache  = new ChunkCache(fake);
-            var type   = typeof(SpectraSharp.Core.AI.PathFinder);
+            var type   = typeof(SpectraEngine.Core.AI.PathFinder);
             return Activator.CreateInstance(
                 type,
                 BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public,
@@ -1211,11 +1211,11 @@ namespace SpectraSharp.Tests.AI
         public void Constants_DoorBlockIds_MatchSpec()
         {
             // Access via reflection (private const)
-            var woodDoor = (int)typeof(SpectraSharp.Core.AI.PathFinder)
+            var woodDoor = (int)typeof(SpectraEngine.Core.AI.PathFinder)
                 .GetField("WoodDoorId", BindingFlags.NonPublic | BindingFlags.Static)!
                 .GetValue(null)!;
 
-            var ironDoor = (int)typeof(SpectraSharp.Core.AI.PathFinder)
+            var ironDoor = (int)typeof(SpectraEngine.Core.AI.PathFinder)
                 .GetField("IronDoorId", BindingFlags.NonPublic | BindingFlags.Static)!
                 .GetValue(null)!;
 
@@ -1231,7 +1231,7 @@ namespace SpectraSharp.Tests.AI
         [Fact]
         public void ScratchArray_HasCapacityOfAtLeast32()
         {
-            var field = typeof(SpectraSharp.Core.AI.PathFinder)
+            var field = typeof(SpectraEngine.Core.AI.PathFinder)
                 .GetField("_scratch", BindingFlags.NonPublic | BindingFlags.Instance);
             Assert.NotNull(field);
 

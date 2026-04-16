@@ -1,8 +1,8 @@
 using System.Diagnostics;
 using System.IO.Compression;
-using SpectraSharp.ModRuntime.Mappings;
+using SpectraEngine.ModRuntime.Mappings;
 
-namespace SpectraSharp.ModRuntime.Compiler;
+namespace SpectraEngine.ModRuntime.Compiler;
 
 /// <summary>
 /// Compiles a mod JAR to a .NET DLL using ikvmc (IKVM's JAR→.NET compiler).

@@ -1,4 +1,4 @@
-namespace SpectraSharp.ModRuntime.Sandbox;
+namespace SpectraEngine.ModRuntime.Sandbox;
 
 /// <summary>
 /// Background thread that monitors a running mod call.

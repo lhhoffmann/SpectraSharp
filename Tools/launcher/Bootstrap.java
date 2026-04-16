@@ -1,4 +1,4 @@
-package io.spectrasharp;
+package io.spectraengine;
 
 import java.io.*;
 import java.net.URISyntaxException;
@@ -8,13 +8,13 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 
 /**
- * SpectraSharp Launcher Bootstrap
+ * SpectraEngine Launcher Bootstrap
  *
  * The official launcher puts <id>/<id>.jar on the classpath and runs
  * whatever mainClass the version JSON specifies.  This class is that mainClass.
  *
- * It reads the SpectraSharp project path from spectradir.txt next to the JAR,
- * then launches dotnet run (DEBUG) or SpectraSharp.exe (RELEASE).
+ * It reads the SpectraEngine project path from spectradir.txt next to the JAR,
+ * then launches dotnet run (DEBUG) or SpectraEngine.exe (RELEASE).
  *
  * All output is written to bootstrap.log in the same directory so it is
  * visible even when the launcher swallows stdout.
@@ -33,7 +33,7 @@ public class Bootstrap {
             : Paths.get(System.getProperty("user.home"), "bootstrap.log");
 
         log = new PrintStream(new FileOutputStream(logFile.toFile(), false), true, "UTF-8");
-        tee("=== SpectraSharp Bootstrap ===  " + new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()));
+        tee("=== SpectraEngine Bootstrap ===  " + new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()));
         tee("JAR dir   : " + jarDir);
         tee("CWD       : " + Paths.get("").toAbsolutePath());
         tee("Java      : " + System.getProperty("java.version"));
@@ -56,8 +56,8 @@ public class Bootstrap {
         tee("SpectraDir: " + spectraDir);
 
         Path dir    = Paths.get(spectraDir).toAbsolutePath();
-        Path exe    = dir.resolve("SpectraSharp.exe");
-        Path csproj = dir.resolve("SpectraSharp.csproj");
+        Path exe    = dir.resolve("SpectraEngine.exe");
+        Path csproj = dir.resolve("SpectraEngine.csproj");
         tee("EXE       : " + exe + "  exists=" + Files.exists(exe));
         tee("CSPROJ    : " + csproj + "  exists=" + Files.exists(csproj));
 
@@ -79,7 +79,7 @@ public class Bootstrap {
             pb = new ProcessBuilder(dotnet, "run", "--project", dir.toString());
 
         } else {
-            fatal("Neither SpectraSharp.exe nor SpectraSharp.csproj found at: " + dir);
+            fatal("Neither SpectraEngine.exe nor SpectraEngine.csproj found at: " + dir);
             return;
         }
 
@@ -98,8 +98,8 @@ public class Bootstrap {
     // ── Helpers ───────────────────────────────────────────────────────────────
 
     private static void tee(String msg) {
-        System.out.println("[SpectraSharp] " + msg);
-        if (log != null) log.println("[SpectraSharp] " + msg);
+        System.out.println("[SpectraEngine] " + msg);
+        if (log != null) log.println("[SpectraEngine] " + msg);
     }
 
     private static void fatal(String msg) {
@@ -146,12 +146,12 @@ public class Bootstrap {
         } catch (Exception ignored) {}
 
         // 2. Scan java.class.path for our JAR name.
-        //    Handles both old layout (versions/.../SpectraSharp-1.0.jar)
-        //    and new library layout (.../io/spectrasharp/bootstrap/1.0/bootstrap-1.0.jar).
+        //    Handles both old layout (versions/.../spectraengine-1.0.jar)
+        //    and new library layout (.../io/spectraengine/bootstrap/1.0/bootstrap-1.0.jar).
         String cp = System.getProperty("java.class.path", "");
         for (String entry : cp.split(File.pathSeparator)) {
             String lower = entry.toLowerCase();
-            if (lower.contains("spectrasharp-1.0") || lower.contains("bootstrap-1.0")) {
+            if (lower.contains("spectraengine-1.0") || lower.contains("bootstrap-1.0")) {
                 Path parent = Paths.get(entry).toAbsolutePath().getParent();
                 if (parent != null) return parent;
             }

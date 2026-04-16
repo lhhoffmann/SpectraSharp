@@ -1,4 +1,4 @@
-namespace SpectraSharp.Core.WorldGen.Structure;
+namespace SpectraEngine.Core.WorldGen.Structure;
 
 /// <summary>
 /// Abstract base for all structure pieces. Replica of <c>nk</c> (StructurePiece).

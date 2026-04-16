@@ -1,4 +1,4 @@
-namespace SpectraSharp.Core;
+namespace SpectraEngine.Core;
 
 /// <summary>
 /// Bit-exact replica of the original <c>c</c> (AxisAlignedBB) class.

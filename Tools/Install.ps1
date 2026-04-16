@@ -1,17 +1,17 @@
 #Requires -Version 5.1
 <#
 .SYNOPSIS
-    Deploys SpectraSharp as a Minecraft launcher version package.
+    Deploys SpectraEngine as a Minecraft launcher version package.
 
 .DESCRIPTION
-    1. Resolves the SpectraSharp project directory (parent of this Tools\ folder).
+    1. Resolves the SpectraEngine project directory (parent of this Tools\ folder).
     2. Deploys Bootstrap JAR into:
-         %APPDATA%\.minecraft\libraries\io\spectrasharp\bootstrap\1.0\
+         %APPDATA%\.minecraft\libraries\io\spectraengine\bootstrap\1.0\
     3. Writes spectradir.txt alongside the library JAR so Bootstrap can find the project.
-    4. Writes the version JSON to versions\SpectraSharp-1.0\.
+    4. Writes the version JSON to versions\spectraengine-1.0\.
 
     After this runs, create a new installation in the Minecraft Launcher and select
-    version "SpectraSharp-1.0". Optionally builds Bootstrap.jar if it is missing.
+    version "spectraengine-1.0". Optionally builds Bootstrap.jar if it is missing.
 
 .PARAMETER SpectraDir
     Override the project directory.  Defaults to the solution root (parent of Tools\).
@@ -44,15 +44,15 @@ if (-not $MinecraftDir) {
     $MinecraftDir = Join-Path $env:APPDATA '.minecraft'
 }
 
-$VersionName  = 'SpectraSharp-1.0'
+$VersionName  = 'spectraengine-1.0'
 $VersionDir   = Join-Path $MinecraftDir "versions\$VersionName"
 $TemplateJson = Join-Path $LauncherDir "$VersionName.template.json"
 $BootstrapJar = Join-Path $LauncherDir "$VersionName.jar"
-$LibDir       = Join-Path $MinecraftDir 'libraries\io\spectrasharp\bootstrap\1.0'
+$LibDir       = Join-Path $MinecraftDir 'libraries\io\spectraengine\bootstrap\1.0'
 $LibJar       = Join-Path $LibDir 'bootstrap-1.0.jar'
 
 Write-Host ''
-Write-Host 'SpectraSharp Install'
+Write-Host 'SpectraEngine Install'
 Write-Host "  SpectraDir   : $SpectraDir"
 Write-Host "  MinecraftDir : $MinecraftDir"
 Write-Host "  VersionDir   : $VersionDir"
@@ -108,10 +108,10 @@ $profilesPath = Join-Path $MinecraftDir 'launcher_profiles.json'
 
 if (Test-Path $profilesPath) {
     $raw        = [System.IO.File]::ReadAllText($profilesPath, [System.Text.Encoding]::UTF8)
-    $profileKey = 'SpectraSharp-1.0'
+    $profileKey = 'spectraengine-1.0'
 
     # Build icon value: base64 data URI if logo exists, else named icon
-    $logoPng    = Join-Path $SpectraDir 'Assets/Branding/SpectraSharpLogo128x128.png'
+    $logoPng    = Join-Path $SpectraDir 'Assets/Branding/SpectraEngineLogo128x128.png'
     $iconValue  = 'Stone'
     if (Test-Path $logoPng) {
         $bytes     = [System.IO.File]::ReadAllBytes($logoPng)
@@ -145,7 +145,7 @@ if (Test-Path $profilesPath) {
     } else {
         # Profile missing -- insert it
         $now   = (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ss.fffZ')
-        $entry = "    `"$profileKey`" : {`n      `"created`" : `"$now`",`n      `"icon`" : `"$iconValue`",`n      `"lastUsed`" : `"$now`",`n      `"lastVersionId`" : `"$VersionName`",`n      `"name`" : `"SpectraSharp 1.0`",`n      `"type`" : `"custom`"`n    },"
+        $entry = "    `"$profileKey`" : {`n      `"created`" : `"$now`",`n      `"icon`" : `"$iconValue`",`n      `"lastUsed`" : `"$now`",`n      `"lastVersionId`" : `"$VersionName`",`n      `"name`" : `"SpectraEngine 1.0`",`n      `"type`" : `"custom`"`n    },"
         $raw   = $raw -replace '("profiles"\s*:\s*\{)', "`$1`n$entry"
         [System.IO.File]::WriteAllText($profilesPath, $raw, $utf8NoBom)
         Write-Host "[Install] Inserted: profile $profileKey"
@@ -157,5 +157,5 @@ if (Test-Path $profilesPath) {
 # -- Done ---------------------------------------------------------------------
 Write-Host ''
 Write-Host '[Install] Done!'
-Write-Host '[Install] In the Minecraft Launcher: create a new installation and select version "SpectraSharp-1.0".'
+Write-Host '[Install] In the Minecraft Launcher: create a new installation and select version "spectraengine-1.0".'
 Write-Host ''

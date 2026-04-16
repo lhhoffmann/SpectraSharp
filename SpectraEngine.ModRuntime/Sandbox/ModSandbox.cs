@@ -1,6 +1,6 @@
 using HarmonyLib;
 
-namespace SpectraSharp.ModRuntime.Sandbox;
+namespace SpectraEngine.ModRuntime.Sandbox;
 
 /// <summary>
 /// Wraps every mod call with:
@@ -25,7 +25,7 @@ public sealed class ModSandbox
     public ModSandbox(string modId)
     {
         _modId    = modId;
-        _harmony  = new Harmony($"spectrasharp.mod.{modId}");
+        _harmony  = new Harmony($"SpectraEngine.mod.{modId}");
         _watchdog = new ModWatchdog(modId, WatchdogMs, () => KillMod("tick timeout"));
     }
 

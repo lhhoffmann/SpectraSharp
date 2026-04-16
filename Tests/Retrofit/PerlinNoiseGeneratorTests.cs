@@ -1,9 +1,9 @@
 using System;
 using System.Security.Cryptography;
 using Xunit;
-using SpectraSharp.Core;
+using SpectraEngine.Core;
 
-namespace SpectraSharp.Tests;
+namespace SpectraEngine.Tests;
 
 // ---------------------------------------------------------------------------
 // Hand-written fakes / helpers
@@ -44,7 +44,7 @@ file sealed class JavaRandom
 // ---------------------------------------------------------------------------
 // Alias so tests compile against the implementation's JavaRandom type
 // ---------------------------------------------------------------------------
-// NOTE: SpectraSharp.Core.JavaRandom is the type used by the production code.
+// NOTE: SpectraEngine.Core.JavaRandom is the type used by the production code.
 // We shadow it here only for test helpers; all production instantiations use
 // the production type directly.
 
@@ -62,8 +62,8 @@ public sealed class PerlinNoiseGeneratorTests
         // must reflect state after 3 doubles.
         // We verify by building two generators from the same seed and checking
         // that the Fill output is identical (pure determinism test).
-        var r1 = new SpectraSharp.Core.JavaRandom(42L);
-        var r2 = new SpectraSharp.Core.JavaRandom(42L);
+        var r1 = new SpectraEngine.Core.JavaRandom(42L);
+        var r2 = new SpectraEngine.Core.JavaRandom(42L);
         var g1 = new PerlinNoiseGenerator(r1);
         var g2 = new PerlinNoiseGenerator(r2);
 
@@ -79,7 +79,7 @@ public sealed class PerlinNoiseGeneratorTests
     public void Constructor_PermutationTable_IsDuplicated_To512()
     {
         // Smoke test: Fill must not throw for coordinates that access p[256..511].
-        var rand = new SpectraSharp.Core.JavaRandom(1L);
+        var rand = new SpectraEngine.Core.JavaRandom(1L);
         var gen  = new PerlinNoiseGenerator(rand);
         double[] buf = new double[1];
         // Large coordinate forces X/Y/Z & 255 to high values; AA+1 can reach p[511].
@@ -95,13 +95,13 @@ public sealed class PerlinNoiseGeneratorTests
         bool foundNonIdentity = false;
         for (int seed = 0; seed < 64; seed++)
         {
-            var rand = new SpectraSharp.Core.JavaRandom((long)seed);
+            var rand = new SpectraEngine.Core.JavaRandom((long)seed);
             // We cannot inspect _p directly; instead we check that two different seeds
             // produce different noise values (identity permutation would be suspicious).
             double[] buf1 = new double[1];
             double[] buf2 = new double[1];
-            new PerlinNoiseGenerator(new SpectraSharp.Core.JavaRandom((long)seed)).Fill(buf1, 1.5, 1.5, 1.5, 1, 1, 1, 1.0, 1.0, 1.0, 1.0);
-            new PerlinNoiseGenerator(new SpectraSharp.Core.JavaRandom((long)seed + 1)).Fill(buf2, 1.5, 1.5, 1.5, 1, 1, 1, 1.0, 1.0, 1.0, 1.0);
+            new PerlinNoiseGenerator(new SpectraEngine.Core.JavaRandom((long)seed)).Fill(buf1, 1.5, 1.5, 1.5, 1, 1, 1, 1.0, 1.0, 1.0, 1.0);
+            new PerlinNoiseGenerator(new SpectraEngine.Core.JavaRandom((long)seed + 1)).Fill(buf2, 1.5, 1.5, 1.5, 1, 1, 1, 1.0, 1.0, 1.0, 1.0);
             if (buf1[0] != buf2[0]) { foundNonIdentity = true; break; }
         }
         Assert.True(foundNonIdentity, "Different seeds should produce different noise values");
@@ -115,7 +115,7 @@ public sealed class PerlinNoiseGeneratorTests
     public void Fill_Accumulates_IntoExistingArray()
     {
         // Spec says Fill *adds* to result; it does not zero first.
-        var rand = new SpectraSharp.Core.JavaRandom(99L);
+        var rand = new SpectraEngine.Core.JavaRandom(99L);
         var gen  = new PerlinNoiseGenerator(rand);
 
         double[] buf = new double[4];
@@ -127,7 +127,7 @@ public sealed class PerlinNoiseGeneratorTests
         // but never equal to just the noise value alone.
         // We verify by running a fresh array and checking the difference is exactly 1000.
         double[] fresh = new double[4];
-        var rand2 = new SpectraSharp.Core.JavaRandom(99L);
+        var rand2 = new SpectraEngine.Core.JavaRandom(99L);
         var gen2  = new PerlinNoiseGenerator(rand2);
         gen2.Fill(fresh, 0, 0, 0, 1, 1, 1, 0.5, 0.5, 0.5, 1.0);
 
@@ -145,7 +145,7 @@ public sealed class PerlinNoiseGeneratorTests
         // Each slot should equal (x*sizeZ+z)*sizeY+y in a reference run.
         // We verify by running 1×1×1 fills at each coordinate and comparing
         // to the same slot in the bulk fill.
-        var rand = new SpectraSharp.Core.JavaRandom(7L);
+        var rand = new SpectraEngine.Core.JavaRandom(7L);
         var gen  = new PerlinNoiseGenerator(rand);
 
         int sX = 2, sY = 4, sZ = 3;
@@ -158,7 +158,7 @@ public sealed class PerlinNoiseGeneratorTests
         for (int iy = 0; iy < sY; iy++)
         {
             int expectedIdx = (ix * sZ + iz) * sY + iy;
-            var rand2 = new SpectraSharp.Core.JavaRandom(7L);
+            var rand2 = new SpectraEngine.Core.JavaRandom(7L);
             var gen2  = new PerlinNoiseGenerator(rand2);
             double[] single = new double[1];
             gen2.Fill(single,
@@ -176,9 +176,9 @@ public sealed class PerlinNoiseGeneratorTests
     [Fact]
     public void Fill_Amplitude_ScalesNoiseOutput()
     {
-        var rand1 = new SpectraSharp.Core.JavaRandom(11L);
+        var rand1 = new SpectraEngine.Core.JavaRandom(11L);
         var gen1  = new PerlinNoiseGenerator(rand1);
-        var rand2 = new SpectraSharp.Core.JavaRandom(11L);
+        var rand2 = new SpectraEngine.Core.JavaRandom(11L);
         var gen2  = new PerlinNoiseGenerator(rand2);
 
         double[] bufA = new double[1];
@@ -196,7 +196,7 @@ public sealed class PerlinNoiseGeneratorTests
     [Fact]
     public void Noise3D_OutputRange_WithinMinusOneToOne()
     {
-        var rand = new SpectraSharp.Core.JavaRandom(314159L);
+        var rand = new SpectraEngine.Core.JavaRandom(314159L);
         var gen  = new PerlinNoiseGenerator(rand);
 
         // Sample a large number of points; all should be in [-1, 1].
@@ -223,7 +223,7 @@ public sealed class PerlinNoiseGeneratorTests
         // At integer coordinates Perlin noise is always 0 because x,y,z fractional parts = 0
         // which leads to Fade(0)=0, and all Grad contributions are weighted 0 → Lerp gives 0.
         // Actually standard Perlin at exact integers = 0 always.
-        var rand = new SpectraSharp.Core.JavaRandom(5L);
+        var rand = new SpectraEngine.Core.JavaRandom(5L);
         var gen  = new PerlinNoiseGenerator(rand);
 
         // Sample at exact integer positions (after offset is applied internally,
@@ -242,9 +242,9 @@ public sealed class PerlinNoiseGeneratorTests
         // should have the same noise when the integer cell offset is the same.
         double[] buf1 = new double[1];
         double[] buf2 = new double[1];
-        var r1 = new SpectraSharp.Core.JavaRandom(5L);
+        var r1 = new SpectraEngine.Core.JavaRandom(5L);
         var g1 = new PerlinNoiseGenerator(r1);
-        var r2 = new SpectraSharp.Core.JavaRandom(5L);
+        var r2 = new SpectraEngine.Core.JavaRandom(5L);
         var g2 = new PerlinNoiseGenerator(r2);
 
         // Same fractional part: coords 0.3 and 1.3 differ by 1 integer → same Perlin cell behaviour
@@ -274,8 +274,8 @@ public sealed class PerlinNoiseGeneratorTests
         // Expected ≈ 0.12797613824...  (golden master from Mojang-parity reference run)
         // Because we cannot run the reference here, we use a self-consistency check:
         // the value must be stable across two identical constructions.
-        var r1 = new SpectraSharp.Core.JavaRandom(0L);
-        var r2 = new SpectraSharp.Core.JavaRandom(0L);
+        var r1 = new SpectraEngine.Core.JavaRandom(0L);
+        var r2 = new SpectraEngine.Core.JavaRandom(0L);
         var g1 = new PerlinNoiseGenerator(r1);
         var g2 = new PerlinNoiseGenerator(r2);
         double[] b1 = new double[1];
@@ -319,9 +319,9 @@ public sealed class PerlinNoiseGeneratorTests
 
         // Golden master: compute noise at two points that differ only in x,
         // confirm the result changes (proving x enters gradient for some hash).
-        var r1 = new SpectraSharp.Core.JavaRandom(3L);
+        var r1 = new SpectraEngine.Core.JavaRandom(3L);
         var g1 = new PerlinNoiseGenerator(r1);
-        var r2 = new SpectraSharp.Core.JavaRandom(3L);
+        var r2 = new SpectraEngine.Core.JavaRandom(3L);
         var g2 = new PerlinNoiseGenerator(r2);
 
         double[] bX1 = new double[1];
@@ -350,7 +350,7 @@ public sealed class PerlinNoiseGeneratorTests
         //
         // If the impl incorrectly uses z for h==12/14, the SHA will differ.
 
-        var rand = new SpectraSharp.Core.JavaRandom(2718281828L);
+        var rand = new SpectraEngine.Core.JavaRandom(2718281828L);
         var gen  = new PerlinNoiseGenerator(rand);
 
         int sX = 4, sY = 4, sZ = 4;
@@ -390,9 +390,9 @@ public sealed class PerlinNoiseGeneratorTests
         // because at ix=0: dx = 0*scaleX + offsetX = offsetX either way.
         // Use sizeX=2 to see difference.
 
-        var r1 = new SpectraSharp.Core.JavaRandom(42L);
+        var r1 = new SpectraEngine.Core.JavaRandom(42L);
         var g1 = new PerlinNoiseGenerator(r1);
-        var r2 = new SpectraSharp.Core.JavaRandom(42L);
+        var r2 = new SpectraEngine.Core.JavaRandom(42L);
         var g2 = new PerlinNoiseGenerator(r2);
 
         double[] buf1 = new double[2 * 1 * 1]; // sX=2, sY=1, sZ=1
@@ -411,7 +411,7 @@ public sealed class PerlinNoiseGeneratorTests
     [Fact]
     public void Fill_WritesExactly_SizeX_Times_SizeZ_Times_SizeY_Elements()
     {
-        var rand = new SpectraSharp.Core.JavaRandom(1L);
+        var rand = new SpectraEngine.Core.JavaRandom(1L);
         var gen  = new PerlinNoiseGenerator(rand);
 
         int sX = 3, sY = 5, sZ = 2;
@@ -448,12 +448,12 @@ public sealed class PerlinNoiseGeneratorTests
         // (After subtracting offsets, which are non-integer in general, so this
         //  test is indirect — we just verify symmetry/determinism instead.)
 
-        var r1 = new SpectraSharp.Core.JavaRandom(77L);
+        var r1 = new SpectraEngine.Core.JavaRandom(77L);
         var g1 = new PerlinNoiseGenerator(r1);
         double[] b1 = new double[1];
         g1.Fill(b1, 5.0, 5.0, 5.0, 1, 1, 1, 1.0, 1.0, 1.0, 1.0);
 
-        var r2 = new SpectraSharp.Core.JavaRandom(77L);
+        var r2 = new SpectraEngine.Core.JavaRandom(77L);
         var g2 = new PerlinNoiseGenerator(r2);
         double[] b2 = new double[1];
         g2.Fill(b2, 5.0, 5.0, 5.0, 1, 1, 1, 1.0, 1.0, 1.0, 1.0);
@@ -480,7 +480,7 @@ public sealed class PerlinNoiseGeneratorTests
         // (derived from Minecraft 1.0 agk.java reference run)
         const double expectedFirstNoise = 0.3456789; // placeholder — replace with real value
 
-        var rand = new SpectraSharp.Core.JavaRandom(1L);
+        var rand = new SpectraEngine.Core.JavaRandom(1L);
         var gen  = new PerlinNoiseGenerator(rand);
         double[] buf = new double[1];
         gen.Fill(buf, 0.5, 0.5, 0.5, 1, 1, 1, 1.0, 1.0, 1.0, 1.0);
@@ -504,7 +504,7 @@ public sealed class PerlinNoiseGeneratorTests
         // NOTE: Until the exact hash is confirmed from a Minecraft 1.0 reference run,
         // this test documents the golden-master intent. We verify structural properties only.
 
-        var rand = new SpectraSharp.Core.JavaRandom(12345L);
+        var rand = new SpectraEngine.Core.JavaRandom(12345L);
         var gen  = new PerlinNoiseGenerator(rand);
 
         double[] buf = new double[5 * 5 * 5];
@@ -534,8 +534,8 @@ public sealed class PerlinNoiseGeneratorTests
     {
         // Two generators with the same seed must produce the same output at the same input,
         // confirming offsets are deterministically derived from the seed.
-        var r1 = new SpectraSharp.Core.JavaRandom(999L);
-        var r2 = new SpectraSharp.Core.JavaRandom(999L);
+        var r1 = new SpectraEngine.Core.JavaRandom(999L);
+        var r2 = new SpectraEngine.Core.JavaRandom(999L);
         var g1 = new PerlinNoiseGenerator(r1);
         var g2 = new PerlinNoiseGenerator(r2);
 
@@ -555,7 +555,7 @@ public sealed class PerlinNoiseGeneratorTests
     [Fact]
     public void Fill_AmplitudeZero_LeavesArrayUnchanged()
     {
-        var rand = new SpectraSharp.Core.JavaRandom(55L);
+        var rand = new SpectraEngine.Core.JavaRandom(55L);
         var gen  = new PerlinNoiseGenerator(rand);
 
         double[] buf = { 1.0, 2.0, 3.0, 4.0 };
@@ -577,7 +577,7 @@ public sealed class PerlinNoiseGeneratorTests
     {
         // When scaleY=0, dy = (baseY + iy)*0 + offsetY = offsetY for all iy.
         // So all Y slices at the same (ix, iz) should be identical.
-        var rand = new SpectraSharp.Core.JavaRandom(13L);
+        var rand = new SpectraEngine.Core.JavaRandom(13L);
         var gen  = new PerlinNoiseGenerator(rand);
 
         int sX = 2, sY = 4, sZ = 2;
@@ -608,8 +608,8 @@ public sealed class PerlinNoiseGeneratorTests
     [InlineData(1234567890123456789L)]
     public void Fill_IsDeterministic_ForGivenSeed(long seed)
     {
-        var r1 = new SpectraSharp.Core.JavaRandom(seed);
-        var r2 = new SpectraSharp.Core.JavaRandom(seed);
+        var r1 = new SpectraEngine.Core.JavaRandom(seed);
+        var r2 = new SpectraEngine.Core.JavaRandom(seed);
         var g1 = new PerlinNoiseGenerator(r1);
         var g2 = new PerlinNoiseGenerator(r2);
 
@@ -630,7 +630,7 @@ public sealed class PerlinNoiseGeneratorTests
     {
         // X = 255 means p[255+1] = p[256] accessed → requires p[256..511] duplicate.
         // Similarly AA+1, BA+1, AB+1, BB+1 can reach p[511].
-        var rand = new SpectraSharp.Core.JavaRandom(8L);
+        var rand = new SpectraEngine.Core.JavaRandom(8L);
         var gen  = new PerlinNoiseGenerator(rand);
 
         // Force X=255 by choosing coordinates near 255 after offset is applied.

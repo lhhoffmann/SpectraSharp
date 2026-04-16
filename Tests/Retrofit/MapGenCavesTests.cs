@@ -1,10 +1,10 @@
-﻿using System;
+using System;
 using System.Security.Cryptography;
 using Xunit;
-using SpectraSharp.Core;
-using SpectraSharp.Core.WorldGen;
+using SpectraEngine.Core;
+using SpectraEngine.Core.WorldGen;
 
-namespace SpectraSharp.Tests.WorldGen;
+namespace SpectraEngine.Tests.WorldGen;
 
 // ── Hand-written fakes ────────────────────────────────────────────────────────
 
@@ -75,7 +75,7 @@ internal sealed class RefJavaRandom
 // Because the implementation uses its own internal World type we expose a public
 // adapter. If the production World is a class we inherit/compose here.
 //
-// NOTE: The production code references `World` (SpectraSharp.Core.WorldGen.World).
+// NOTE: The production code references `World` (SpectraEngine.Core.WorldGen.World).
 // We create a minimal subclass/substitute that satisfies the compiler.
 
 // We cannot assume the exact shape of World without the source; instead we test
@@ -888,7 +888,7 @@ public sealed class MapGenCavesTests
     // ─────────────────────────────────────────────────────────────────────────
 
     private static World CreateWorld(long seed)
-        => new World(new SpectraSharp.Tests.NullChunkLoader(), seed);
+        => new World(new SpectraEngine.Tests.NullChunkLoader(), seed);
 
     private static string Sha256Hex(byte[] data)
     {

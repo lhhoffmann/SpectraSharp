@@ -1,4 +1,4 @@
-namespace SpectraSharp.ModTranspiler.Model;
+namespace SpectraEngine.ModTranspiler.Model;
 
 enum InjectionPosition { Prepend, Append, ReplaceBody }
 

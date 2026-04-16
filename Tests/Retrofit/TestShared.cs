@@ -1,9 +1,9 @@
 // Tests/Retrofit/TestShared.cs
 // Shared infrastructure for all Retrofit tests.
 
-using SpectraSharp.Core;
+using SpectraEngine.Core;
 
-namespace SpectraSharp.Tests;
+namespace SpectraEngine.Tests;
 
 /// <summary>
 /// IChunkLoader that returns empty chunks. Used to construct World instances in tests

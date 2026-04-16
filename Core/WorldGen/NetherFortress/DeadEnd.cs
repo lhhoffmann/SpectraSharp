@@ -1,6 +1,6 @@
-using SpectraSharp.Core.WorldGen.Structure;
+using SpectraEngine.Core.WorldGen.Structure;
 
-namespace SpectraSharp.Core.WorldGen.NetherFortress;
+namespace SpectraEngine.Core.WorldGen.NetherFortress;
 
 /// <summary>
 /// Fallback terminator piece. Replica of <c>ld</c>.

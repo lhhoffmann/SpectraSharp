@@ -1,6 +1,6 @@
-using SpectraSharp.Core.WorldGen;
+using SpectraEngine.Core.WorldGen;
 
-namespace SpectraSharp.Core;
+namespace SpectraEngine.Core;
 
 /// <summary>
 /// Replica of <c>sr</c> (BiomeGenBase) — abstract base class for all biomes.

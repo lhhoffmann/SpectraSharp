@@ -1,4 +1,4 @@
-namespace SpectraSharp.ModTranspiler.Model;
+namespace SpectraEngine.ModTranspiler.Model;
 
 enum RecipeType { Shaped, Shapeless, Smelting }
 

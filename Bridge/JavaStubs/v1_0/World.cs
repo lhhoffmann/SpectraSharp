@@ -1,10 +1,10 @@
 // Stub for obfuscated class ry (World) — Minecraft 1.0
 // Java package: net.minecraft.world (human-readable name used after remapping)
-// Maps to SpectraSharp.Core.IWorld
+// Maps to SpectraEngine.Core.IWorld
 
-using SpectraSharp.Core;
-using SpectraSharp.ModRuntime.AllocGuard;
-using SpectraSharp.ModRuntime.Sandbox;
+using SpectraEngine.Core;
+using SpectraEngine.ModRuntime.AllocGuard;
+using SpectraEngine.ModRuntime.Sandbox;
 using net.minecraft.src;
 
 namespace net.minecraft.world;

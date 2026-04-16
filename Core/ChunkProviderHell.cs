@@ -1,7 +1,7 @@
-using SpectraSharp.Core.WorldGen;
-using SpectraSharp.Core.WorldGen.NetherFortress;
+using SpectraEngine.Core.WorldGen;
+using SpectraEngine.Core.WorldGen.NetherFortress;
 
-namespace SpectraSharp.Core;
+namespace SpectraEngine.Core;
 
 /// <summary>
 /// Replica of <c>jv</c> (ChunkProviderHell) — Nether dimension terrain generator.

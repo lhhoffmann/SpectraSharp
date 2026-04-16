@@ -1,6 +1,6 @@
-using SpectraSharp.Core.WorldGen.Structure;
+using SpectraEngine.Core.WorldGen.Structure;
 
-namespace SpectraSharp.Core.WorldGen.NetherFortress;
+namespace SpectraEngine.Core.WorldGen.NetherFortress;
 
 // ── Room list pieces ──────────────────────────────────────────────────────────
 // Spec §7.7-§7.13: hg, yj, lu, ahw, tr, acs, io

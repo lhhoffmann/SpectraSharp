@@ -1,6 +1,6 @@
-using SpectraSharp.Core.Blocks;
+using SpectraEngine.Core.Blocks;
 
-namespace SpectraSharp.Core;
+namespace SpectraEngine.Core;
 
 /// <summary>
 /// Registers all 122 vanilla block singletons into <see cref="Block.BlocksList"/>.

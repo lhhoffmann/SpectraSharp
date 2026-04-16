@@ -1,4 +1,4 @@
-namespace SpectraSharp.Core.WorldGen;
+namespace SpectraEngine.Core.WorldGen;
 
 /// <summary>
 /// Circular disk patch generator. Spec: <c>fc</c> (WorldGenSandDisc).

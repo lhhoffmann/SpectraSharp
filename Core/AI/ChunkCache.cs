@@ -1,4 +1,4 @@
-namespace SpectraSharp.Core.AI;
+namespace SpectraEngine.Core.AI;
 
 /// <summary>
 /// Replica of <c>xk</c> (ChunkCache) — a pre-fetched chunk grid snapshot used by

@@ -1,12 +1,12 @@
 using System;
 using System.Collections.Generic;
 using System.Reflection;
-using SpectraSharp.Core;
-using SpectraSharp.Core.Blocks;
+using SpectraEngine.Core;
+using SpectraEngine.Core.Blocks;
 using Xunit;
-using static SpectraSharp.Core.BlockRegistry;
+using static SpectraEngine.Core.BlockRegistry;
 
-namespace SpectraSharp.Tests.BlockRegistry
+namespace SpectraEngine.Tests.BlockRegistry
 {
     // ── Fakes ────────────────────────────────────────────────────────────────
 

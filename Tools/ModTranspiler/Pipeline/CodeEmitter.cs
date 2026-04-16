@@ -1,4 +1,4 @@
-namespace SpectraSharp.ModTranspiler.Pipeline;
+namespace SpectraEngine.ModTranspiler.Pipeline;
 
 /// <summary>
 /// Phase 5 — Writes generated C# source files to Bridge/Mods/&lt;ModName&gt;/.
@@ -35,12 +35,12 @@ static class CodeEmitter
               <PropertyGroup>
                 <TargetFramework>net10.0</TargetFramework>
                 <AssemblyName>{modName}</AssemblyName>
-                <RootNamespace>SpectraSharp.Bridge.Mods.{Sanitize(modName)}</RootNamespace>
+                <RootNamespace>SpectraEngine.Bridge.Mods.{Sanitize(modName)}</RootNamespace>
                 <Nullable>enable</Nullable>
                 <ImplicitUsings>enable</ImplicitUsings>
               </PropertyGroup>
               <ItemGroup>
-                <ProjectReference Include="../../../SpectraSharp.csproj" />
+                <ProjectReference Include="../../../SpectraEngine.csproj" />
                 <PackageReference Include="Lib.Harmony" Version="2.3.6" />
               </ItemGroup>
             </Project>

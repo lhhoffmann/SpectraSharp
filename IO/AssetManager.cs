@@ -1,6 +1,6 @@
 using System.IO.Compression;
 
-namespace SpectraSharp.IO;
+namespace SpectraEngine.IO;
 
 /// <summary>
 /// Reads assets at runtime from the user's own game JAR.

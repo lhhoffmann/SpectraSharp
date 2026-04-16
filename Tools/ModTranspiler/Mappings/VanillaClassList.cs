@@ -1,4 +1,4 @@
-namespace SpectraSharp.ModTranspiler.Mappings;
+namespace SpectraEngine.ModTranspiler.Mappings;
 
 /// <summary>
 /// All known obfuscated class names from the vanilla 1.0 JAR.

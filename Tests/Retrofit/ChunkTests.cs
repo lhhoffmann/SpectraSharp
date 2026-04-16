@@ -1,15 +1,15 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using Xunit;
-using SpectraSharp.Core;
+using SpectraEngine.Core;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Hand-written fakes / stubs
 // ─────────────────────────────────────────────────────────────────────────────
 
-namespace SpectraSharp.Core.Tests
+namespace SpectraEngine.Core.Tests
 {
     // ── Minimal Material stub ─────────────────────────────────────────────────
 
@@ -65,7 +65,7 @@ namespace SpectraSharp.Core.Tests
         public List<(int x, int z, int minY, int maxY)> PropagateColumnCalls { get; } = new();
 
         public FakeWorld(long seed = 0L, bool isNether = false)
-            : base(new SpectraSharp.Tests.NullChunkLoader(), seed) { IsNether = isNether; }
+            : base(new SpectraEngine.Tests.NullChunkLoader(), seed) { IsNether = isNether; }
 
         public new void PropagateLight(LightType type, int x, int y, int z)
         {

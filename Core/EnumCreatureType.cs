@@ -1,4 +1,4 @@
-namespace SpectraSharp.Core;
+namespace SpectraEngine.Core;
 
 /// <summary>
 /// Replica of <c>jf</c> (EnumCreatureType) — classifies living entities for population-cap tracking.

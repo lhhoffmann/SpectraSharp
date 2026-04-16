@@ -1,6 +1,6 @@
 // Stub for BaseMod — Minecraft 1.0 ModLoader entry point
 
-using SpectraSharp.Core.Mods;
+using SpectraEngine.Core.Mods;
 
 namespace net.minecraft.src;
 
@@ -45,6 +45,6 @@ public abstract class BaseMod : ISpectraMod
     public virtual void onTickInGame() { }
 
     /// <summary>Called on world generation for each chunk.</summary>
-    public virtual void generateSurface(SpectraSharp.Core.IWorld world,
+    public virtual void generateSurface(SpectraEngine.Core.IWorld world,
                                          System.Random rng, int x, int z) { }
 }
