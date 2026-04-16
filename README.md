@@ -54,4 +54,4 @@ This project is licensed under the **GNU Affero General Public License v3.0 (AGP
 ## 📫 Contact
 **Luca Hoffmann** IT Student (System Integration)  
 Email: [luca@lhhoffmann.de](mailto:luca@lhhoffmann.de)  
-Website: [lhhoffmann.de](https://lhhoffmann.de)
+Website: [lhhoffmann.de](http://lhhoffmann.de)
