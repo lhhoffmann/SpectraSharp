@@ -226,6 +226,11 @@ public sealed class ChunkProviderServer : IChunkLoader
         QueueForUnloadKey(chunkX, chunkZ, key);
     }
 
+    /// <summary>
+    /// Spec §10: canSave() — always returns true for ChunkProviderServer.
+    /// </summary>
+    public bool CanSave => true;
+
     // ── Private helpers ───────────────────────────────────────────────────────
 
     private Chunk LoadOrCreateChunk(int chunkX, int chunkZ, long key)

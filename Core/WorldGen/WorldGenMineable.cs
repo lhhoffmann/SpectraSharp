@@ -14,7 +14,7 @@ namespace SpectraSharp.Core.WorldGen;
 ///
 /// Source spec: Documentation/VoxelCore/Parity/Specs/WorldGenMinable_Spec.md
 /// </summary>
-public sealed class WorldGenMineable(int blockId, int veinSize) : WorldGenerator
+public class WorldGenMineable(int blockId, int veinSize) : WorldGenerator
 {
     private readonly int _blockId  = blockId;
     private readonly int _veinSize = veinSize;

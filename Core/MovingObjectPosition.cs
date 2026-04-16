@@ -38,6 +38,7 @@ public sealed class MovingObjectPosition
     /// 4 = −X (west),  5 = +X (east)
     /// </summary>
     public readonly int FaceId;        // obf: e
+    public           int Face => FaceId; // C#-style alias for tests
 
     /// <summary>
     /// Exact hit position — a POOLED Vec3 copy (quirk 1). obf: f

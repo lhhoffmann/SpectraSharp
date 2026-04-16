@@ -137,6 +137,9 @@ public sealed class NbtList : NbtTag
 
     public IReadOnlyList<NbtTag> Items => _items;
 
+    /// <summary>Returns the element at <paramref name="index"/> as an <see cref="NbtCompound"/>.</summary>
+    public NbtCompound GetCompound(int index) => (NbtCompound)_items[index];
+
     internal override void WritePayload(NbtBinaryWriter w)
     {
         w.WriteByte(ElementTypeId);

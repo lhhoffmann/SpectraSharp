@@ -13,6 +13,12 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "JavaStubs", "JavaStubs", "{
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MinecraftStubs.v1_0", "Bridge\JavaStubs\MinecraftStubs.v1_0.csproj", "{A4656871-D5CE-4F2E-9011-2B2282CAFAA0}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tests", "Tests", "{0AB3BF05-4346-4AA6-1389-037BE0695223}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Retrofit", "Retrofit", "{60725832-D8E2-4276-2C9F-9FB4EC16942C}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SpectraSharp.Tests.Retrofit", "Tests\Retrofit\SpectraSharp.Tests.Retrofit.csproj", "{4B7DABD3-ED67-4EA4-AD25-021580DF9032}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -59,6 +65,18 @@ Global
 		{A4656871-D5CE-4F2E-9011-2B2282CAFAA0}.Release|x64.Build.0 = Release|Any CPU
 		{A4656871-D5CE-4F2E-9011-2B2282CAFAA0}.Release|x86.ActiveCfg = Release|Any CPU
 		{A4656871-D5CE-4F2E-9011-2B2282CAFAA0}.Release|x86.Build.0 = Release|Any CPU
+		{4B7DABD3-ED67-4EA4-AD25-021580DF9032}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4B7DABD3-ED67-4EA4-AD25-021580DF9032}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4B7DABD3-ED67-4EA4-AD25-021580DF9032}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{4B7DABD3-ED67-4EA4-AD25-021580DF9032}.Debug|x64.Build.0 = Debug|Any CPU
+		{4B7DABD3-ED67-4EA4-AD25-021580DF9032}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{4B7DABD3-ED67-4EA4-AD25-021580DF9032}.Debug|x86.Build.0 = Debug|Any CPU
+		{4B7DABD3-ED67-4EA4-AD25-021580DF9032}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4B7DABD3-ED67-4EA4-AD25-021580DF9032}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4B7DABD3-ED67-4EA4-AD25-021580DF9032}.Release|x64.ActiveCfg = Release|Any CPU
+		{4B7DABD3-ED67-4EA4-AD25-021580DF9032}.Release|x64.Build.0 = Release|Any CPU
+		{4B7DABD3-ED67-4EA4-AD25-021580DF9032}.Release|x86.ActiveCfg = Release|Any CPU
+		{4B7DABD3-ED67-4EA4-AD25-021580DF9032}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -66,5 +84,7 @@ Global
 	GlobalSection(NestedProjects) = preSolution
 		{EE8DF228-6603-7F96-E16F-17124735E973} = {68BF4094-9419-05A7-776B-98D5B493D877}
 		{A4656871-D5CE-4F2E-9011-2B2282CAFAA0} = {EE8DF228-6603-7F96-E16F-17124735E973}
+		{60725832-D8E2-4276-2C9F-9FB4EC16942C} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
+		{4B7DABD3-ED67-4EA4-AD25-021580DF9032} = {60725832-D8E2-4276-2C9F-9FB4EC16942C}
 	EndGlobalSection
 EndGlobal

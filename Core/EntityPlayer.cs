@@ -105,6 +105,9 @@ public abstract class EntityPlayer : LivingEntity
         SetSize(0.6f, 1.8f);             // obf: a(0.6F, 1.8F) — width × height
     }
 
+    /// <summary>No-arg constructor for test stubs that do not need a real World reference.</summary>
+    protected EntityPlayer() : this(null!) { }
+
     // ── EntityInit override (spec §7) ─────────────────────────────────────────
 
     /// <summary>

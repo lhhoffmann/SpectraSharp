@@ -116,6 +116,42 @@ and add the C# file path in the Notes column.
 
 ---
 
+### RULE: Automated Testing (xUnit) — Strict Minimum
+
+**Default: DO NOT write tests.** Implementation speed matters. Tests are written only when
+the risk of a silent wrong result is high and impossible to catch by code review alone.
+
+Generate a test class **ONLY IF** the class meets **AT LEAST ONE** of these narrow criteria:
+
+1. **RNG-dependent output:** Uses `JavaRandom` and produces world gen or AI decisions.
+   A wrong seed order silently produces a different world with no compile error.
+2. **Numeric off-by-one from spec:** Section 7 documents a specific wrong constant
+   (e.g., `+1` that should be `+0`, `<` that should be `<=`). Invisible in code review.
+3. **Bitwise data packing:** Packs/unpacks metadata into bit fields. Wrong masks are
+   silent data corruption.
+4. **Save/load round-trip:** Serializes or deserializes world data. Silent corruption
+   means corrupted save files with no runtime error.
+
+**Never write tests for these — no exceptions:**
+- Any `Block` subclass unless it hits criterion 2 or 3
+- Any class under 80 lines
+- Interfaces, enums, data containers, registries
+- Tier-2 blocks in `SimpleBlocks.cs`
+- Rendering, texture, audio, or UI classes
+- Classes whose only logic delegates to another class
+
+#### Technical Requirements for Tests (if generated)
+
+- **Framework:** `xUnit` (`[Fact]`, `[Theory]`, `[InlineData]`).
+- **NO MOCKING LIBRARIES:** Do NOT use `Moq`, `NSubstitute`, or any reflection-based mocking
+  framework. Use ONLY hand-written fakes/stubs (e.g., `class FakeWorld : IWorld { ... }` directly
+  in the test file).
+- **Determinism:** 100 % deterministic. Any `Random` must use a fixed seed.
+- **Golden Master:** For world gen or chunk data, compare SHA-256 of the block array against
+  expected Mojang parity constants derived from verified Minecraft 1.0 behaviour.
+
+---
+
 ## Session End Checklist
 
 Before closing the session, append one entry to `Documentation/METRICS.md`:

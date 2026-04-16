@@ -74,6 +74,11 @@ public sealed class BlockTNT : Block
     /// <summary>No normal drop — handled in <see cref="Ignite"/>. Spec §8.</summary>
     public override int IdDropped(int meta, JavaRandom rng, int fortune) => 0;
 
+    /// <summary>
+    /// Test stub: returns null per spec §8 c_(meta) — drops handled manually in e().
+    /// </summary>
+    public static object? GetItem(int meta) => null;
+
     // ── Ignite / harvestBlock (spec §8 — e(ry,x,y,z,meta)) ─────────────────
 
     /// <summary>

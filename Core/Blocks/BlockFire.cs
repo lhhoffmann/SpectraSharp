@@ -52,13 +52,18 @@ public sealed class BlockFire : Block
     private const int FireId       = 51;
     private const int NetherrackId = 87;  // yy.bb — permanent fire
 
+    // ── Public table accessors (used by tests) ────────────────────────────────
+
+    public static int GetFlammability(int blockId) => Flammability[blockId];
+    public static int GetBurnability(int blockId)  => Burnability[blockId];
+
     // ── Constructor ───────────────────────────────────────────────────────────
 
     public BlockFire(int blockId)
         : base(blockId, Material.Portal_N)  // p.n — fire material (immovable, passable)
     {
-        // Light emission 15 (spec §5)
-        LightValue[blockId] = 15;
+        // Light emission 15 (spec §5) — use SetLightValue so instance LightValue tracks it
+        SetLightValue(1.0f);
         // Fire uses scheduled UpdateTick only; no random BlockTick
         ClearNeedsRandomTick();
     }
@@ -71,6 +76,74 @@ public sealed class BlockFire : Block
 
     // Fire drops nothing (spec §5)
     public override int  QuantityDropped(JavaRandom rng) => 0;
+
+    /// <summary>Alias for QuantityDropped accepting System.Random (test adapter).</summary>
+    public int GetDropCount(Random rng) => 0;
+
+    /// <summary>Alias for GetCollisionBoundingBoxFromPool (test adapter).</summary>
+    public AxisAlignedBB? GetCollisionBoundingBox(IWorld world, int x, int y, int z)
+        => GetCollisionBoundingBoxFromPool(world, x, y, z);
+
+    // ── Public instance wrappers for private static helpers (used by tests) ─────
+
+    /// <summary>Public wrapper for OnNeighborBlockChange (test alias).</summary>
+    public void OnNeighborChange(IWorld world, int x, int y, int z, int neighbourId)
+        => OnNeighborBlockChange(world, x, y, z, neighbourId);
+
+    /// <summary>Public wrapper for UpdateTick accepting System.Random (test adapter).</summary>
+    public void OnBlockTick(IWorld world, int x, int y, int z, Random rng)
+        => UpdateTick(world, x, y, z, new JavaRandom((long)rng.Next()));
+
+    /// <summary>Returns true if the block at (x,y,z) has any flammability.</summary>
+    public bool IsFlammable(IBlockAccess world, int x, int y, int z)
+        => Flammability[world.GetBlockId(x, y, z)] > 0;
+
+    /// <summary>
+    /// Returns the maximum flammability of neighbours around an air block.
+    /// Returns 0 if the target block is not air.
+    /// </summary>
+    public int MaxFlammabilityAround(IWorld world, int x, int y, int z)
+    {
+        if (world.GetBlockId(x, y, z) != 0) return 0;
+        int best = 0;
+        best = Math.Max(best, Flammability[world.GetBlockId(x + 1, y, z)]);
+        best = Math.Max(best, Flammability[world.GetBlockId(x - 1, y, z)]);
+        best = Math.Max(best, Flammability[world.GetBlockId(x, y + 1, z)]);
+        best = Math.Max(best, Flammability[world.GetBlockId(x, y - 1, z)]);
+        best = Math.Max(best, Flammability[world.GetBlockId(x, y, z + 1)]);
+        best = Math.Max(best, Flammability[world.GetBlockId(x, y, z - 1)]);
+        return best;
+    }
+
+    /// <summary>True if any of the 6 adjacent blocks has flammability greater than 0.</summary>
+    public bool HasFlammableNeighbor(IWorld world, int x, int y, int z)
+        => Flammability[world.GetBlockId(x + 1, y, z)] > 0
+        || Flammability[world.GetBlockId(x - 1, y, z)] > 0
+        || Flammability[world.GetBlockId(x, y + 1, z)] > 0
+        || Flammability[world.GetBlockId(x, y - 1, z)] > 0
+        || Flammability[world.GetBlockId(x, y, z + 1)] > 0
+        || Flammability[world.GetBlockId(x, y, z - 1)] > 0;
+
+    /// <summary>True if fire can exist at (x,y,z): solid ground below or flammable neighbour.</summary>
+    public bool CanFireSurviveHere(IWorld world, int x, int y, int z)
+        => world.IsOpaqueCube(x, y - 1, z) || HasFlammableNeighbor(world, x, y, z);
+
+    /// <summary>
+    /// Returns the base divisor used in the area spread calculation.
+    /// 100 for targetY ≤ fireY+1; 100 + (targetY − fireY − 1)×100 above.
+    /// </summary>
+    public int ComputeAreaSpreadBaseDivisor(int fireY, int targetY)
+    {
+        int excess = targetY - (fireY + 1);
+        return excess > 0 ? 100 + excess * 100 : 100;
+    }
+
+    /// <summary>
+    /// Returns the divisor used when burning a direct face neighbour.
+    /// 300 for horizontal (dx or dz ≠ 0), 250 for vertical (dy ≠ 0).
+    /// </summary>
+    public int GetDirectSpreadDivisor(int dx, int dy, int dz)
+        => (dy != 0) ? 250 : 300;
 
     // ── Block lifecycle ───────────────────────────────────────────────────────
 
@@ -88,7 +161,7 @@ public sealed class BlockFire : Block
                 return; // portal placed; fire replaced by portal blocks
 
             // Remove immediately if no support
-            if (!CanSurviveHere(world, x, y, z))
+            if (!S_CanSurviveHere(world, x, y, z))
             {
                 world.SetBlock(x, y, z, 0);
                 return;
@@ -103,7 +176,7 @@ public sealed class BlockFire : Block
     /// </summary>
     public override void OnNeighborBlockChange(IWorld world, int x, int y, int z, int neighbourId)
     {
-        if (!CanSurviveHere(world, x, y, z))
+        if (!S_CanSurviveHere(world, x, y, z))
             world.SetBlock(x, y, z, 0);
     }
 
@@ -119,7 +192,7 @@ public sealed class BlockFire : Block
         // (End-stone check: DimensionId == 1 and ID 121 — stubbed for now)
 
         // Step 2: existence check
-        if (!CanSurviveHere(world, x, y, z))
+        if (!S_CanSurviveHere(world, x, y, z))
         {
             world.SetBlock(x, y, z, 0);
             return;
@@ -230,30 +303,32 @@ public sealed class BlockFire : Block
     }
 
     // ── Fire survival helpers (spec §4) ──────────────────────────────────────
+    // Private static implementations (prefixed with S_ to avoid name conflicts
+    // with the public instance wrappers that tests call via instance reference).
 
     /// <summary>
     /// Returns true if fire can exist at (x, y, z): solid ground below or flammable neighbour.
     /// obf: <c>wj.c(World, x, y, z)</c> — 3-arg override.
     /// </summary>
-    private static bool CanSurviveHere(IWorld world, int x, int y, int z)
-        => world.IsOpaqueCube(x, y - 1, z) || HasFlammableNeighbor(world, x, y, z);
+    private static bool S_CanSurviveHere(IWorld world, int x, int y, int z)
+        => world.IsOpaqueCube(x, y - 1, z) || S_HasFlammableNeighbor(world, x, y, z);
 
     /// <summary>
     /// True if any of the 6 adjacent blocks has flammability > 0.
     /// obf: <c>wj.g(world, x, y, z)</c>.
     /// </summary>
-    private static bool HasFlammableNeighbor(IWorld world, int x, int y, int z)
+    private static bool S_HasFlammableNeighbor(IWorld world, int x, int y, int z)
     {
-        return IsFlammable(world, x + 1, y, z) || IsFlammable(world, x - 1, y, z)
-            || IsFlammable(world, x, y + 1, z) || IsFlammable(world, x, y - 1, z)
-            || IsFlammable(world, x, y, z + 1) || IsFlammable(world, x, y, z - 1);
+        return S_IsFlammable(world, x + 1, y, z) || S_IsFlammable(world, x - 1, y, z)
+            || S_IsFlammable(world, x, y + 1, z) || S_IsFlammable(world, x, y - 1, z)
+            || S_IsFlammable(world, x, y, z + 1) || S_IsFlammable(world, x, y, z - 1);
     }
 
     /// <summary>
     /// True if the block at (x, y, z) has any flammability.
     /// obf: <c>wj.c(IBlockAccess, x, y, z)</c> — 4-arg overload.
     /// </summary>
-    private static bool IsFlammable(IBlockAccess world, int x, int y, int z)
+    private static bool S_IsFlammable(IBlockAccess world, int x, int y, int z)
         => Flammability[world.GetBlockId(x, y, z)] > 0;
 
     /// <summary>
@@ -261,7 +336,7 @@ public sealed class BlockFire : Block
     /// Returns 0 if the target position is not air.
     /// obf: <c>wj.h(world, x, y, z)</c>.
     /// </summary>
-    private static int MaxFlammabilityAround(IWorld world, int x, int y, int z)
+    private static int S_MaxFlammabilityAround(IWorld world, int x, int y, int z)
     {
         if (world.GetBlockId(x, y, z) != 0) return 0; // must be air
 

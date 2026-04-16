@@ -15,7 +15,7 @@ namespace SpectraSharp.Core;
 ///
 /// Source spec: Documentation/VoxelCore/Parity/Specs/ChunkProviderGenerate_Spec.md
 /// </summary>
-public sealed class ChunkProviderGenerate : IChunkLoader
+public class ChunkProviderGenerate : IChunkLoader
 {
     // ── Fields (spec §3) ──────────────────────────────────────────────────────
 
@@ -48,7 +48,7 @@ public sealed class ChunkProviderGenerate : IChunkLoader
     /// Optional at construction; set via <see cref="SetWorld"/> after the World is created
     /// if a chicken-and-egg dependency would otherwise occur.
     /// </param>
-    public ChunkProviderGenerate(long seed, bool generateStructures = false, World? world = null)
+    public ChunkProviderGenerate(long seed = 0L, bool generateStructures = false, World? world = null)
     {
         _world              = world!;
         _worldSeed          = seed;
@@ -70,11 +70,11 @@ public sealed class ChunkProviderGenerate : IChunkLoader
     }
 
     /// <summary>Sets the world reference after construction. Call before the first chunk is requested.</summary>
-    public void SetWorld(World world) => _world = world;
+    public virtual void SetWorld(World world) => _world = world;
 
     // ── IChunkLoader ──────────────────────────────────────────────────────────
 
-    public Chunk GetChunk(int chunkX, int chunkZ)
+    public virtual Chunk GetChunk(int chunkX, int chunkZ)
     {
         long key = (long)chunkX << 32 | (uint)chunkZ;
         if (_chunks.TryGetValue(key, out Chunk? existing)) return existing;
@@ -106,7 +106,7 @@ public sealed class ChunkProviderGenerate : IChunkLoader
         return _chunks.ContainsKey(key);
     }
 
-    public void Tick() { }
+    public virtual void Tick() { }
 
     public IEnumerable<(int chunkX, int chunkZ)> GetLoadedChunkCoords()
     {
@@ -202,12 +202,23 @@ public sealed class ChunkProviderGenerate : IChunkLoader
     /// before decorating so re-entry never double-populates.
     /// Spec: the chunk's <c>a(ej, ej, int, int)</c> population hook.
     /// </summary>
-    public void PopulateChunkFromServer(int chunkX, int chunkZ)
+    public virtual void PopulateChunkFromServer(int chunkX, int chunkZ)
     {
         long key = (long)chunkX << 32 | (uint)chunkZ;
         if (_chunks.TryGetValue(key, out Chunk? c) && c.IsPopulated) return;
         if (c != null) c.IsPopulated = true;
         PopulateChunk(chunkX, chunkZ);
+    }
+
+    /// Returns the deterministic seed that PopulateChunk uses for the given chunk coordinates.
+    /// Used by tests to verify seed derivation (spec §8).
+    public long GetPopulateSeedForChunk(int chunkX, int chunkZ)
+    {
+        var rng = new JavaRandom(_worldSeed);
+        rng.SetSeed(_worldSeed);
+        long xSeed = (rng.NextLong() / 2L * 2L) + 1L;
+        long zSeed = (rng.NextLong() / 2L * 2L) + 1L;
+        return (long)chunkX * xSeed + (long)chunkZ * zSeed ^ _worldSeed;
     }
 
     private void PopulateChunk(int chunkX, int chunkZ)

@@ -94,7 +94,7 @@ public class World : IWorld
 
     // ── Public state ──────────────────────────────────────────────────────────
 
-    public  bool         IsClientSide   { get; }        // I
+    public  bool         IsClientSide   { get; set; }   // I
     public  JavaRandom   Random         { get; }        // w
     public  bool         IsNether       { get; set; }   // y.e (WorldProvider.isNether)
     /// <summary>
@@ -1020,7 +1020,7 @@ public class World : IWorld
     /// </summary>
     private int ComputeBlockLightValue(int x, int y, int z, int blockId, int opacity)
     {
-        int best = Block.LightValue[blockId]; // self-emission (yy.q[id])
+        int best = Block.LightValueTable[blockId]; // self-emission (yy.q[id])
         foreach (var (dx, dy, dz) in BfsNeighbors)
         {
             int nx = x + dx, ny = y + dy, nz = z + dz;

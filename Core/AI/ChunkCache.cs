@@ -16,7 +16,7 @@ namespace SpectraSharp.Core.AI;
 ///
 /// Source spec: Documentation/VoxelCore/Parity/Specs/MobAI_PathFinder_Spec.md §6
 /// </summary>
-internal sealed class ChunkCache
+public sealed class ChunkCache
 {
     // ── Fields ────────────────────────────────────────────────────────────────
 

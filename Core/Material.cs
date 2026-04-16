@@ -129,6 +129,12 @@ public class Material
                                                         .SetTransparent().SetImmovable();                         // C (tx subclass)
     public static readonly Material Mat_D         = new Material(MapColor.StoneGrey).SetPushDestroys();          // D — J=2
 
+    // ── Common aliases used by tests and mod stubs ───────────────────────────
+
+    public static readonly Material Passable = MatPass_Q;    // test alias for passable (air-like) material
+    public static readonly Material Fire     = Portal_N;     // test alias for fire/portal material
+    public static readonly Material Sand     = Mat_O;        // test alias for sand material
+
     // ── Subclasses (spec §7) ──────────────────────────────────────────────────
 
     /// <summary>sn — MaterialLiquid: overrides IsLiquid() → true.</summary>

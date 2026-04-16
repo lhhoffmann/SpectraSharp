@@ -60,6 +60,12 @@ public sealed class ItemStack
         // _nbtTag  = source._nbtTag?.Copy() — stub (ik spec pending)
     }
 
+    // ── Convenience aliases ───────────────────────────────────────────────────
+
+    public int Id     => ItemId;
+    public int Count  => StackSize;
+    public int Damage => _itemDamage;
+
     // ── Item access (spec §4) ─────────────────────────────────────────────────
 
     /// <summary>

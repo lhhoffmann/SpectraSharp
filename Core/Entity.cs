@@ -149,6 +149,12 @@ public abstract class Entity
         EntityInit();
     }
 
+    /// <summary>
+    /// No-arg constructor for test stubs that do not need a real World reference.
+    /// Delegates to the main constructor with a null World (World = null).
+    /// </summary>
+    protected Entity() : this(null!) { }
+
     // ── Abstract hooks (spec §12) ─────────────────────────────────────────────
 
     /// <summary>

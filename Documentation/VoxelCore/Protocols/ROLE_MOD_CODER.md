@@ -602,6 +602,62 @@ JNI is the only hard limit. Less than 1% of mods use it.
 
 ---
 
+---
+
+### RULE: Automated Testing (xUnit) — Conditional Generation
+
+To manage token limits and focus on correctness, follow a strict 80/20 testing rule.
+
+Evaluate the C# class you just generated. You **MUST** generate an accompanying xUnit test
+class (`[ClassName]Tests.cs`) in the same output **ONLY IF** the class meets **AT LEAST ONE**
+of the following criteria:
+
+**ModTranspiler criteria:**
+
+1. **Silent misclassification risk (`ModDiffer`):** Any class that tags mod classes as
+   `NEW_CONTENT / OVERRIDE / PASSTHROUGH / LIBRARY`. A wrong tag silently breaks the mod —
+   either logic is dropped or a vanilla class is double-patched. Always test with known
+   class name lists and verify the exact tag returned.
+
+2. **Data extraction from AST (`ManifestBuilder`):** Any class that reads a Java AST and
+   extracts structured data (block IDs, texture indices, method injection points). Wrong
+   extraction produces a subtly incorrect mod with no compile error. Test with inline Java
+   source strings and assert exact field values in the resulting descriptor.
+
+3. **Code generation / templates (`Translator`, `BlockTemplate`, `ItemTemplate`, `HookTemplate`):**
+   Any class that produces C# source strings. Output must be deterministic — test with a
+   fixed input and compare against an expected output string constant. If the output changes,
+   the constant must be deliberately updated (no silent drift).
+
+4. **VanillaApiMap / VanillaClassList lookups:** The translation tables are hardcoded —
+   test that known Java call signatures map to the correct C# equivalents, and that unknown
+   calls produce a `// TODO:` comment rather than being silently dropped.
+
+**MinecraftStubs criteria:**
+
+5. **Stub delegation chain:** Any `MinecraftStub` class that delegates a Java API call to a
+   `SpectraSharp.Contracts` interface. Test that the correct interface method is called with
+   the correct arguments. Use a hand-written fake that implements the interface and records
+   calls (e.g., `class FakeWorld : IWorld`).
+
+**If the class meets none of these criteria** (e.g., it is a data model like `BlockDescriptor`,
+a CLI argument parser, `Program.cs`, or `TypeMap`), **DO NOT GENERATE ANY TESTS.**
+
+#### Technical Requirements for Tests (if generated)
+
+- **Framework:** `xUnit` (`[Fact]`, `[Theory]`, `[InlineData]`).
+- **NO MOCKING LIBRARIES:** Do NOT use `Moq`, `NSubstitute`, or any reflection-based mocking
+  framework. Use ONLY hand-written fakes/stubs directly in the test file.
+- **No subprocess calls:** Do NOT invoke Vineflower or `java` from within unit tests. The
+  `IDecompiler` boundary must be faked with an implementation that returns a pre-written
+  Java source string.
+- **No file system dependency:** Tests must run without reading or writing disk. Pass Java
+  source as inline strings, assert C# output as inline strings.
+- **Golden Master:** For all code generation classes, store the expected C# output as a
+  string constant in the test. Treat any unexpected change in output as a test failure.
+
+---
+
 ## Session End Checklist
 
 Append to `Documentation/METRICS.md`:

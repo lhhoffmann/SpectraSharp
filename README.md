@@ -44,9 +44,9 @@ The goal is to understand the complexities of voxel-based environments, efficien
 
 ## 📜 License & Commercial Use
 
-This project is licensed under the **GNU General Public License v3.0 (GPL-3.0)**. 
+This project is licensed under the **GNU Affero General Public License v3.0 (AGPL-3.0)**. 
 
-- **Open Source:** You are free to study, modify, and distribute this code under the terms of the GPL-3.0.
+- **Open Source:** You are free to study, modify, and distribute this code under the terms of the AGPL-3.0.
 - **Commercial Use:** If you are a company or individual interested in using SpectraSharp technology for commercial purposes or within a proprietary environment, please reach out for a separate licensing agreement.
 
 ---

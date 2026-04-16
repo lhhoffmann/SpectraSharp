@@ -6,7 +6,7 @@ This repository uses a dual-license model:
 
 | Content | License |
 |---|---|
-| Source code (`*.cs`, `*.csproj`, build scripts) | GNU GPL v3 (see `/LICENSE`) |
+| Source code (`*.cs`, `*.csproj`, build scripts) | GNU AGPL v3 (see `/LICENSE`) |
 | Documentation (`Documentation/**/*.md`) | Creative Commons Attribution 4.0 International (CC BY 4.0) |
 
 ---

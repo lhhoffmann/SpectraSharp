@@ -58,7 +58,12 @@ public interface IBridgeStub
 /// </summary>
 public abstract class BridgeStubBase : IBridgeStub
 {
-    public abstract string JavaClassName { get; }
+    /// <summary>
+    /// Java class name this stub maps to.
+    /// Default: empty string (valid for test stubs that don't represent a real Java class).
+    /// Production stubs should override with the fully-qualified Java name.
+    /// </summary>
+    public virtual string JavaClassName => string.Empty;
 
     /// <summary>
     /// Stub priority. Virtual so subclasses (e.g. <c>BlockBase</c>) can

@@ -60,7 +60,7 @@ public class Block
     private static readonly bool[]      _unknownN        = new bool[256];      // obf: n  always false
     public  static readonly int[]       LightOpacity     = new int[256];       // obf: o  0–255
     public  static readonly bool[]      CanPassThrough   = new bool[256];      // obf: p  true = passable (air/liquid); false = solid
-    public  static readonly int[]       LightValue       = new int[256];       // obf: q  0–15
+    public  static readonly int[]       LightValueTable  = new int[256];       // obf: q  0–15  (use instance LightValue for float fraction)
     public  static readonly bool[]      HasTileEntity    = new bool[256];      // obf: r
     public  static readonly bool[]      RenderSpecial    = new bool[256];      // obf: s
     /// <summary>
@@ -74,7 +74,16 @@ public class Block
 
     public  int       BlockIndexInTexture;               // obf: bL
     public  readonly int BlockID;                        // obf: bM  (final in Java)
+    public           int BlockId => BlockID;              // C#-style alias for tests and mod stubs
+    public           int Id      => BlockID;              // short alias used by test stubs
+    private float _lightFraction;                         // backing for LightValue; set by SetLightValue
+    /// <summary>
+    /// Returns the block's emitted light as a [0,1] fraction.
+    /// Set via <see cref="SetLightValue"/>; defaults to 0.
+    /// </summary>
+    public float LightValue => _lightFraction;
     public  float     BlockHardness;                     // obf: bN
+    public  float     Hardness { get => BlockHardness; set => BlockHardness = value; } // test alias
     public  float     BlockResistance;                   // obf: bO
 #pragma warning disable CS0414  // spec-required fields — purpose TBD, must be preserved
     private bool      _bP = true;                        // obf: bP  always true, purpose TBD
@@ -165,7 +174,8 @@ public class Block
     /// <summary>Sets emitted light level from a [0,1] fraction. Spec: <c>a(float)</c>.</summary>
     public Block SetLightValue(float fraction)
     {
-        LightValue[BlockID] = (int)(15.0f * fraction);
+        _lightFraction = fraction;
+        LightValueTable[BlockID] = (int)(15.0f * fraction);
         return this;
     }
 
@@ -506,7 +516,7 @@ public class Block
     /// Returns ambient occlusion brightness. Spec: <c>d(float,IBlockAccess,x,y,z)</c>.
     /// </summary>
     public float GetLightBrightness(float unused, IBlockAccess world, int x, int y, int z)
-        => world.GetBrightness(x, y, z, LightValue[BlockID]);
+        => world.GetBrightness(x, y, z, LightValueTable[BlockID]);
 
     /// <summary>
     /// True if the block at (x,y,z) can be replaced by another block.

@@ -15,6 +15,7 @@
     <Compile Remove="Tools/**" />
     <Compile Remove="Bridge/JavaStubs/**" />
     <Compile Remove="SpectraSharp.ModRuntime/**" />
+    <Compile Remove="Tests/**" />
   </ItemGroup>
 
   <ItemGroup>
@@ -23,7 +24,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Content Include="Assets/Branding/SpectraSharpLogo256x256.png">
+    <Content Include="Assets/Branding/SpectraEngineLogo256x256.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
   </ItemGroup>

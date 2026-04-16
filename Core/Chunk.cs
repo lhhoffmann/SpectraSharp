@@ -128,7 +128,13 @@ public class Chunk
     // ── Serialization accessors (WorldSave — DiskChunkLoader) ────────────────
     // Internal: only the save system needs raw array access.
 
-    internal byte[]       BlockIdsRaw   => _blockIds;
+    public    byte[]      BlockIdsRaw   => _blockIds;
+
+    /// Returns a copy of the raw block-ID array (32768 bytes). Used by tests for golden-master comparisons.
+    public byte[] GetBlockDataSnapshot() => (byte[])_blockIds.Clone();
+
+    /// Returns the raw block-ID array reference. Used by tests for content comparison.
+    public byte[] Blocks => _blockIds;
     internal byte[]       HeightMapRaw
     {
         get => _heightMap;
@@ -139,7 +145,7 @@ public class Chunk
     internal NibbleArray  BlockLightRaw => _blockLight!;
 
     /// <summary>Resets the height map to all-zero (used before re-calculating sky light on load).</summary>
-    internal void ClearHeightMap() => Array.Clear(_heightMap);
+    public   void ClearHeightMap() => Array.Clear(_heightMap);
 
     // ── Entity bucket management (spec §2 field o, Entity_Spec §3) ───────────
 

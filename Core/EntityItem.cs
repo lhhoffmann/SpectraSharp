@@ -22,6 +22,8 @@ public class EntityItem : Entity
     // ── Fields (spec §2) ─────────────────────────────────────────────────────
 
     public  ItemStack ItemStack;     // obf: a — the carried item
+    /// <summary>Test alias for ItemStack (compatibility with generated test stubs).</summary>
+    public  ItemStack Item => ItemStack;
     private int       _age;          // obf: b — ticks alive; despawn at 6000 (quirk 4)
     public  int       PickupDelay;   // obf: c — must be 0 for pickup to be allowed (quirk 1)
     private float     _rotation;     // obf: d — initial random rotation for visual bob

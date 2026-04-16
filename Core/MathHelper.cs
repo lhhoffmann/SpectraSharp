@@ -16,6 +16,9 @@ public static class MathHelper
     // 65536 single-precision entries covering one full period [0, 2π).
     private static readonly float[] SinTable = new float[65536];
 
+    /// Public accessor for the sine table. Used by tests.
+    public static float[] SineTable => SinTable;
+
     static MathHelper()
     {
         // Spec §4: double arithmetic throughout; cast to float at the end.
@@ -199,5 +202,14 @@ public static class MathHelper
     {
         if (min >= max) return min;
         return rng.NextInt(max - min + 1) + min;
+    }
+
+    /// <summary>
+    /// Overload that accepts a <c>Func&lt;int, int&gt;</c> delegate (e.g. a method group from test fakes).
+    /// </summary>
+    public static int GetRandomIntegerInRange(Func<int, int> nextInt, int min, int max)
+    {
+        if (min >= max) return min;
+        return nextInt(max - min + 1) + min;
     }
 }

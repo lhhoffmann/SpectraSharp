@@ -38,3 +38,6 @@ publish/
 
 # Debug / verification tools — local only, never committed
 Tools/Debug/
+
+# Local environment variables — contains secrets, never committed
+.env

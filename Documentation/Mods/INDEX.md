@@ -1,70 +1,116 @@
 # SpectraSharp Mod Documentation — Index
 
-This folder documents the **Mod Transpiler Pipeline**: the system that automatically
-converts Java-based Minecraft 1.0 mods into native C# plugins for SpectraSharp.
+This folder documents the **Mod Runtime**: the system that runs Java mod JARs of any
+Minecraft version natively on .NET without decompilation or source translation.
 
-> No clean-room protocol applies here. The Mod Transpiler is a compiler —
-> it reads Java by design. Building it is standard software engineering.
+> No clean-room protocol applies. Executing Java bytecode is standard software engineering —
+> we are not reimplementing anything, just hosting existing compiled code.
 
 ---
 
-## How It Works
+## Architecture Overview
 
 ```
 User drops mod.jar into /mods/
         │
         ▼
-[ModWatcher] detects new unprocessed JAR
+[IkvmBridge.Initialize()]          ← one-time at startup
+  - Set IKVM RelaxedVerification
+  - Load MinecraftStubs.v*.dll into Default ALC
+  - Prime ClassMapping with Core types
         │
         ▼
-[ModTranspilerService.ProcessAsync(jar)]
+[ModLoader.LoadAll()]
         │
-        ├─ Phase 1: Vineflower decompiles mod.jar → temp/mods/<ModName>/*.java
+        ├─ Phase 1: VersionDetector.Detect(jar)
+        │           Fingerprint scan → which MC version / loader?
         │
-        ├─ Phase 2: ModDiffer tags each class:
-        │           NEW_CONTENT / OVERRIDE / PASSTHROUGH / LIBRARY
+        ├─ Phase 2: ModCompiler.Compile(jar, mapping)
+        │           ikvmc (IKVM compiler) translates JAR → .NET DLL
+        │           Links against: MinecraftStubs.v*.dll + IKVM.Runtime.dll
+        │           Output: mods/compiled/<ModName>.dll
         │
-        ├─ Phase 3: ANTLR4 parses Java AST → ModManifest
-        │           (BlockDescriptor, ItemDescriptor, InjectionDescriptor, ...)
+        ├─ Phase 3: AssemblyLoadContext.LoadFromAssemblyPath(dll)
+        │           Isolated per-mod ALC (collectible for unload)
         │
-        ├─ Phase 4: Translator converts ModManifest → C# source strings
-        │           using VanillaApiMap lookup table
+        ├─ Phase 4: MixinInterceptor.Intercept(asm)
+        │           Scans for @Mixin annotations (Fabric/Forge mods)
+        │           ClassMapping.Resolve(javaClass) → SpectraSharp.Core type
+        │           HarmonyBridge applies Harmony patches BEFORE OnLoad()
         │
-        ├─ Phase 5: CodeEmitter writes Bridge/Mods/<ModName>/*.cs
+        ├─ Phase 5: ClassMapping.ScanAssembly(asm)
+        │           Auto-registers [JavaClassName] attributes
         │
-        └─ Phase 6: Roslyn compiles → mods/compiled/<ModName>.dll
-                │
-                ▼
-        ModLoader.Load(dll)
-        AssemblyLoadContext → HarmonyLib patches active
-        ISpectraMod.OnLoad(engine) → mod is running
+        └─ Phase 6: ISpectraMod.OnLoad(engine)
+                    Runs inside ModSandbox (500ms watchdog, OOM/SOF guard)
+                    FramePool resets every tick (AllocGuard)
 ```
 
 ---
 
-## Key Reference Files
+## Layer Diagram
+
+```
+mod.jar  ──ikvmc──►  Mod.dll
+                        │
+                        │  references
+                        ▼
+               MinecraftStubs.v*.dll
+               (net.minecraft.* stubs)
+                        │
+                        │  delegates
+                        ▼
+               SpectraSharp.Core
+               (IWorld, IEngine, etc.)
+
+  Mixin patches (Fabric/Forge mods only):
+  MixinInterceptor → ClassMapping → HarmonyBridge → HarmonyLib
+```
+
+---
+
+## Key Files
 
 | File | Purpose |
 |---|---|
-| [Protocols/MOD_TRANSPILER.md](../VoxelCore/Protocols/MOD_TRANSPILER.md) | Full pipeline architecture |
-| [Protocols/ROLE_MOD_CODER.md](../VoxelCore/Protocols/ROLE_MOD_CODER.md) | How to implement each pipeline phase |
-| [Protocols/MOD_ANALYSIS_INTERNALS.md](../VoxelCore/Protocols/MOD_ANALYSIS_INTERNALS.md) | Internal analysis logic (what the program does) |
-| [Mappings/vanilla_api.md](Mappings/vanilla_api.md) | Java → C# API translation table (source for VanillaApiMap.cs) |
+| [../VoxelCore/Protocols/ROLE_MOD_CODER.md](../VoxelCore/Protocols/ROLE_MOD_CODER.md) | Full architecture + implementation order |
+| [Mappings/vanilla_api.md](Mappings/vanilla_api.md) | Java → C# API translation reference |
+
+### Source locations
+
+| Component | Path |
+|---|---|
+| Mod Runtime (loader, sandbox, AllocGuard) | `SpectraSharp.ModRuntime/` |
+| IKVM init + ClassMapping + Mixin pipeline | `SpectraSharp.ModRuntime/Interop/` |
+| Mod compiler (ikvmc wrapper) | `SpectraSharp.ModRuntime/Compiler/` |
+| Version mappings JSON | `SpectraSharp.ModRuntime/Mappings/Data/` |
+| MinecraftStubs v1.0 | `Bridge/JavaStubs/v1_0/` |
+
+---
+
+## Version Support Matrix
+
+| Minecraft Version | Loader | Stubs | Mappings | Status |
+|---|---|---|---|---|
+| 1.0 | ModLoader | `MinecraftStubs.v1_0` | `1.0.json` (obfuscated) | In progress |
+| 1.12.2 | Forge | *(planned)* | `1.12.2.json` (Searge) | Planned |
+| 1.21+ | Fabric / NeoForge | *(planned)* | `1.21.json` (Mojmap) | Planned |
 
 ---
 
 ## Mod Registry
 
-| Mod Name | JAR | Status |
-|---|---|---|
-| *(none yet — transpiler not yet built)* | | |
+| Mod Name | JAR | MC Version | Status |
+|---|---|---|---|
+| *(no mods loaded yet)* | | | |
 
 ## Status Legend
 
 | Status | Meaning |
 |---|---|
-| `[QUEUED]` | JAR in /mods/, transpiler not yet run |
-| `[PROCESSING]` | Transpiler currently running |
-| `[COMPILED]` | DLL built successfully |
-| `[LOADED]` | Plugin active in engine |
-| `[FAILED]` | Transpiler produced errors — check TODO comments in Bridge/Mods/ |
+| `[QUEUED]` | JAR in /mods/, compiler not yet run |
+| `[COMPILED]` | ikvmc produced DLL successfully |
+| `[LOADED]` | Mod active — ISpectraMod.OnLoad() succeeded |
+| `[DISABLED]` | Mod threw unhandled exception — sandbox disabled it |
+| `[KILLED]` | Mod timed out / OOM / StackOverflow — patches reverted |
+| `[FAILED]` | ikvmc compile failed — check ModCompiler log |

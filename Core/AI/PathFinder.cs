@@ -19,7 +19,7 @@ namespace SpectraSharp.Core.AI;
 ///
 /// Source spec: Documentation/VoxelCore/Parity/Specs/MobAI_PathFinder_Spec.md §4
 /// </summary>
-internal sealed class PathFinder
+public sealed class PathFinder
 {
     // ── Block IDs for door check (spec §4 constants) ──────────────────────────
 
