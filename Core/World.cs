@@ -512,6 +512,33 @@ public class World : IWorld
     public void PlaySoundAt(Entity origin, string name, float volume, float pitch) { }
 
     /// <summary>
+    /// obf: <c>a(c box, oi material)</c> — containsAnyLiquid / containsMaterial.
+    /// Returns true if any block in the AABB matches the given material type.
+    /// Stub: only checks for Water material via flood-fill scan of the box extents.
+    /// </summary>
+    public bool ContainsMaterial(AxisAlignedBB box, Material material)
+    {
+        int x0 = (int)Math.Floor(box.MinX);
+        int y0 = (int)Math.Floor(box.MinY);
+        int z0 = (int)Math.Floor(box.MinZ);
+        int x1 = (int)Math.Ceiling(box.MaxX);
+        int y1 = (int)Math.Ceiling(box.MaxY);
+        int z1 = (int)Math.Ceiling(box.MaxZ);
+
+        for (int x = x0; x < x1; x++)
+        for (int y = y0; y < y1; y++)
+        for (int z = z0; z < z1; z++)
+        {
+            int id = GetBlockId(x, y, z);
+            if (id <= 0 || id >= Block.BlocksList.Length) continue;
+            var block = Block.BlocksList[id];
+            if (block != null && block.BlockMaterial == material)
+                return true;
+        }
+        return false;
+    }
+
+    /// <summary>
     /// Combined light level 0–15: max(sky − SkyDarkening, block). Spec: <c>world.getLightBrightness(x,y,z)</c>.
     /// </summary>
     public int GetLightBrightness(int x, int y, int z)
@@ -858,22 +885,35 @@ public class World : IWorld
     /// </summary>
     public void MainTick()
     {
-        // 1. Advance world time
-        _worldTime      = (_worldTime + 1) % 24000;
+        // 1. Advance world time (spec WorldServer §4.1 — running long, never wraps)
+        _worldTime      += 1;
         _totalWorldTime += 1;
+        if (WorldInfo != null) WorldInfo.Time = _worldTime;
 
-        // 2. Recompute sky darkening for time-of-day / weather (spec: p())
+        // 2. Weather tick (spec WorldServer §6)
+        if (!IsClientSide)
+        {
+            TickWeather();
+
+            // Auto-save every 40 ticks (spec §5.1) — saves WorldInfo (level.dat)
+            if (_totalWorldTime % _autoSaveInterval == 0 && WorldInfo != null)
+            {
+                SaveHandler?.SaveLevelDat(WorldInfo);
+            }
+        }
+
+        // 3. Recompute sky darkening for time-of-day / weather (spec: p())
         UpdateSkyDarkening();
 
-        // 3. ChunkLoader tick
+        // 4. ChunkLoader tick
 
-        // 4. Tick entities + tile entities (spec: m(), called once per game tick)
+        // 5. Tick entities + tile entities (spec: m(), called once per game tick)
         TickEntities();
 
-        // 5. Process scheduled block updates (up to 1000 per tick)
+        // 6. Process scheduled block updates (up to 1000 per tick)
         ProcessScheduledTicks(false);
 
-        // 6. Tick loaded chunks (random block ticks)
+        // 7. Tick loaded chunks (random block ticks)
         TickChunks();
     }
 
@@ -1193,6 +1233,54 @@ public class World : IWorld
         brightness *= 1f - _rainStrength    * (5f / 16f);
         brightness *= 1f - _thunderStrength * (5f / 16f);
         SkyDarkening = (int)((1f - brightness) * 11f);
+    }
+
+    /// <summary>
+    /// Moon phase index 0–7. Phase 0 = full moon, 4 = new moon.
+    /// Spec: WorldServer §4.3 — <c>(worldTime / 24000) % 8</c>.
+    /// Used by mob spawn rates and slime spawning.
+    /// </summary>
+    public int MoonPhase => (int)((_worldTime / 24000L) % 8L);
+
+    /// <summary>
+    /// Weather toggle + rain/thunder strength lerp. Spec: WorldServer §6.
+    /// Runs server-side only; reads and writes WorldInfo rain/thunder state.
+    /// </summary>
+    private void TickWeather()
+    {
+        if (WorldInfo == null || WorldInfo.Hardcore) return;
+
+        // ── Rain toggle (spec §6.1) ───────────────────────────────────────────
+        WorldInfo.RainTime--;
+        if (WorldInfo.RainTime <= 0)
+        {
+            WorldInfo.Raining = !WorldInfo.Raining;
+            WorldInfo.RainTime = WorldInfo.Raining
+                ? Random.NextInt(12000) + 3600   // 3–9 min of rain
+                : Random.NextInt(168000) + 12000; // 10–150 min of clear
+        }
+
+        // ── Thunder toggle (spec §6.3) ────────────────────────────────────────
+        WorldInfo.ThunderTime--;
+        if (WorldInfo.ThunderTime <= 0)
+        {
+            WorldInfo.Thundering = !WorldInfo.Thundering;
+            WorldInfo.ThunderTime = WorldInfo.Thundering
+                ? Random.NextInt(12000) + 12000   // 10–20 min of thunder
+                : Random.NextInt(168000) + 12000; // 10–150 min of calm
+        }
+
+        // ── Rain strength lerp (spec §6.2) ± 0.01F per tick ──────────────────
+        _prevRainStrength = _rainStrength;
+        _rainStrength = WorldInfo.Raining
+            ? Math.Min(_rainStrength + 0.01f, 1.0f)
+            : Math.Max(_rainStrength - 0.01f, 0.0f);
+
+        // ── Thunder strength lerp ─────────────────────────────────────────────
+        _prevThunderStrength = _thunderStrength;
+        _thunderStrength = WorldInfo.Thundering
+            ? Math.Min(_thunderStrength + 0.01f, 1.0f)
+            : Math.Max(_thunderStrength - 0.01f, 0.0f);
     }
 
     // ── Weather queries (spec §15 / BlockFire_Spec §11) ──────────────────────

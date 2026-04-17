@@ -28,6 +28,12 @@ public sealed class InventoryPlayer : IInventory
     /// <summary>obf: <c>c</c> — currently selected hotbar slot (0–8).</summary>
     public int CurrentItem;
 
+    /// <summary>
+    /// obf: <c>i()</c> / <c>a(dk)</c> — cursor item (held while a container is open).
+    /// Not part of the inventory proper; lives outside the slot arrays.
+    /// </summary>
+    public ItemStack? CursorStack;
+
     private readonly EntityPlayer _owner;
 
     // ── Constructor ───────────────────────────────────────────────────────────
@@ -103,6 +109,14 @@ public sealed class InventoryPlayer : IInventory
 
     /// <summary>obf: <c>k()</c> — no-op.</summary>
     public void CloseChest() { }
+
+    // ── Cursor stack accessors (spec §2 — obf: i() / a(dk)) ─────────────────
+
+    /// <summary>obf: <c>i()</c> — returns the cursor stack (held during container open).</summary>
+    public ItemStack? GetItemStack() => CursorStack;
+
+    /// <summary>obf: <c>a(dk)</c> — sets the cursor stack.</summary>
+    public void SetItemStack(ItemStack? stack) { CursorStack = stack; }
 
     // ── Additional methods (spec §4) ──────────────────────────────────────────
 
@@ -186,6 +200,35 @@ public sealed class InventoryPlayer : IInventory
         }
 
         return incoming.StackSize == 0;
+    }
+
+    /// <summary>
+    /// Returns true if the main inventory contains at least one stack of the item
+    /// with the given registry index.
+    /// </summary>
+    public bool HasItem(int registryIndex)
+    {
+        foreach (var slot in MainInventory)
+            if (slot != null && slot.ItemId == registryIndex && slot.StackSize > 0)
+                return true;
+        return false;
+    }
+
+    /// <summary>
+    /// Removes one item with the given registry index from the main inventory.
+    /// Scans from hotbar outward. No-op if the item is not present.
+    /// </summary>
+    public void ConsumeItem(int registryIndex)
+    {
+        for (int i = 0; i < MainInventory.Length; i++)
+        {
+            var slot = MainInventory[i];
+            if (slot == null || slot.ItemId != registryIndex || slot.StackSize <= 0) continue;
+            slot.StackSize--;
+            if (slot.StackSize == 0) MainInventory[i] = null;
+            OnInventoryChanged();
+            return;
+        }
     }
 
     // ── NBT serialization (spec: PlayerNBT_Spec §6) ───────────────────────────

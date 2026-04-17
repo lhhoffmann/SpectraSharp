@@ -14,7 +14,7 @@ namespace SpectraEngine.Core.TileEntity;
 ///
 /// Source spec: Documentation/VoxelCore/Parity/Specs/TileEntity_Spec.md §5
 /// </summary>
-public sealed class TileEntityFurnace : TileEntity
+public sealed class TileEntityFurnace : TileEntity, IInventory
 {
     private const int SlotCount  = 3;
     private const int CookTarget = 200;
@@ -29,6 +29,11 @@ public sealed class TileEntityFurnace : TileEntity
     private int _burnTime;            // obf: a — ticks of fuel remaining
     private int _currentItemBurnTime; // obf: b — total ticks of last fuel (for UI bar)
     private int _cookTime;            // obf: j — ticks current input has been cooking
+
+    // Public accessors for ContainerFurnace data sync (spec §6.2-6.3)
+    public int BurnTime        { get => _burnTime;            set => _burnTime            = value; }
+    public int CurrentBurnTime { get => _currentItemBurnTime; set => _currentItemBurnTime = value; }
+    public int CookTime        { get => _cookTime;            set => _cookTime            = value; }
 
     // ── NBT (spec §5.2) ───────────────────────────────────────────────────────
 
@@ -91,13 +96,12 @@ public sealed class TileEntityFurnace : TileEntity
             _cookTime = 0; // cook resets when not active (quirk 1)
         }
 
-        // Lit / unlit block swap
+        // Lit / unlit block swap — routes through BlockFurnace.SetLitState (spec §2.7)
         bool isBurning = _burnTime > 0;
         if (wasBurning != isBurning)
         {
             changed = true;
-            int newId = isBurning ? BlockFurnaceOn : BlockFurnaceOff;
-            World.SetBlock(X, Y, Z, newId);
+            BlockFurnace.SetLitState(World, X, Y, Z, isBurning);
         }
 
         if (changed) MarkDirty();
@@ -153,4 +157,46 @@ public sealed class TileEntityFurnace : TileEntity
 
         return 0;
     }
+
+    // ── IInventory ────────────────────────────────────────────────────────────
+
+    public int GetSizeInventory() => SlotCount;
+
+    public ItemStack? GetStackInSlot(int slot) => Slots[slot];
+
+    public ItemStack? DecrStackSize(int slot, int count)
+    {
+        if (Slots[slot] == null) return null;
+        if (Slots[slot]!.StackSize <= count)
+        {
+            var s = Slots[slot]; Slots[slot] = null; MarkDirty(); return s;
+        }
+        var split = Slots[slot]!.SplitStack(count);
+        MarkDirty();
+        return split;
+    }
+
+    public void SetInventorySlotContents(int slot, ItemStack? stack)
+    {
+        Slots[slot] = stack;
+        if (stack != null && stack.StackSize > GetInventoryStackLimit())
+            stack.StackSize = GetInventoryStackLimit();
+        MarkDirty();
+    }
+
+    public string GetInvName()             => "container.furnace";
+    public int    GetInventoryStackLimit() => 64;
+    public void   OnInventoryChanged()     => MarkDirty();
+
+    public bool IsUseableByPlayer(EntityPlayer player)
+    {
+        if (World == null) return false;
+        double dx = player.PosX - (X + 0.5);
+        double dy = player.PosY - (Y + 0.5);
+        double dz = player.PosZ - (Z + 0.5);
+        return dx * dx + dy * dy + dz * dz < 64.0;
+    }
+
+    public void OpenChest()  { }
+    public void CloseChest() { }
 }

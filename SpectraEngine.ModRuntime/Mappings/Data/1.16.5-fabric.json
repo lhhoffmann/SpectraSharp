@@ -1,0 +1,25 @@
+{
+  "version": "1.16.5",
+  "obfuscated": false,
+  "stubs_version": "v1_16",
+  "loaders": ["fabric"],
+  "mojmap": true,
+  "fingerprints": [
+    "file:fabric.mod.json",
+    "bytecode:net/fabricmc/api/ModInitializer"
+  ],
+  "classes": {
+    "net.minecraft.world.World":                          "net.minecraft.world.World",
+    "net.minecraft.block.Block":                          "net.minecraft.block.Block",
+    "net.minecraft.item.Item":                            "net.minecraft.item.Item",
+    "net.minecraft.item.ItemStack":                       "net.minecraft.item.ItemStack",
+    "net.minecraft.util.math.BlockPos":                   "net.minecraft.util.math.BlockPos",
+    "net.minecraft.entity.Entity":                        "net.minecraft.entity.Entity",
+    "net.minecraft.entity.LivingEntity":                  "net.minecraft.entity.LivingEntity",
+    "net.minecraft.entity.player.PlayerEntity":           "net.minecraft.entity.player.PlayerEntity",
+    "net.minecraft.util.ResourceLocation":                "net.minecraft.util.ResourceLocation",
+    "net.fabricmc.api.ModInitializer":                    "net.fabricmc.api.ModInitializer",
+    "net.fabricmc.loader.api.FabricLoader":               "net.fabricmc.loader.api.FabricLoader",
+    "net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents": "net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents"
+  }
+}

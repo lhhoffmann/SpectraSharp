@@ -1,3 +1,5 @@
+using SpectraEngine.Core.Items;
+
 namespace SpectraEngine.Core;
 
 /// <summary>
@@ -77,7 +79,7 @@ public class Item
     /// Spec: <c>protected acy(int id)</c>.
     /// Stores this at <c>ItemsList[256 + id]</c>. Conflict is non-fatal (quirk 1).
     /// </summary>
-    protected Item(int id)
+    public Item(int id)
     {
         RegistryIndex = 256 + id;
         if (ItemsList[RegistryIndex] != null)
@@ -220,10 +222,30 @@ public class Item
     public virtual bool OnBlockDestroyed(ItemStack stack, int x, int y, int z, object entity) => false;
 
     /// <summary>
+    /// obf: <c>a(dk, ry, vi, int)</c> — onPlayerStoppedUsing.
+    /// Called when right-click is released while the item was being used.
+    /// Base is a no-op.
+    /// </summary>
+    public virtual void OnPlayerStoppedUsing(ItemStack stack, World world, object player, int remainingTicks) { }
+
+    /// <summary>
+    /// obf: <c>c()</c> — enchantability value. Used by <see cref="Enchantments.EnchantmentHelper"/>
+    /// to gate whether an item can be enchanted and to scale power roll variance.
+    /// Delegates to <see cref="GetItemEnchantability"/> so subclasses only need one override.
+    /// </summary>
+    public virtual int GetEnchantability() => GetItemEnchantability();
+
+    /// <summary>
     /// obf: <c>a()</c> — isItemTool. Returns false base.
     /// True for tools (ItemTool, ItemSword, ItemHoe) — enables block reach and tool checks.
     /// </summary>
     public virtual bool IsItemTool() => false;
+
+    /// <summary>
+    /// obf: <c>d(dk)</c> — getRarity. Base returns <see cref="ItemRarity.Common"/> (white tooltip).
+    /// Override to return Uncommon, Rare, or Epic for special items.
+    /// </summary>
+    public virtual ItemRarity GetRarity(ItemStack? stack = null) => ItemRarity.Common;
 
     // ── toString ──────────────────────────────────────────────────────────────
 

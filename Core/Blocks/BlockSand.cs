@@ -20,21 +20,39 @@ public class BlockSand : Block
         if (y <= 0) return;
         if (!IsFallable(world, x, y - 1, z)) return;
 
-        // Instant-fall mode (equivalent to Block.a=true / world-gen mode).
-        // Scan downward to the lowest free position, then teleport the block.
-        int targetY = y - 1;
-        while (targetY > 0 && IsFallable(world, x, targetY - 1, z))
-            targetY--;
-
-        world.SetBlock(x, y, z, 0);          // remove from current position
-        world.SetBlock(x, targetY, z, BlockID); // place at resting position
+        if (world is World concreteWorld)
+        {
+            // Spawn EntityFallingSand (spec EntityFallingSand §4 — entity-based gravity)
+            concreteWorld.SetBlock(x, y, z, 0);
+            var entity = new EntityFallingSand(concreteWorld, x + 0.5, y, z + 0.5, BlockID);
+            concreteWorld.SpawnEntity(entity);
+        }
+        else
+        {
+            // Instant-fall fallback for headless / world-gen contexts
+            int targetY = y - 1;
+            while (targetY > 0 && IsFallable(world, x, targetY - 1, z))
+                targetY--;
+            world.SetBlock(x, y, z, 0);
+            world.SetBlock(x, targetY, z, BlockID);
+        }
     }
 
-    /// <summary>Returns true if this block can fall into the block at (x, y, z).</summary>
+    /// <summary>
+    /// Returns true if this block can fall into the block at (x, y, z).
+    /// Air, water (8/9), lava (10/11), fire (51) are all fallable targets.
+    /// </summary>
     protected static bool IsFallable(IBlockAccess world, int x, int y, int z)
     {
         int id = world.GetBlockId(x, y, z);
-        // Air, flowing water, still water, flowing lava, still lava, fire
         return id == 0 || id == 8 || id == 9 || id == 10 || id == 11 || id == 51;
     }
+
+    /// <summary>
+    /// Returns true if the block at (x, y, z) would itself fall (used by EntityFallingSand
+    /// to prevent stacking a newly-landed block on top of another falling sand entity).
+    /// Spec: EntityFallingSand §4 step 8 — <c>BlockSand.isFallingBelow(world, x, y-1, z)</c>.
+    /// </summary>
+    public static bool IsFallingBelow(IBlockAccess world, int x, int y, int z)
+        => IsFallable(world, x, y, z);
 }

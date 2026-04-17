@@ -32,7 +32,9 @@ public abstract class TileEntity
         { 68, () => new TileEntitySign()       },  // wall sign
         { 25, () => new TileEntityNote()       },  // note block
         { 36, () => new TileEntityPiston()     },  // moving piston (blank — replaced by SetTileEntity)
-        { 84, () => new TileEntityJukebox()    },  // jukebox
+        { 84, () => new TileEntityJukebox()          },  // jukebox
+        { 116, () => new TileEntityEnchantmentTable() },  // enchantment table
+        { 117, () => new TileEntityBrewingStand()     },  // brewing stand
     };
 
     /// <summary>
@@ -54,7 +56,7 @@ public abstract class TileEntity
         // Remaining registered TEs — stub (no additional NBT):
         Register<TileEntityPiston>         ("Piston");
         Register<TileEntityBrewingStand>   ("Cauldron");
-        Register<TileEntityEnchantTable>   ("EnchantTable");
+        Register<TileEntityEnchantmentTable>("EnchantTable");
         Register<TileEntityJukebox>        ("RecordPlayer");
         Register<TileEntityEndPortal>      ("Airportal");
     }

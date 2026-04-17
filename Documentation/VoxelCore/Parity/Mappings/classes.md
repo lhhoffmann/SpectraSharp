@@ -450,7 +450,10 @@ Obfuscated name (as found in `temp/decompiled/`) → MCP/human-readable name.
 | `ol` | `WorldProviderEnd` | End dimension provider; dim=1; `g()=new dh(100,50,0)`; fog=0x808080×0.15F; `e=true` (no sky), `c=true` (sleeping disabled), `g=1`; `c()=new a(world,seed)` |
 | `uu` | `BiomeSky` | End biome decorator; extends `ql`; field `L=new oh(yy.bJ.bM)` (spike generator); 1/5 chance spike per populate; spawns Ender Dragon `oo` at (0.0,128.0,0.0) only for chunk (0,0) |
 | `oh` | `WorldGenEndSpike` | End obsidian pillar generator; validates end stone floor; random height nextInt(32)+6=[6,37], radius nextInt(4)+1=[1,4]; obsidian cylinder (yy.ap.bM=49); EntityEnderCrystal `sf` on top; bedrock cap (yy.z.bM=7) |
-| `oo` | `EntityDragon` | Ender Dragon boss entity; spawned at (0.0,128.0,0.0) during End chunk populate (chunk 0,0 only) |
+| `oo` | `EntityDragon` | Ender Dragon boss entity (EntityList "EnderDragon", ID 63); extends `adh` (EntityBoss); max health 200; 7-part body (vc); flying AI with 64-entry position ring buffer; wing knockback + head melee 10 dmg; crystal healing 1HP/10t; 200-tick death sequence; generates exit portal at Y=64 on death |
+| `adh` | `EntityBoss` | Abstract boss base; extends `nq`; immune to all damage via `a(pm,int)=false`; `e(pm,int)=super.a()` bypass; `f_()=bI` maxHealth |
+| `vc` | `EntityBodyPart` | Multi-part body segment; extends `ia`; holds parent reference `a` and name `b`; delegates all damage to `parent.a(this,pm,int)`; no NBT; `h(ia)=true` for self or parent |
+| `sf` | `EntityEnderCrystal` | Ender Crystal entity; extends `ia`; hitbox 2.0×2.0; noClip; places fire block each tick at own position; 1-shot kill → explosion power 6.0; no NBT persistence; DataWatcher slot 8 = health/state |
 | `sf` | `EntityEnderCrystal` | End crystal entity; placed on top of obsidian pillars by `oh` |
 | `rl` | `BlockEndPortalFrame` | BlockEndPortalFrame (ID 120); texture 159; meta bits 0-1=facing, bit 2=hasEye; `e(meta)=(meta&4)!=0`; AABB 0–0.8125; hardness=-1 (unbreakable); light 0.125F; drops nothing; facing set from player yaw on placement |
 | `aid` | `BlockEndPortal` | BlockEndPortal (ID 119); extends `ba` (TileEntityRegistry); TileEntity `yg`; AABB 1/16 thick; no collision; `onEntityCollided→player.c(1)` teleport; self-destructs in non-overworld on `onBlockAdded`; static `a` guard |
@@ -466,6 +469,123 @@ Obfuscated name (as found in `temp/decompiled/`) → MCP/human-readable name.
 | `aaf` | `BlockPortalBase` | Abstract base class for `sc` (BlockPortal); exact function unknown |
 | `aim` | `PortalTravelAgent` | Portal link manager; `a(world,entity)`: for dim==1 places 5×5 obsidian floor+3-high air; for Nether calls `b()` find then `c()` create; `b()` radius=128; `c()` radius=16, 2-phase + emergency at Y=70, builds 4×5 obsidian frame with 2×3 portal interior |
 | `ou` | `ItemFlintAndSteel` | Flint and Steel item (ID 259); bN=1; durability=64; `onItemUse` places fire on adjacent air; always damages 1 durability; portal ignition indirect via BlockFire→sc.g() |
+
+## Ranged Combat / Fishing Classes
+
+| Obfuscated | Human name | Notes |
+|---|---|---|
+| `il` | `ItemBow` | Bow item (ID 261 = 256+5); durability 384; charge formula `power=(f²+2f)/3` where f=ticksCharged/20; arrow fired in `onPlayerStoppedUsing`; requires arrows in inventory (acy.k) or Creative; critical at power==1.0; use action ps.e; texture col5 row1 |
+| `ro` | `EntityArrow` | Arrow entity (EntityList "Arrow", ID 10); hitbox 0.5×0.5; gravity 0.05/tick, air drag 0.99, water drag 0.8; fields: e/f/g=xTile/yTile/zTile, aq=inGround, a=isPlayerArrow, b=shake, c=shooter, ar=ticksInGround, d=isCritical; despawn ar==1200; pickup when aq+isPlayer+shake==0; shooter NOT saved to NBT |
+| `hd` | `ItemFishingRod` | Fishing rod item (ID 346 = 256+90); durability 64; cast spawns ael; reel-in calls ael.g() → returns durability cost 0/1/2/3 |
+| `ael` | `EntityFishHook` | Fish hook entity (NOT in EntityList, no NBT persistence); hitbox 0.25×0.25; cast velocity ≈0.6 b/t; fish bite: 1/500 roll (1/300 with sky), ar=nextInt(30)+10 countdown; reel-in: entity pull (cost 3) / raw fish (cost 1) / ground (cost 2) / empty (cost 0); player.ci = this |
+| `it` | `EntitySkeleton` | Skeleton mob (EntityList "Skeleton", ID 51); fires ro at targets <10 blocks; arrow speed 1.6 spread 12; cooldown aT=60; holds acy.j (bow); drops 0–2 arrows + 0–2 bones; sunlight per-tick burn check; Sniper achievement at ≥50 block kill |
+
+---
+
+## Enchanting / XP Classes
+
+| Obfuscated | Human name | Notes |
+|---|---|---|
+| `fk` | `EntityXPOrb` | XP orb entity (EntityList "XPOrb", ID 2); hitbox 0.5×0.5; gravity 0.03/tick; attracted to nearest player ≤8 blocks; despawn at age2≥6000 ticks; 10 value tiers via `h()` threshold array; xpValue=field `e`; NBT: Health/Age/Value |
+| `sy` | `BlockEnchantmentTable` | Enchantment table block (ID 116); AABB 0–0.75 height; hardness 5.0 resistance 2000; TileEntity=`rq`; random-tick spawns "enchantmenttable" particles toward bookshelves with LOS check; onActivate opens `ahk` container |
+| `rq` | `TileEntityEnchantmentTable` | Enchantment table TE — animated floating book; tracks nearest player within 3 blocks; fields: a=tickCounter, b/j=openAmount curr/prev, m/n=bookLift curr/prev, o/p=bookRotation curr/prev, q=targetAngle; renderer: `wn` |
+| `wn` | `TileEntityEnchantmentTableRenderer` | Client-side book animation renderer; extends `du` (TileEntityRenderer); draws "/item/book.png" above the table |
+| `ahk` | `ContainerEnchantment` | Enchantment container; 1 input slot + player inventory (36); `c[3]`=slot levels synced to clients; `b`=long seed (nextLong on item placement); bookshelf scan: 8-adjacent gap check then ±2 bookshelf positions; slot levels via `ml.a()`; enchanting deducts levels via `player.l()` |
+| `ml` | `EnchantmentHelper` | Static enchantment utilities; `a(Random,slot,bookshelfBonus,item)` = slot level formula; `a(Random,item,power)` = weighted enchantment selection; various enchantment-level lookup helpers (getLevel, damage reduction, etc.) |
+| `aef` | `Enchantment` | Abstract enchantment base; `b[]`=static registry[256]; fields: t=ID, a=weight, u=target, v=name; 19 registered instances (c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s); default min=1+L×10, max=min+5, maxLevel=1 |
+| `ii` | `EnchantmentProtection` | Protection group (subtypes 0-4: Protection/FireProtection/FeatherFalling/BlastProtection/ProjectileProtection); maxLevel=4; FeatherFalling target overridden to boots only; group mutually exclusive except FeatherFalling can coexist |
+| `vu` | `EnchantmentRespiration` | Respiration (ID 5, max 3); min=10×L, max=10×L+30; target: helmet |
+| `adz` | `EnchantmentAquaAffinity` | Aqua Affinity (ID 6, max 1); min=1, max=41; target: helmet |
+| `ap` | `EnchantmentDamage` | Sword damage group (subtypes 0/1/2: Sharpness/Smite/BaneOfArthropods); maxLevel=5; all three mutually exclusive; damage bonus applied in LivingEntity damage pipeline |
+| `dz` | `EnchantmentKnockback` | Knockback (ID 19, max 2); min=5+20×(L-1), max=1+L×10+50 (uses super.a) |
+| `aie` | `EnchantmentFireAspect` | Fire Aspect (ID 20, max 2); min=10+20×(L-1), max=1+L×10+50 (uses super.a) |
+| `qn` | `EnchantmentLootBonus` | Looting (ID 21, sword, max 3) and Fortune (ID 35, tool, max 3); min=20+(L-1)×12, max=1+L×10+50; Looting and Fortune are each mutually exclusive with SilkTouch |
+| `kr` | `EnchantmentDigging` | Efficiency (ID 32, max 5); min=1+15×(L-1), max=1+L×10+50 |
+| `gi` | `EnchantmentUntouching` | Silk Touch (ID 33, max 1); min=25, max=61; mutually exclusive with Fortune |
+| `dq` | `EnchantmentDurability` | Unbreaking (ID 34, max 3); min=5+(L-1)×10, max=1+L×10+50 |
+| `vs` | `EnchantmentData` | Enchantment+level pair; extends `abt` (weighted item) with weight=enchantment.weight; used by weighted-random selection in `ml` |
+| `q` | `EnumEnchantmentType` | Enum of enchantment targets; `b`=armor, `c`=boots, `d`=leggings, `e`=chestplate, `f`=helmet, `g`=sword, `h`=tool; `a(item)` dispatches by item type |
+
+## Container / Inventory Classes
+
+| Obfuscated | Human name | Notes |
+|---|---|---|
+| `pj` | `Container` | Abstract container base; `e`=List<Slot>, `d`=snapshots, `g`=ICrafting listeners; click handler (left/right/shift/slotId=-999 drop); merge helper |
+| `vv` | `Slot` | One inventory cell in a container; fields `c`=IInventory, `a`=slotIndex, `e`=screenX, `f`=screenY; `b()`=getItem, `a(dk)`=canPutInSlot |
+| `ace` | `ContainerWorkbench` | 3×3 crafting grid container (slot 0=SlotCrafting, 1–9=grid, 10–45=player); opened by BlockWorkbench |
+| `gd` | `ContainerPlayer` | 2×2 crafting + 4 armor slots container; opened by E key; validity always true |
+| `eg` | `ContainerFurnace` | Furnace container; slots 0=input(56,17), 1=fuel(56,53), 2=output(116,35); syncs cookTime/burnTime to clients via data IDs 0/1/2 |
+| `ak` | `ContainerChest` | Chest container; variable rows `b=inventory.c()/9`; calls inventory.j()/k() on open/close |
+| `afe` | `SlotCrafting` | Output slot for crafting grids; reads recipe result from `sl` on any change |
+| `ie` | `SlotFurnaceOutput` | Output slot for furnace; only allows taking, not placing |
+| `pi` | `SlotArmor` | Armor slot; accepts only matching armor type |
+| `lm` | `CraftingInventory` | NxM grid IInventory for crafting grids; constructed as `lm(pj container, int width, int height)` |
+| `iy` | `OutputInventory` | Single-slot output buffer for crafting result |
+| `adv` | `InventoryLargeChest` | Combines two IInventory into 54-slot view; slots 0–26=left chest, 27–53=right |
+| `sl` | `CraftingManager` | Shaped/shapeless recipe registry singleton; `a()` adds shaped recipe, `b()` adds shapeless; tool repair special-case; loads 7 helper classes |
+| `mt` | `FurnaceRecipes` | Smelting recipe singleton; 15 input→output pairs |
+| `abd` | `ICrafting` | Listener interface; notified on slot change via `a(pj, slotIndex, ItemStack)` |
+
+## Potion / Item Classes
+
+| Obfuscated | Human name | Notes |
+|---|---|---|
+| `abg` | `Potion` | Potion effect type registry; 19 effects in 1.0 (IDs 1–19), 20–31 null; fields H=ID, I=name, J=icon, K=isBad, L=factor, M=ambient, N=color; performEffect per-tick; shouldTrigger interval formula |
+| `s` | `PotionEffect` | Active effect instance; fields a=effectId, b=durationTicks, c=amplifier; `a(nq)` tick method; `a(s)` combine (higher amp or longer duration) |
+| `abk` | `ItemPotion` | Potion item (ID 373); stack 1; splash = `(meta & 16384) != 0`; drink applies `pk.b(meta,false)` effects; returns glass bottle `acy.bs` |
+| `pk` | `PotionHelper` | Metadata decoder via formula strings; 32 prefix name strings for mundane potions |
+| `py` | `InstantPotion` | Extends `abg`; overrides `a()`=true; used for Instant Health/Harm (IDs 6/7) |
+| `en` | `ItemBucket` | Bucket item (ID 325=empty, 326=water, 327=lava); field `a`=fluid block ID; picks up still water/lava; places on right-click |
+| `om` | `ItemMilkBucket` | Milk bucket item (ID 335); separate class from `en`; obtained from cow (`adr`); clears all potion effects on drink |
+| `abo` | `ItemShears` | Shears item (ID 359); durability 238; speed 15F for leaves/tallgrass, 5F for wool; blocks `yy.K/W/X/bu` cost 1 durability |
+| `my` | `ItemSign` | Sign item (ID 323); stack 1; face==1→floor sign `yy.aD` meta=`(yaw+180)*16/360` &15; face 2-5→wall sign `yy.aI` meta=face; opens sign GUI |
+| `afk` | `ItemGoldenApple` | Golden apple item (ID 322); extends `agu` (ItemFood); `g(dk)=true` (always edible); `d(dk)=ja.d` (epic rarity) |
+| `xv` | `ItemDye` | Dye item (ID 351); 16 metadata colors; meta 15=bonemeal (grows plants); other metas dye wool/sheep; texture = `bO + meta%8*16 + meta/8` |
+
+## Village Structure Classes
+
+| Obfuscated | Human name | Notes |
+|---|---|---|
+| `xf` | `VillagePiece` | Abstract building piece base; extends `nk`; stores BoundingBox `e`, facing `f`, ground height `a`; `b(ry,nl)` scans ground height |
+| `za` | `VillageRoadBase` | Abstract road piece base; extends `xf`; marker class only |
+| `nk` | `StructurePiece` | Abstract piece for all structures; AABB, facing; `a(List,nl)` collision query; `a(yp,List,Random)` expansion |
+| `aan` | `WeightedPiece` | Weight+count descriptor for village piece selection; fields a=class, b=weight, c=currentCount, d=maxCount |
+| `xy` | `VillagePieceRegistry` | Static helper; `a(Random,depth)` builds weighted piece list; `c()` selects piece; road depth limit 3+b, building radius 112 |
+| `yp` | `VillageStartPiece` | Village starting node; extends `aia`; fields a=WorldChunkManager, b=depth, c=lastPieceType, d=pieceList, h=roadQueue, i=buildingQueue |
+| `yo` | `VillageStart` | StructureStart for villages; valid if >2 non-road pieces generated |
+| `uy` | `VillageSmallHut` | 5×6×5 small hut; cobblestone walls, plank roof, random fence variant; weight 4 |
+| `uz` | `VillageLargeHouse` | 5×12×9 large two-storey house; oak+glass; chest inside; weight 20 |
+| `gs` | `VillageBlacksmith` | 9×9×6 open-front building; stone/sandstone walls; weight 20 |
+| `wi` | `VillageHouseSmall2` | 4×6×5 small house; random `b` roof flag + `c` material variant; weight 3 |
+| `acz` | `VillageLibrary` | 9×7×11 library; bookshelves, fence-enclosed; weight 15 |
+| `ec` | `VillageFarmLarge` | 13×4×9 farm; farmland rows, fence perimeter, crops; weight 3 |
+| `agr` | `VillageFarmSmall` | 7×4×9 small farm; weight 3 |
+| `ko` | `VillageHouseLarge2` | 10×6×7 large house; stone-brick roof band; weight 15 |
+| `tf` | `VillageChurch` | 9×7×12 tall building; weight 8 |
+| `abj` | `VillageWell` | 3×4×2 well; cobblestone column + water cross pattern at top |
+| `ahz` | `VillageStreet` | Road segment between buildings; extends `za`; spawns buildings on both sides, branches at ends |
+
+## Stronghold Piece Classes
+
+| Obfuscated | Human name | Notes |
+|---|---|---|
+| `os` | `StrongholdPiece` | Abstract base; stores BoundingBox, facing direction, door type (`mj`), depth counter |
+| `mj` | `DoorType` | Door-type enum: `a`=open archway, `b`=wood door (ID 64), `c`=iron door (ID 71), `d`=iron bar grating (ID 101) |
+| `tc` | `StrongholdPieceFactory` | Static factory; `c()` recursively extends branches; depth limit 50; XZ radius 112; `vn` fallback terminator |
+| `ci` | `WeightedPiece` | Weight+count descriptor; fields: class, weight, maxCount; `iz` and `th` are subclasses for Library and PortalRoom |
+| `aeh` | `StrongholdStart` | Extends `vl`; additional fields: `a`=last piece type used, `b`=portal room reference (`ir`), `c`=all-pieces list |
+| `gp` | `SimpleCorridor` | 5×5×7; primary stone-brick corridor; cobwebs + torches; 1 forward exit |
+| `vn` | `StraightCorridor` | 5×5×var; fallback terminator piece; variable length `a`; no loot |
+| `fj` | `Prison` | 9×5×11; iron-bar cells; chest loot; 1 forward exit |
+| `hq` | `LeftTurn` | 5×5×5; 90° left turn; no features |
+| `xg` | `RightTurn` | 5×5×5; 90° right turn; no features |
+| `jt` | `Crossing` | 11×7×11; up to 3 exits (F/L/R); torch + cobblestone column supports |
+| `kt` | `LargeRoom` | 10×9×11; forced as first piece after `aeh`; 2 exits; chest loot |
+| `so` | `SpiralStairs` | 5×11×8; stone-brick slab spiral; descends 7 blocks; 1 exit at bottom |
+| `vl` | `StraightStairs` | 5×11×5; straight flight; descends 7 blocks; isStart=true → forces `kt` ahead |
+| `ys` | `SmallRoom` | 5×5×7; dead-end alcove; possible chest |
+| `zc` | `Library` | 14×11×15 (tall, c=false) or 14×6×15 (short, c=true); bookshelves + loot chest; max 2 per stronghold |
+| `ir` | `PortalRoom` | 11×8×16; sets `((aeh)parent).b=this`; End Portal Frame (ID 120); water pool; silverfish spawner (`ze`); max 1 per stronghold |
 
 ---
 

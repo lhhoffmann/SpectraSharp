@@ -40,6 +40,7 @@ public sealed class BlockRedstoneWire : Block
     }
 
     public override bool IsOpaqueCube() => false;
+    public override int  GetRenderType()  => 5;
     public override bool RenderAsNormalBlock() => false;
     public override AxisAlignedBB? GetCollisionBoundingBoxFromPool(IWorld world, int x, int y, int z) => null;
     public override bool CanProvidePower() => _canProvidePower;

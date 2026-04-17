@@ -27,7 +27,8 @@ public sealed class MapGenVillage
     // Biome IDs from BiomeGenBase: Plains=1, Desert=2
     private static readonly HashSet<int> ValidBiomeIds = new() { 1, 2 }; // plains, desert
 
-    private readonly Dictionary<long, bool> _isVillageChunk = new();
+    private readonly Dictionary<long, bool>          _isVillageChunk = new();
+    private readonly Dictionary<(int,int), VillageStart> _villageStarts  = new();
 
     public void SetWorldSeed(long seed) => _worldSeed = seed;
 
@@ -46,7 +47,15 @@ public sealed class MapGenVillage
         bool result = IsVillageOriginChunk(world, chunkX, chunkZ);
         _isVillageChunk[key] = result;
 
-        // Stub: full village piece placement (yp expansion) pending VillagePieces spec
+        if (result)
+        {
+            var start = new VillageStart(world, rng, chunkX, chunkZ);
+            if (start.IsValid)
+                _villageStarts[(chunkX, chunkZ)] = start;
+            else
+                result = false;
+        }
+
         return result;
     }
 
@@ -74,5 +83,23 @@ public sealed class MapGenVillage
         // Biome check at chunk centre (spec §4.1 step 6)
         int biomeId = world.ChunkManager?.GetBiomeAt(chunkX * 16 + 8, chunkZ * 16 + 8).BiomeId ?? 1;
         return ValidBiomeIds.Contains(biomeId);
+    }
+
+    /// <summary>
+    /// Generates village blocks into the given chunk (called during populate phase).
+    /// Finds any village starts whose pieces overlap this chunk and calls their Generate.
+    /// </summary>
+    public void Populate(World world, JavaRandom rng, int chunkX, int chunkZ)
+    {
+        foreach (var kvp in _villageStarts)
+        {
+            var start = kvp.Value;
+            // Only generate if any piece in this start touches this chunk
+            var chunkBounds = new Structure.StructureBoundingBox(
+                chunkX * 16, 0, chunkZ * 16,
+                chunkX * 16 + 15, 255, chunkZ * 16 + 15);
+            if (start.AllPieces.Any(p => p.BBox.Intersects(chunkBounds)))
+                start.Generate(world, rng, chunkX, chunkZ);
+        }
     }
 }

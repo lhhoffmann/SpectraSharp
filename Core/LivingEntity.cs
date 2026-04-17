@@ -19,7 +19,7 @@ namespace SpectraEngine.Core;
 ///
 /// Open stubs (specs pending):
 ///   - DamageSource (pm): AttackEntityFrom is skeletal.
-///   - PotionEffect (abg, s): effect system is a no-op stub.
+///   - PotionHelper (pk): metadata decode is stubbed — GetEffectsFromMeta returns empty list.
 ///   - CreatureAttribute (el): GetCreatureAttribute returns default.
 ///   - ExperienceOrb (fk): XP drops are not spawned.
 ///   - AI / pathfinding: WanderingAI and DespawnCheck are stubs.
@@ -75,6 +75,11 @@ public abstract class LivingEntity : Entity
     public  float PrevSwingProgress;   // obf: ba
     public  float SwingProgress;       // obf: bb — arm swing towards target
     public  float LimbRotation;        // obf: bc
+    /// <summary>
+    /// obf: <c>aE</c> — pendingKnockback counter.
+    /// Incremented when an attack lands; applied and reset on the next tick.
+    /// </summary>
+    public int PendingKnockback;       // obf: aE
     public  float ChildScaleRandom;    // obf: aZ — random scale for child mob rendering
     public  float PrevHealthBar;       // obf: aU
     public  float HealthBar;           // obf: aV
@@ -89,6 +94,11 @@ public abstract class LivingEntity : Entity
     protected int     LastAttackerTicks;             // obf: be — countdown to clear LastAttacker
     public    int     FireResistTicks;               // obf: bf
     public    int     FireResistRender;              // obf: bg
+
+    // ── Active potion effects (spec: abg/s) ───────────────────────────────────
+
+    /// <summary>Active potion effects keyed by effect ID (spec: abg.a[]).</summary>
+    private readonly Dictionary<int, PotionEffect> _activeEffects = new();
 #pragma warning disable CS0169
     private   Entity? _gazeTarget;                  // obf: e  — wander look target
     private   int     _gazeTicks;                   // obf: bx — ticks to keep gazing
@@ -161,6 +171,33 @@ public abstract class LivingEntity : Entity
         InvulnerabilityCountdown = InvulnerabilityTicks / 2; // ac = aq/2
     }
 
+    /// <summary>obf: <c>aM</c> accessor — current health (read-only for external callers).</summary>
+    public int GetCurrentHealth() => Health;
+
+    // ── Active effects (spec: nq / abg / s) ──────────────────────────────────
+
+    /// <summary>
+    /// obf: <c>nq.a(s effect)</c> — apply or combine a potion effect.
+    /// Combines with existing effect if already active (spec §5.3).
+    /// </summary>
+    public void AddPotionEffect(PotionEffect effect)
+    {
+        if (_activeEffects.TryGetValue(effect.EffectId, out var existing))
+            _activeEffects[effect.EffectId] = existing.Combine(effect);
+        else
+            _activeEffects[effect.EffectId] = effect;
+    }
+
+    /// <summary>Returns a snapshot of all currently active potion effects.</summary>
+    public IReadOnlyCollection<PotionEffect> GetActivePotionEffects()
+        => _activeEffects.Values;
+
+    /// <summary>Returns true if this entity has the given effect active.</summary>
+    public bool IsPotionActive(int effectId) => _activeEffects.ContainsKey(effectId);
+
+    /// <summary>Removes all active potion effects (e.g. milk bucket). obf: nq equivalent.</summary>
+    public void ClearAllPotionEffects() => _activeEffects.Clear();
+
     /// <summary>
     /// obf: <c>K()</c> override — isAlive = !isDead &amp;&amp; health > 0.
     /// </summary>
@@ -185,7 +222,7 @@ public abstract class LivingEntity : Entity
     ///   6. Knockback.
     ///   7. Hurt/death sound + death handler.
     /// </summary>
-    public virtual bool AttackEntityFrom(DamageSource damageSource, int amount)
+    public override bool AttackEntityFrom(DamageSource damageSource, int amount)
     {
         if (World != null && World.IsClientSide) return false;
         NaturalDespawnTicker = 0;
@@ -470,6 +507,40 @@ public abstract class LivingEntity : Entity
     /// </summary>
     public override void Tick()
     {
+        // ── Drowning (spec LivingEntity_Survival §1) — runs before EntityBaseTick ──
+        if (IsEntityAlive() && IsInWater)
+        {
+            // Decrement air by 1 each tick while head is in water
+            short air = DataWatcher.GetShort(1);
+            DataWatcher.UpdateObject(1, (short)(air - 1));
+
+            if (DataWatcher.GetShort(1) == -20)
+            {
+                // Reset to 0 and deal 2 drowning damage (spec §1.3)
+                DataWatcher.UpdateObject(1, (short)0);
+                AttackEntityFrom(DamageSource.Drown, 2);
+            }
+        }
+        else
+        {
+            // Restore air to full when not drowning
+            DataWatcher.UpdateObject(1, (short)300);
+        }
+
+        // ── Suffocation in opaque blocks (spec LivingEntity_Survival §4) ─────────
+        if (IsEntityAlive() && World != null)
+        {
+            double eyeX = PosX;
+            double eyeY = PosY + GetEyeHeight();
+            double eyeZ = PosZ;
+            int bx = (int)Math.Floor(eyeX);
+            int by = (int)Math.Floor(eyeY);
+            int bz = (int)Math.Floor(eyeZ);
+            int id = World.GetBlockId(bx, by, bz);
+            if (id > 0 && Block.IsOpaqueCubeArr[id])
+                AttackEntityFrom(DamageSource.InWall, 1);
+        }
+
         EntityBaseTick(); // fire, void, prevPos, ticksExisted
 
         if (IsDead) return;
@@ -501,7 +572,16 @@ public abstract class LivingEntity : Entity
             return;
         }
 
-        // Step 5: potion effects — stub (abg/s spec pending)
+        // Step 5: potion effects (spec §5.2)
+        if (_activeEffects.Count > 0)
+        {
+            var toRemove = new List<int>();
+            foreach (var (id, fx) in _activeEffects)
+            {
+                if (!fx.Tick(this)) toRemove.Add(id);
+            }
+            foreach (int id in toRemove) _activeEffects.Remove(id);
+        }
 
         // Step 6: AI input decay
         AiForward  *= 0.98f;
@@ -558,12 +638,11 @@ public abstract class LivingEntity : Entity
     /// </summary>
     protected override void OnLanded(double dy, bool onGround)
     {
+        if (!onGround) return;
         float distance = FallDistance;
         int damage = (int)Math.Ceiling(distance - 3.0f);
         if (damage > 0)
-        {
-            AttackEntityFrom(null!, damage); // DamageSource.fall — stub null
-        }
+            AttackEntityFrom(DamageSource.Fall, damage);
     }
 
     // ── Eye height (spec §15) ─────────────────────────────────────────────────
@@ -594,6 +673,20 @@ public abstract class LivingEntity : Entity
     /// <summary>obf: <c>q_()</c> — isSpecialMob (boss etc., suppresses natural despawn). Base false.</summary>
     public virtual bool IsSpecialMob() => false;
 
+    /// <summary>
+    /// obf: <c>el.b</c> — creature attribute UNDEAD.
+    /// True for Zombie, Skeleton, ZombiePigman, Wither, Wither Skeleton.
+    /// Used by Smite enchantment. Default: false.
+    /// </summary>
+    public virtual bool IsUndead => false;
+
+    /// <summary>
+    /// obf: <c>el.c</c> — creature attribute ARTHROPOD.
+    /// True for Spider, CaveSpider, Silverfish, Endermite.
+    /// Used by BaneOfArthropods enchantment. Default: false.
+    /// </summary>
+    public virtual bool IsArthropod => false;
+
     /// <summary>obf: <c>p_()</c> — getAmbientSoundInterval. Base returns 80 ticks.</summary>
     public virtual int GetAmbientSoundInterval() => 80;
 
@@ -613,8 +706,17 @@ public abstract class LivingEntity : Entity
         tag.PutShort("DeathTime",  (short)DeathTime);
         tag.PutShort("AttackTime", (short)AttackCooldown);
 
-        // ActiveEffects — empty list (potion system stub)
-        tag.PutList("ActiveEffects", new Nbt.NbtList());
+        // ActiveEffects list (spec §5.1 NBT)
+        var effectList = new Nbt.NbtList();
+        foreach (var fx in _activeEffects.Values)
+        {
+            var fxTag = new Nbt.NbtCompound();
+            fxTag.PutByte("Id",        (byte)fx.EffectId);
+            fxTag.PutByte("Amplifier", (byte)fx.Amplifier);
+            fxTag.PutInt ("Duration",  fx.Duration);
+            effectList.Add(fxTag);
+        }
+        tag.PutList("ActiveEffects", effectList);
     }
 
     /// <summary>
@@ -627,6 +729,18 @@ public abstract class LivingEntity : Entity
         HurtTime       = tag.GetShort("HurtTime");
         DeathTime      = tag.GetShort("DeathTime");
         AttackCooldown = tag.GetShort("AttackTime");
-        // ActiveEffects list — no-op (potion system stub)
+        // ActiveEffects list (spec §5.1 NBT)
+        _activeEffects.Clear();
+        if (tag.GetList("ActiveEffects") is { } effectList)
+        {
+            for (int i = 0; i < effectList.Count; i++)
+            {
+                var fxTag = effectList.GetCompound(i);
+                int id  = fxTag.GetByte("Id");
+                int amp = fxTag.GetByte("Amplifier");
+                int dur = fxTag.GetInt("Duration");
+                _activeEffects[id] = new PotionEffect(id, dur, amp);
+            }
+        }
     }
 }

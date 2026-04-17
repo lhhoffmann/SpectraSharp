@@ -23,6 +23,7 @@ public sealed class BlockLever : Block
     }
 
     public override bool IsOpaqueCube() => false;
+    public override int  GetRenderType()  => 12;
     public override bool RenderAsNormalBlock() => false;
     public override bool CanProvidePower() => true;
     public override AxisAlignedBB? GetCollisionBoundingBoxFromPool(IWorld world, int x, int y, int z) => null;

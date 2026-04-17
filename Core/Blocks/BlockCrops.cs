@@ -31,6 +31,7 @@ public class BlockCrops : Block
     // ── Properties ───────────────────────────────────────────────────────────
 
     public override bool IsOpaqueCube() => false;
+    public override int  GetRenderType()  => 6;
     public override bool RenderAsNormalBlock() => false;
 
     /// <summary>
@@ -144,6 +145,9 @@ public class BlockCrops : Block
     /// <summary>obf: <c>g(ry, x, y, z)</c> — bonemeal: jump to stage 7.</summary>
     public void InstantGrow(IWorld world, int x, int y, int z)
         => world.SetMetadata(x, y, z, 7);
+
+    public override void BonemealGrow(IWorld world, int x, int y, int z, JavaRandom rng)
+        => InstantGrow(world, x, y, z);
 
     // ── Textures (spec §A.5 a(int face, int meta)) ───────────────────────────
 

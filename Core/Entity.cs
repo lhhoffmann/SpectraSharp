@@ -76,7 +76,7 @@ public abstract class Entity
     // ── State flags ───────────────────────────────────────────────────────────
 
     public  bool IsDead;                 // obf: K
-    protected bool IsImmuneToFire;       // obf: af
+    public    bool IsImmuneToFire;       // obf: af
     protected bool IsInWater;            // obf: ab
     public  bool VelocityChanged;        // obf: ap
 #pragma warning disable CS0414, CS0169
@@ -131,7 +131,7 @@ public abstract class Entity
 
     // ── Entity's own random ───────────────────────────────────────────────────
 
-    protected readonly JavaRandom EntityRandom = new JavaRandom(); // obf: Y
+    protected internal readonly JavaRandom EntityRandom = new JavaRandom(); // obf: Y
 
     // ── Constructor (spec §3) ─────────────────────────────────────────────────
 
@@ -219,7 +219,9 @@ public abstract class Entity
                     _fireTicks -= 4;
                 else
                 {
-                    // Fire damage every 20 ticks — stub (DamageSource pm spec pending)
+                    // Deal 1 fire damage every 20 ticks (spec §2.2, §3)
+                    if (_fireTicks % 20 == 0)
+                        AttackEntityFrom(DamageSource.OnFire, 1);
                     _fireTicks--;
                 }
             }
@@ -323,11 +325,15 @@ public abstract class Entity
     {
         if (World == null) return;
 
-        // Step 1: web motion scaling (quirk 1)
+        // YSize decays each move (spec §2.7)
+        YSize *= 0.4f;
+
+        // Step 1: web motion scaling (spec §2.1)
         if (IsInWeb)
         {
             dx *= 0.25; dy *= 0.05; dz *= 0.25;
             MotionX = 0; MotionY = 0; MotionZ = 0;
+            IsInWeb = false;
         }
 
         double origDx = dx, origDy = dy, origDz = dz;
@@ -340,22 +346,22 @@ public abstract class Entity
         foreach (var box in colliders) dy = box.CalculateYOffset(BoundingBox, dy);
         BoundingBox.OffsetInPlace(0, dy, 0);
 
-        // Step 6: no-clip gate (quirk 1 for J == false)
-        if (!NoClip && dy != origDy) { dx = 0; dy = 0; dz = 0; }
+        // Step 6: no-clip gate — only zero the blocked component (spec §2.4)
+        if (!NoClip && dy != origDy) dy = 0;
 
         // Step 7: sweep X
         foreach (var box in colliders) dx = box.CalculateXOffset(BoundingBox, dx);
         BoundingBox.OffsetInPlace(dx, 0, 0);
 
-        // Step 8: no-clip gate
-        if (!NoClip && dx != origDx) { dx = 0; dy = 0; dz = 0; }
+        // Step 8: no-clip gate — only zero the blocked component (spec §2.6)
+        if (!NoClip && dx != origDx) dx = 0;
 
         // Step 9: sweep Z
         foreach (var box in colliders) dz = box.CalculateZOffset(BoundingBox, dz);
         BoundingBox.OffsetInPlace(0, 0, dz);
 
-        // Step 10: no-clip gate
-        if (!NoClip && dz != origDz) { dx = 0; dy = 0; dz = 0; }
+        // Step 10: no-clip gate — only zero the blocked component (spec §2.6)
+        if (!NoClip && dz != origDz) dz = 0;
 
         // Step 11: step-assist (V > 0, blocked horizontally, on-ground or vertical-blocked)
         if (StepHeight > 0 && (OnGround || VerticalMoved) && (origDx != dx || origDz != dz))
@@ -421,7 +427,28 @@ public abstract class Entity
         if (origDy != dy) MotionY = 0;
         if (origDz != dz) MotionZ = 0;
 
-        // Step 16–17: step sound, block notify — stub
+        // Step 16: block overlap callbacks — OnEntityCollidedWithBlock for all touching blocks (spec §2.12)
+        {
+            int x0 = (int)Math.Floor(BoundingBox.MinX + 0.001);
+            int y0 = (int)Math.Floor(BoundingBox.MinY + 0.001);
+            int z0 = (int)Math.Floor(BoundingBox.MinZ + 0.001);
+            int x1 = (int)Math.Floor(BoundingBox.MaxX - 0.001);
+            int y1 = (int)Math.Floor(BoundingBox.MaxY - 0.001);
+            int z1 = (int)Math.Floor(BoundingBox.MaxZ - 0.001);
+            for (int bx = x0; bx <= x1; bx++)
+            for (int by = y0; by <= y1; by++)
+            for (int bz = z0; bz <= z1; bz++)
+            {
+                int id = World.GetBlockId(bx, by, bz);
+                Block.BlocksList[id]?.OnEntityCollidedWithBlock(World, bx, by, bz, this);
+            }
+        }
+
+        // Step 17: water extinguish — if in water and burning, apply fire immunity (spec §2.13)
+        if (IsInWater && _fireTicks > 0)
+        {
+            _fireTicks = -FireImmuneTicks * 20;
+        }
     }
 
     /// <summary>
@@ -487,6 +514,12 @@ public abstract class Entity
 
     /// <summary>True if entity is alive (not dead). Spec: <c>K()</c> → bool.</summary>
     public virtual bool IsEntityAlive() => !IsDead;
+
+    /// <summary>
+    /// obf: <c>a(pm source, int amount)</c> — attackEntityFrom.
+    /// Base returns false (entity cannot be damaged). Overridden by LivingEntity.
+    /// </summary>
+    public virtual bool AttackEntityFrom(DamageSource source, int amount) => false;
 
     // ── Spawn validation (spec: SpawnerAnimals_Spec §4) ──────────────────────
 

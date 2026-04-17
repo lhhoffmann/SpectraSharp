@@ -10,14 +10,14 @@ namespace net.minecraft.src;
 /// </summary>
 internal static class JavaRandomAdapter
 {
-    public static java.util.Random Wrap(JavaRandom rng) => new JavaRandomWrapper(rng);
+    public static java.util.Random Wrap(SpectraEngine.Core.JavaRandom rng) => new JavaRandomWrapper(rng);
 }
 
 /// <summary>
 /// java.util.Random subclass that delegates to SpectraEngine.Core.JavaRandom.
 /// IKVM sees this as a real java.util.Random — no mod code is aware of the wrapper.
 /// </summary>
-internal sealed class JavaRandomWrapper(JavaRandom _rng) : java.util.Random
+internal sealed class JavaRandomWrapper(SpectraEngine.Core.JavaRandom _rng) : java.util.Random
 {
     public override int nextInt(int bound) => _rng.NextInt(bound);
     public override int nextInt()          => _rng.NextInt();

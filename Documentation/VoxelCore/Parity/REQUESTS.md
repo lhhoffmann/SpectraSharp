@@ -1142,7 +1142,7 @@ Full spec covers: A* algorithm in `rw`, `ww` AI tick `n()` complete sequence, `z
 ---
 
 ## Explosion
-[STATUS:PROVIDED]
+[STATUS:IMPLEMENTED]
 **Needed for:** `Core/Explosion.cs` + `Core/Entities/EntityTNTPrimed.cs`
 Creeper explosion is referenced in `EntityCreeper` (fuse countdown, `IsPowered`) but no `Explosion` class exists. TNT block (ID 46) is a plain stub in `BlockRegistry`.
 
@@ -1330,8 +1330,1093 @@ Nether portal creation and dimension travel are completely absent. `WorldProvide
 ---
 
 ## OpenQuestion_AcyAV
-[STATUS:PROVIDED]
+[STATUS:IMPLEMENTED]
 **Resolved:** `acy.aV = new xv(95)` — class `xv` = ItemDye; item ID = `bM = 256 + 95 = 351`. Name "dyePowder".
 Loot slot 10 drops `new dk(acy.aV, 1, 3)` = 1× Dye, damage 3 = **Cocoa Beans** (brown dye).
 Music disc open question also resolved: `acy.bB.bM = 2256` ("13") and bM+1 = 2257 ("cat").
 See `WorldGenDungeon_Spec.md §9` for the full answers. `WorldGenDungeon_Spec.md §9` updated from "Open Questions" to "Resolved Questions".
+
+---
+
+## PortalTravelAgent
+[STATUS:IMPLEMENTED]
+**Needed for:** `Core/WorldGen/PortalTravelAgent.cs` + `Core/EntityPlayer.cs` (`TravelToDimension`)
+`BlockPortal` is implemented but dimension travel is a stub. `EntityPlayer.TravelToDimension(int)` throws nothing — it simply does nothing. The portal-linking and spawn-platform logic is missing entirely.
+
+**Questions:**
+- Obf class name for PortalTravelAgent (believed to be `aim` — confirm)
+- `findPortal(world, x, y, z, radius)`: search radius 128 blocks; exact search algorithm (spiral? column scan?); what coordinate is returned if no portal found?
+- `createPortal(world, x, y, z, radius)`: search radius 16; 2-phase placement (find flat area, fallback to Y=70); exact obsidian frame layout (4×5 with 2×3 air interior)
+- Overworld→Nether coordinate scaling: divide X/Z by 8 (confirmed?) or different ratio?
+- Nether→Overworld: multiply X/Z by 8?
+- End arrival: obsidian platform 5×5 at fixed coords (0, 60, 0)? Or relative to exit portal?
+- Is PortalTravelAgent a singleton or per-world instance?
+- What happens when `TravelToDimension` is called on a non-player entity (minecart, mob)?
+
+**Resolution:** Spec at `Specs/PortalTravelAgent_Spec.md`. Obf name `aim` confirmed. NOT a singleton — `new aim()` per transition. Coordinate scaling is in `Minecraft.a(int)` NOT in aim: Overworld→Nether ×0.125, Nether→Overworld ×8.0, End transitions ×1.0. findPortal (`b()`): grid scan ±128 XZ, full-height Y scan per column, 3D distance-squared minimisation, returns false if not found. createPortal (`c()`): Phase 1 = 3D suitability check (solid floor + 3-deep air box ×4 orientations); Phase 2 = 2D column check ×2 orientations; Emergency = Y clamped to [70, height-10], clears 2×3×3 pocket. Frame always built 4× (loop) to trigger activation. Frame: 4×5 obsidian+portal, 2×3 interior. End platform: placed at entity arrival position (floor(X), floor(Y)−1, floor(Z)); 5×5 obsidian floor + 3 air layers; centred on spawn (100, 49, 0). aim.a() not called when leaving End (oldDim=1 fails condition oldDim<1).
+
+---
+
+## EnchantingXP
+[STATUS:IMPLEMENTED]
+**Needed for:** `Core/Items/ItemEnchanted.cs` + `Core/EnchantmentHelper.cs` + `Core/EntityPlayer.cs` (XP fields)
+Enchanting table and XP system are completely absent. `LivingEntity` has a stub `DropXP(int)` but no XP is tracked or consumed anywhere.
+
+**Questions:**
+- Obf class names: EnchantmentHelper (`?`), EnchantingTable block (`?`), ItemEnchanted (`?`)
+- XP: how is `xpLevel` / `xpTotal` stored on EntityPlayer? Which DataWatcher slots?
+- XP orb entity: obf name, size categories, pickup radius, merge radius, despawn age
+- `xpSeed` per-player for randomizing enchantment options — how is it seeded/reseeded?
+- Enchantment table: 3-slot UI, bookshelf bonus (15 max), level formula per slot
+- Which enchantments exist in 1.0 final? (Protection/FireProtection/FeatherFalling/BlastProtection/ProjectileProtection/Respiration/AquaAffinity/Sharpness/Smite/BaneOfArthropods/Knockback/FireAspect/Looting/Efficiency/SilkTouch/Unbreaking/Fortune/Power/Punch/Flame/Infinity?)
+- Enchantment ID table (obf constants)
+- `ItemEnchanted` wrapper: NBT `ench` list format (id short + lvl short per entry)
+
+**Resolution:** Spec at `Specs/EnchantingXP_Spec.md`. Real obf names: EntityXPOrb=`fk` (entity ID 2), BlockEnchantmentTable=`sy` (block ID 116), TileEntityEnchantmentTable=`rq`, ContainerEnchantment=`ahk`, EnchantmentHelper=`ml`, Enchantment base=`aef`.
+XP orb: size 0.5×0.5; gravity 0.03; attraction radius 8 blocks; despawn at age2≥6000 ticks; 10 value tiers via threshold array [3,7,17,37,73,149,307,617,1237,2477].
+Player XP fields: cd=XpLevel, cf=XpP(progress 0–1), ce=XpTotal. Level formula: `7+floor(level×3.5)` XP per level. Death drop: min(level×7, 100).
+No xpSeed per-player — enchantment seed is per-container (ContainerEnchantment.b=nextLong(), fresh on each item placement). Items can only be enchanted once via table.
+Bookshelf bonus: gap check (adjacent air at y and y+1), then ±2-block bookshelf scan including diagonal corners. Slot levels via ml.a(): base=1+nextInt(bonus/2+1)+nextInt(bonus+1), noise+=nextInt(5); slot0=(noise>>1)+1, slot1=noise*2/3+1, slot2=noise. Enchantability gates whether enchanting is possible at all.
+19 enchantments: IDs 0–6 (armor/helmet), 16–21 (sword), 32–35 (tool). NO bow enchantments (Power/Punch/Flame/Infinity absent in 1.0). SilkTouch↔Fortune mutually exclusive. NBT: "ench" TAG_List of {id:short, lvl:short((byte)level)}.
+
+---
+
+## BowArrow
+[STATUS:IMPLEMENTED]
+**Needed for:** `Core/Items/ItemBow.cs` + `Core/EntityArrow.cs` + `Core/Items/ItemFishingRod.cs` + `Core/EntityFishHook.cs`
+Ranged combat is completely absent. `ItemRegistry` has no bow or fishing rod. No projectile entity exists for arrows or hooks.
+
+**Questions:**
+- Obf class names: ItemBow (`?`), EntityArrow (`?`), ItemFishingRod (`?`), EntityFishHook (`?`)
+- Bow: charge mechanic — how many ticks to full charge? 3 stages (0/1/2)? Damage formula at full charge?
+- Arrow entity: gravity (0.05?), drag per tick, hitbox size, critical hit flag (from full-charge bow), fire-arrow from flame enchantment
+- Arrow pickup: only when `inGround` and `ticksInGround > 7`; is the arrow ItemStack recoverable?
+- Arrow NBT: `inGround`, `xTile/yTile/zTile`, `inTile`, `shake`, `life` (despawn 1200 ticks in ground), owner entity ID
+- Skeleton AI: does it use the same `zo` hostile base? How does it select bow vs melee?
+- Fishing rod: cast mechanic, hook entity physics, catch table (fish types, treasure, junk — is treasure/junk in 1.0 or later?), reel-in trigger
+- ItemFishingRod durability cost per cast vs per catch?
+
+**Resolution:** Spec at `Specs/BowArrow_Spec.md`. Real obf names: ItemBow=`il`, EntityArrow=`ro`, ItemFishingRod=`hd`, EntityFishHook=`ael`, EntitySkeleton=`it`.
+Bow: charge formula `power=(f²+2f)/3` where f=ticksCharged/20; threshold 0.1; full charge at 20 ticks; arrow final speed=power×3.0; damage=ceil(speed×2.0); critical at power==1.0 adds nextInt(dmg/2+2). Durability 384, costs 1/shot.
+Arrow: gravity 0.05/tick, air drag 0.99, water drag 0.8; hitbox 0.5×0.5; pickup when inGround+isPlayerArrow+shake==0; despawn 1200t in ground. NO fire-arrow in 1.0 (no Flame enchantment). NBT: xTile/yTile/zTile/inTile/inData/shake/inGround/player — shooter entity NOT saved (lost on reload).
+Fishing: hook NOT in EntityList (no NBT persistence). Cast velocity 0.6 b/t. Fish bite roll 1/500 (1/300 with sky), gives RawFish (acy.aT=ID 349) + 1 XP stat. Durability 0 (miss) / 1 (fish) / 2 (ground) / 3 (entity). No treasure/junk in 1.0. Skeleton: extends zo; 60-tick reload; speed=1.6 spread=12; drops 0–2 arrows+bones; sunlight burn check per-tick random.
+
+---
+
+## RemainingMobs_Batch
+[STATUS:PROVIDED]
+**Needed for:** `Core/Mobs/` — 12 mob entity classes still registered via `RegisterId` stubs
+in `EntityRegistry`. Without them, mobs from chunk NBT return null on load, and biome spawn lists
+for passive/hostile packs are incomplete (SpawnerAnimals skips unknown types silently).
+
+Mobs needed (obfuscated class names unknown for most):
+- `Slime` (ID 55) — splits on death into smaller slimes; cube shape; jumps; size field
+- `Ghast` (ID 56) — flying; fireball attack at player; 10 HP; sound-based; no pathfinding
+- `PigZombie` (ID 57) — neutral by default; group aggro when any individual is attacked; NBT anger field
+- `Enderman` (ID 58) — can pick up / place blocks; teleports away from water or projectiles; provoked by direct stare (DW bit); screams and attacks; height 2.9
+- `CaveSpider` (ID 59) — extends Spider; smaller hitbox 0.7×0.5; can squeeze through 1-high gaps; poison attack (effect amplifier depends on difficulty)
+- `Silverfish` (ID 60) — spawns from ID-97 monster eggs (stone/cobble/stone brick); calls nearby silverfish when attacked; very small 0.3×0.7
+- `Blaze` (ID 61) — fires 3 small fireballs in burst; floats via vertical Y oscillation; drops blaze rods; immune to fire; can spawn from spawner in NetherFortress
+- `LavaSlime` / MagmaCube (ID 62) — like Slime but in Nether; fire-immune; size field; no-pathfinding jump AI; drops magma cream
+- `Squid` (ID 94) — passive water mob; ink sac drops; random swimming direction changes; no land AI; drowning on land
+- `Wolf` (ID 95) — tamed/untamed/angry states; taming with bones; follows owner; attacks sheep/hostile if tamed; sitting with right-click; pack behaviour; collar DW color
+- `MushroomCow` (ID 96) — like Cow but red/mushroom skin; mushroom biome only; milkable with mushroom soup; shear converts to normal Cow + drops mushrooms
+- `SnowGolem` (ID 97) — player-built (2 snow blocks + pumpkin); throws snowballs at hostiles; melts in rain/warm biomes; leaves snow trail
+
+**Questions per mob:**
+- Obfuscated class name?
+- Superclass chain (ww → zo/fx → concrete)?
+- All DataWatcher slots used?
+- Extra NBT fields beyond nq base (Health/HurtTime/DeathTime/AttackTime)?
+- Hitbox dimensions (width × height)?
+- Max HP and attack strength?
+- Drop table (item IDs, quantities, conditions)?
+- Special AI or tick behaviour not covered by the ww/zo/fx base?
+- Spawn biome list (what `jf` creature type, what biome spawn lists)?
+
+For Wolf specifically:
+- Taming mechanic: which item? How many uses before tamed? Probability per bone?
+- Collar color DataWatcher slot and default? Sits/stands toggle?
+- Anger state: triggered by what? Persisted in NBT?
+- NBT fields: Owner (string), Sitting (byte), Angry (byte)?
+
+For Enderman specifically:
+- Block pickup: which block IDs can Enderman carry? Can it place the block back?
+- Teleportation: triggered by projectiles hitting it? By water? By player stare? Random idle?
+- Stare detection: is it a direct camera-direction dot-product check? Range?
+- DW slot for carried block ID and metadata?
+
+For Slime/MagmaCube specifically:
+- Size field: stored in DW and/or NBT? Values 0/1/2 (tiny/small/big)?
+- Jump AI: how is jump force calculated from size? Tick interval?
+- Split logic: when a slime dies, how many children? At what size does splitting stop?
+
+**Expected deliverable:** `Specs/RemainingMobs_Spec.md` — one section per mob with all fields,
+AI description, NBT layout, drop table, spawn type assignment.
+
+---
+
+## ThrowableEntities_Batch
+[STATUS:PROVIDED]
+**Needed for:** `Core/EntitySnowball.cs`, `Core/EntityEgg.cs`, `Core/EntityEnderPearl.cs`,
+`Core/EntityFireball.cs`, `Core/EntitySmallFireball.cs` — all currently `RegisterId` stubs.
+Also needed to implement `ItemSnowball`, `ItemEgg`, `ItemEnderPearl` which are plain `Item`
+stubs in `ItemRegistry` (IDs 332, 344, 368).
+
+**Entities needed:**
+- Snowball (ID 11) — launched by player; creates impact particles; no damage; extinguishes Blazes
+- Egg (ID 12 in 1.0?) — launched by player; 1/8 chance to spawn a chicken; breaks on impact
+- ThrownEnderpearl (ID 14) — teleports thrower to landing position; 5 fall damage to thrower; entity ID in EntityList
+- Fireball (ID 12 in entity list?) — Ghast projectile; large; continues flying until blocked; creates explosion power 1 (no block damage in peaceful?); sets target on fire
+- SmallFireball (ID 13) — Blaze projectile; smaller; same rules as Fireball but no block damage
+
+**Questions:**
+- Obfuscated class names for all five?
+- Common abstract throwable base class — does one exist? (suspected `ro` is Arrow, separate from throwable)
+- For all throwables: gravity constant, drag, hitbox size, max range before despawn?
+- Snowball: does it deal any damage to Blazes specifically, or just extinguish them?
+- Egg: exact spawn rules: 1/8 chicken, on top of that a separate 1/32 for 4 chickens?
+- EnderPearl: exact fall-damage amount? Teleport offset (feet position = impact position)?
+- Fireball: who is the "owner" entity for explosion damage attribution? Power 1 — does it destroy blocks?
+- SmallFireball: same as Fireball? Or no block destruction at all?
+- Eye of Ender Signal (ID 15) — is this also a throwable? What does it do exactly?
+- Are Snowball/Egg/EnderPearl in EntityList (have NBT)? Or similar to EntityFishHook (no NBT)?
+
+**Expected deliverable:** `Specs/ThrowableEntities_Spec.md` — abstract base (if any) + one section
+per entity: obf name, gravity/drag/hitbox, impact logic, NBT (or confirmed no-NBT), owner tracking.
+
+---
+
+## EntityFallingSand
+[STATUS:PROVIDED]
+**Needed for:** `Core/EntityFallingSand.cs` — currently `RegisterId("FallingSand", 21)` stub.
+Without this, sand and gravel blocks that should fall (e.g. placed over an air gap, or created
+by explosions) instead hang stationary in mid-air. The sand block's `BlockTick` calls
+`world.spawnEntity(new EntityFallingSand(...))` but the class does not exist yet.
+
+**Obfuscated class:** suspected `hz` — used in BlockSand `e()` tick method.
+
+**Questions:**
+- Class name (confirm or correct `hz`)?
+- Fields: stored block ID? Metadata? Fall distance?
+- Tick: gravity acceleration (same 0.04 as EntityItem?); drag/friction?
+- Landing: when the entity hits a solid block, what happens?
+  - If the block below is solid: place the block, remove entity
+  - If the block below is air/liquid: keep falling
+  - If the block cannot be placed (e.g. another block already occupies the position): drop as item?
+  - Does it harm entities it lands on?
+- Which block IDs can be "falling"? Just sand (12) and gravel (13)? Or others (concrete powder — not in 1.0)?
+- NBT: `"TileID"` byte? `"Data"` byte? Is it in EntityList (afw)?
+- Does it tick on the client too, or only server-side placement?
+- What happens when a FallingSand entity is in a chunk that gets saved — does it persist via NBT or despawn?
+
+**Expected deliverable:** `Specs/EntityFallingSand_Spec.md`
+
+---
+
+## EntityPainting
+[STATUS:PROVIDED]
+**Needed for:** `Core/EntityPainting.cs` — currently `RegisterId("Painting", 9)` stub.
+Paintings are placeable decorative entities. The EnumArt `sv` class (25 variants) was partially
+analysed in the ItemFood session but never specced for implementation.
+
+**Obfuscated classes:** `sv` (EnumArt enum), painting entity class unknown.
+
+**Questions:**
+- Obfuscated class name for the painting entity?
+- `sv` (EnumArt): complete table of all 25 variants — enum name, atlas tile X/Y offset, width×height in blocks?
+- Placement: which face is the painting placed on? How is the position snapped to the wall?
+- Hitbox: matches the painting's dimensions exactly?
+- Right-click places with ItemPainting (obf: unknown) — what item ID?
+- On placement: random variant selected from those that fit in the available wall space?
+- When the supporting block is removed: does the painting drop as an item?
+- NBT: `"Motive"` string (variant name), `"Dir"` byte (facing 0-3), `"TileX"/"TileY"/"TileZ"` ints?
+- Is EntityPainting in the `afw` EntityList? What int entity ID?
+
+**Expected deliverable:** `Specs/EntityPainting_Spec.md` — entity fields + EnumArt full table +
+placement algorithm + NBT layout.
+
+---
+
+## EntityBoat
+[STATUS:PROVIDED]
+**Needed for:** `Core/EntityBoat.cs` — currently `RegisterId("Boat", 41)` stub.
+Boats are rideable water vehicles craftable from wooden planks.
+
+**Questions:**
+- Obfuscated class name?
+- Physics: how does buoyancy work in water (partial submersion lift)?
+- Riding: player enters via right-click; driver controls yaw/speed via WASD?
+- Speed: faster than swimming on open water?
+- Damage model: boats are destroyed by attacks or collision above a speed threshold?
+- On destruction: drops 3 wooden planks?
+- Behaviour in different fluids: water = normal; lava = instant destroy + no drops?
+- Mouse input forwarding to entity from rider (`vi.bA`)?
+- NBT: just base entity fields? Any boat-specific fields?
+- EntityList int ID = 41?
+
+**Expected deliverable:** `Specs/EntityBoat_Spec.md`
+
+---
+
+## EntityMinecart
+[STATUS:PROVIDED]
+**Needed for:** `Core/EntityMinecart.cs` — currently `RegisterId("Minecart", 40)` stub.
+Three minecart variants exist in 1.0: empty minecart, storage minecart (chest), powered minecart (furnace).
+
+**Obfuscated class:** base minecart class unknown; sub-types likely single class with `type` field.
+
+**Questions:**
+- Is there one class with a `type` field (0=empty, 1=chest, 2=furnace) or three separate classes?
+  - If one class: what int type values?
+  - If separate: class names?
+- Rail interaction: how does the minecart track along BlockRail (ID 27)?
+  - Rail metadata 0-9: which encode straight, curve, slope?
+  - Does the minecart read the rail's metadata to compute its next position?
+  - Slope ascent/descent: gradient force and speed cap?
+- Physics on flat rail: friction deceleration? Max speed?
+- Powered rail (ID 27 variant or ID 28?): boosts minecart; reversed if unpowered (brake)?
+- Detector rail (ID 28 or another ID?): emits redstone signal when minecart is above?
+- Off-rail: does the minecart fall off rail and slide/fall as normal entity?
+- Rider: player enters via right-click; exits via sneak key?
+- Storage minecart: 27-slot IInventory (like chest)?
+- Powered minecart: accepts coal as fuel; pushes attached minecarts?
+- NBT: type field? Inventory items? Fuel ticks?
+- On destruction: drops empty minecart + chest/furnace contents?
+- EntityList int ID = 40?
+
+Also needed: BlockRail variants — what IDs are used for powered rail, detector rail, activator rail?
+Are they separate block IDs or metadata on ID 27?
+
+**Expected deliverable:** `Specs/EntityMinecart_Spec.md` — physics, rail interaction algorithm,
+storage/powered subtypes, NBT. Include rail ID table if BlockRail metadata is non-obvious.
+
+---
+
+## Container_System
+[STATUS:PROVIDED]
+**Needed for:** `Core/Container/` directory (does not yet exist). Crafting, smelting, and all
+inventory interaction require a `Container` base class and concrete subclasses. Currently
+`BlockWorkbench.OnBlockActivated` and `BlockFurnace.OnBlockActivated` open nothing — there is
+no container layer at all. The enchanting container (`ContainerEnchantment`) exists but is
+isolated.
+
+**Obfuscated classes:** container base is likely `bs`; crafting grid `ag`; crafting container unknown;
+furnace container unknown; chest container unknown.
+
+**Questions:**
+
+Container base (`bs`):
+- Fields: list of Slot objects? Player inventory reference?
+- Slot class: fields (inventory ref, slot index, display x/y)?
+- Core click logic `b(int slotId, int button, boolean shift, vi player)`:
+  - Normal left-click: swap cursor with slot?
+  - Normal right-click: split stack into slot, or take half?
+  - Shift-click: move to other inventory section automatically?
+  - Double-click: collect same items into cursor?
+- `canInteractWith(vi player)` — distance check?
+- Listener pattern: `onContentsChanged` callback?
+
+CraftingGrid (`ag`):
+- A 2×2 or configurable-size inventory?
+- When contents change, does it auto-check recipes?
+- Does the output slot refuse direct placement?
+
+ContainerCrafting (workbench, 3×3):
+- SlotCrafting (output slot): decrements all inputs by 1 when taken; triggers `onCrafting`?
+- Which CraftingRecipes class holds the recipe table?
+
+CraftingRecipes / CraftingManager:
+- Full table: all vanilla 1.0 shaped and shapeless recipes?
+- Shaped recipe format: pattern strings + ingredient map?
+- Shapeless recipe: just a set of ingredients?
+- Does the recipe system handle ore dictionary or just exact item IDs?
+- How is mirroring handled (shaped recipes can be mirrored)?
+
+ContainerFurnace:
+- 3 slots: input (0), fuel (1), output (2)?
+- Progress bars: `cookTime` (0-200) and `burnTime` / `currentBurnTime`?
+- Method to transfer state between server and client (`a(int id, int data)` / `b(int id, int data)`)?
+
+ContainerChest:
+- 27 or 54 slots (27 for single, 54 for double chest)?
+- How are double-chest inventories combined — two `IInventory` references stitched?
+
+ContainerDispenser:
+- 9 slots in a 3×3 grid?
+
+**Expected deliverable:** `Specs/Container_Spec.md` — ContainerBase slot logic, click handling
+(all 4 cases: left/right/shift/double), SlotCrafting trigger, ContainerCrafting, ContainerFurnace,
+ContainerChest, ContainerDispenser. Full vanilla 1.0 crafting recipe table in an appendix.
+
+---
+
+## CraftingRecipes
+[STATUS:PROVIDED]
+**Needed for:** `Core/CraftingManager.cs` — the `CraftingManager` class exists with empty lists.
+Without recipes, players cannot craft any item. This is the single largest gameplay gap remaining.
+
+**Questions:**
+- Obfuscated class holding the recipe table? (suspected `mt` singleton — but that is FurnaceRecipes;
+  there should be a separate class for crafting)
+- Shaped recipe format in source: pattern as string array? `' '` = empty, letter = ingredient?
+- Shapeless recipe format: just a varargs item list?
+- Does the recipe check handle `ItemStack.damage` for tool materials, or only item IDs?
+- Can multiple items match the same shaped-recipe slot (e.g. "any plank")?
+- Are any recipes mirror-symmetric (L-shaped items that work flipped)?
+- Complete list of all shaped recipes in 1.0 acy.java static initializer (all `a(new Object[] {...})` calls)
+- Complete list of all shapeless recipes
+- Any recipes that produce items with non-zero damage/metadata (dyed wool, specific records)?
+
+**Expected deliverable:** `Specs/CraftingRecipes_Spec.md` — complete recipe table for all
+vanilla 1.0 crafting recipes, organized by output item. Include both shaped and shapeless.
+Format: output item ID + count + meta | input pattern or ingredient list.
+
+---
+
+## PotionEffect_System
+[STATUS:PROVIDED]
+**Needed for:** `Core/Potions/` directory (does not exist yet). LivingEntity has `_activeEffects`
+list and stubs for `AddPotionEffect` / `GetActivePotionEffect` / `IsPotionActive`, but the
+`PotionEffect` and `Potion` classes do not exist. ItemFood already uses a placeholder potion
+effect for Spider Eye; EntityCaveSpider needs Poison; Milk bucket removes all effects.
+
+**Obfuscated classes:** `Potion` registry likely `ad`; PotionEffect carrier likely `kd`.
+
+**Questions:**
+
+Potion class (`ad` or similar):
+- Static registry: how many potion effect types in 1.0? (suspected 23)
+- Fields per Potion: int ID, liquid color, is_instant, is_bad_effect?
+- All potion IDs (0-23+) with names and colors — e.g. Speed=1, Slowness=2, Haste=3, etc.?
+- Method to get color from active effects list (mixed blend for splash)?
+
+PotionEffect (`kd` or similar):
+- Fields: int effectId, int duration (ticks), int amplifier (0=level I, 1=level II)?
+- `performEffect(nq entity)` — called per tick or per N ticks depending on effect type?
+- Per-effect tick logic:
+  - Speed (1): movement multiplier?
+  - Slowness (2)?
+  - Haste (3): mining speed factor?
+  - Mining Fatigue (4)?
+  - Strength (5): attack bonus?
+  - Instant Health (6): instant +4 HP per amplifier?
+  - Instant Damage (7): instant damage?
+  - Jump Boost (8)?
+  - Nausea (9): visual only?
+  - Regeneration (10): HP/tick formula?
+  - Resistance (11): damage reduction already in LivingEntity damage pipeline?
+  - Fire Resistance (12): prevents fire/lava damage?
+  - Water Breathing (13): prevents drowning?
+  - Invisibility (14)?
+  - Blindness (15)?
+  - Night Vision (16)?
+  - Hunger (17): increases exhaustion?
+  - Weakness (18)?
+  - Poison (19): damage per 25t, not below 1 HP?
+  - Wither (20): damage per 40t, CAN kill?
+  - Health Boost (21)?
+  - Absorption (22)?
+
+ItemPotion (ID 373):
+- Metadata encodes effect type + potion tier + splash/drinkable flags?
+- Splash: thrown projectile entity; splash radius; exposure fraction?
+- Drinkable: OnItemRightClick directly applies effects?
+- Duration formula from metadata?
+- Is splash potion a separate class or same class with flag?
+
+**Expected deliverable:** `Specs/PotionEffect_Spec.md` — Potion registry (all effect IDs + colors),
+PotionEffect fields + performEffect per-tick logic, ItemPotion metadata decoding, splash vs drink.
+
+---
+
+## BlockPlants_Batch
+[STATUS:PROVIDED]
+**Needed for:** Multiple plain `Block` stubs in `BlockRegistry` that have no custom behaviour:
+- ID 6 — Sapling (oak/spruce/birch/jungle meta 0-3): grows into tree via random tick + bonemeal
+- ID 37 — Dandelion (yellow flower): simple plant; canBlockStay requires soil
+- ID 38 — Rose (red flower): same as Dandelion
+- ID 39 — Brown Mushroom: can spread if <5 in 9×9×3 volume; survives in low light
+- ID 40 — Red Mushroom: same spread rules
+- ID 83 — Reed / SugarCane: grows up to 3 tall; requires water adjacent at base; random tick grow
+- ID 115 — Nether Wart: 4 growth stages (meta 0-3) on soul sand only; no bonemeal growth in 1.0
+- ID 104 — Melon Stem: 8 growth stages; when fully grown attempts to place melon in adjacent cell
+- ID 105 — Pumpkin Stem: same as melon stem
+
+Currently all these are plain `Block` stubs with no tick behaviour. None of them fall when their
+support block is removed, grow, or check canBlockStay.
+
+**Questions:**
+
+BlockSapling (ID 6):
+- Obfuscated class name?
+- How is sapling type (oak/spruce/birch) stored — metadata?
+- Random tick: what probability? Is it affected by bonemeal?
+- Bonemeal (ItemDye meta 15): guarantees instant growth?
+- Tree type selected by meta: meta 0=oak (90% gq / 10% yd), meta 1=spruce (ty or us), meta 2=birch (jp)?
+- canBlockStay: requires dirt/grass/farmland below?
+
+BlockFlower / BlockRose (IDs 37/38):
+- Obfuscated class name (likely shared base)?
+- canBlockStay: specific soil block types?
+- Do they have any random tick behaviour?
+- Drops itself as item?
+
+BlockMushroom (IDs 39/40):
+- Spread logic: max 5 in 9×9×3 before spreading stops?
+- Light level requirement for survival? Above what blockLight level does it die?
+- Drops itself as item?
+
+BlockReed (ID 83):
+- Obfuscated class name?
+- Water adjacency check: water block at same Y level on any of 4 horizontal sides?
+- Max height: 3 blocks total?
+- Growth: each random tick, if top reed and below full height → place new block above?
+- canBlockStay: dirt/grass/sand below AND water adjacent at y-1 level?
+
+BlockNetherWart (ID 115):
+- Obfuscated class name?
+- Soul sand only (block ID 88)?
+- Growth stages 0-3 via random tick only (no bonemeal in 1.0)?
+- Drops: meta 0 = 1 nether wart; meta 3 = 2-4 nether wart (fortune applies)?
+
+BlockStem (IDs 104/105):
+- Obfuscated class name?
+- Growth stages 0-7 via random tick; bonemeal works?
+- At stage 7: attempts to place melon (ID 103) or pumpkin (ID 86) in random adjacent air cell?
+- Placed fruit must have solid block below?
+- When the placed fruit is harvested: does the stem reset to stage 0 or stay at 7?
+- Drops: melon seeds (ID 362) or pumpkin seeds (ID 361)?
+
+**Expected deliverable:** `Specs/BlockPlants_Spec.md` — one section per plant type: obf class name,
+canBlockStay conditions, random tick growth/spread logic, bonemeal response, drops table.
+
+---
+
+## BlockVine
+[STATUS:PROVIDED]
+**Needed for:** `Core/Blocks/BlockVine.cs` — currently a plain `Block` stub (ID 106).
+Vines have complex multi-face connectivity, climbing behaviour, and spread AI.
+
+**Obfuscated class:** suspected `ahl` — confirmed by the Analyst session correction
+("BlockVine: guess `ahl`…real `mz`" — wait, that was BlockRedstoneDiode. Vine is `ahl` confirmed?).
+Actually the BlockRedstone spec noted "`ahl`=BlockVine". So obf name is `ahl`.
+
+**Questions:**
+- Confirm obfuscated class is `ahl`?
+- Metadata: bitmask — which bit = which face (N/S/E/W, top)?
+- Vine has no bottom face — must be attached to N/S/E/W solid block OR to the block above?
+- `canBlockStay`: requires at least one face with an adjacent solid opaque block?
+- Climbing: does Entity.isOnLadder check for vine block (same as ladder ID 65)?
+- Spread (random tick): tries to attach to adjacent blocks? Up to 4 horizontal + above?
+- Can vines grow downward without attachment? Or must the block above be vine/solid?
+- Collision: no collision box (like ladder — entity walks through)?
+- Selection/ray-trace: does it have a collision box for ray-trace (right-click, breaking) even if walk-through?
+- Breaking: drops nothing (unless sheared with ItemShears)?
+- Light opacity?
+- Material: `p.n` (same as air) or a plant material?
+
+**Expected deliverable:** `Specs/BlockVine_Spec.md`
+
+---
+
+## BlockFenceGate
+[STATUS:PROVIDED]
+**Needed for:** `Core/Blocks/BlockFenceGate.cs` — currently a plain `Block` stub (ID 107).
+The `BlockFence` class already has hard-coded gate connectivity checking for ID 107, so the
+gate geometry must be compatible. The gate also accepts redstone signals.
+
+**Questions:**
+- Obfuscated class name?
+- Metadata: facing (2 bits) + isOpen (1 bit)? Or just facing?
+- AABB when closed: same as fence post (0.375–0.625 in one axis, full height 1.5)?
+- AABB when open: no collision (entity can walk through)?
+- Is it redstone-activatable (like iron door)?
+- Does right-click toggle open/closed?
+- When open: does the fence-gate "face" rotate so it lies along the fence line?
+- Fence connectivity: BlockFence already checks `if id==107 → true`. Does BlockFenceGate reciprocate?
+- Breaking drops 1 fence gate item?
+- Light opacity?
+
+**Expected deliverable:** `Specs/BlockFenceGate_Spec.md`
+
+---
+
+## BlockPane
+[STATUS:PROVIDED]
+**Needed for:** `Core/Blocks/BlockPane.cs` — iron bars (ID 101) and glass pane (ID 102) are
+plain `Block` stubs. They use thin cross-shaped geometry like fences but with different connectivity
+rules. The `BlockFence` spec described fences; panes/bars are similar but thinner (2/16 thick vs 3/16).
+
+**Obfuscated classes:** iron bars class unknown; glass pane class unknown (may be shared base `fp`?).
+
+**Questions:**
+- Obfuscated class name(s)? Shared base or separate?
+- Post width: 2/16 (0.0625 on each side of center) — confirm?
+- Arm thickness: also 2/16?
+- Connectivity: connects to same block type AND to any solid opaque block?
+- Does glass pane connect to iron bars and vice versa?
+- Does glass pane connect to glass blocks?
+- Height: full 1.0 (unlike fence at 1.5)?
+- AABB: post core = 0.4375–0.5625 (2/16 centered), extends to 0/1 per connected direction?
+- Selection box (ray-trace): full cube like fence?
+- `isOpaqueCube`: false? `renderAsNormal`: false?
+- Light opacity: 0 for glass pane, something for iron bars?
+- Drops: glass pane drops itself; iron bars drops itself?
+- Does the rendering use the face texture for the post/arm, or a special thin-bar texture?
+
+**Expected deliverable:** `Specs/BlockPane_Spec.md` — shared base class geometry (if any),
+connectivity rules, AABB logic, rendering differences between iron bars and glass pane.
+
+---
+
+## BlockChest_Full
+[STATUS:PROVIDED]
+**Needed for:** `Core/Blocks/BlockChest.cs` — currently a plain `Block` stub (ID 54).
+`TileEntityChest` already exists (27 slots), but:
+1. Double chest detection is missing — two adjacent chests merge into 54-slot inventory
+2. Opening animation (lid lifts) uses TileEntityChest fields not yet linked
+3. `OnBlockActivated` does not open any container
+
+Also needed: an `InventoryLargeChest` combining two `IInventory` instances into a 54-slot view.
+
+**Questions:**
+- Obfuscated class name for BlockChest?
+- How does double-chest detection work?
+  - When placed adjacent to another chest: which axis is checked (Z and/or X only, not Y)?
+  - Is there a priority rule for which chest is "left" vs "right" in the combined view?
+  - Can you open a single chest that is adjacent to another? Or always treated as double?
+- `OnBlockActivated`: opens ContainerChest — how is the container title determined?
+- Opening animation: is it stored in TileEntityChest? Which field?
+  - `numPlayersUsing` counter (number of players with chest open) — incremented on open, decremented on close?
+  - Lid angle interpolated from numPlayersUsing > 0?
+- Breaking: chest drops all its contents as EntityItem entities + drops itself?
+- `InventoryLargeChest` (obf: unknown): wraps two `IInventory`; slot 0-26 → left chest, 27-53 → right?
+- Can cats (ocelots) sit on chests to prevent opening in 1.0? (probably not — cats added 1.2)
+- NBT: chest is a TileEntity already — no additional block metadata needed?
+
+**Expected deliverable:** `Specs/BlockChest_Spec.md` — double-chest placement detection, combined
+inventory class, opening/closing animation fields, container wiring.
+
+---
+
+## BlockWorkbench_Furnace_Interaction
+[STATUS:PROVIDED]
+**Needed for:** `Core/Blocks/BlockWorkbench.cs` (ID 58) and `Core/Blocks/BlockFurnace.cs`
+(IDs 61/62). Both are plain `Block` stubs. Their `OnBlockActivated` methods do nothing.
+Container_Spec (above) covers the Container classes themselves; this spec covers the block side.
+
+**Questions:**
+
+BlockWorkbench (ID 58):
+- Obfuscated class name?
+- `OnBlockActivated`: opens a ContainerCrafting (3×3)?
+- Any special fields on the block? Or purely a passthrough to container?
+- Drops: itself (1 workbench)?
+- Texture: faces? (top=60, front=59, sides=43, bottom=4 in terrain.png?)
+
+BlockFurnace (IDs 61/62 — unlit and lit):
+- Obfuscated class name?
+- Facing: stored in metadata (meta 0-5 = facing down/up/north/south/west/east)?
+- Placement: placed facing the player (like BlockDispenser)?
+- `OnBlockActivated`: opens ContainerFurnace?
+- Lit state (ID 62) persists after reload — when does it switch from unlit→lit and back?
+  (TileEntityFurnace already handles the block switch via `eu.a()` — confirm this is correct)
+- Light emission: lit furnace emits light level 13?
+- Texture: unlit front=45, lit front=62; sides=43, top/bottom=62 in terrain.png?
+
+**Expected deliverable:** `Specs/BlockWorkbench_Furnace_Spec.md`
+
+---
+
+## BlockSapling_Growth
+[STATUS:PROVIDED]
+**Needed for:** Sapling is currently a plain `Block` stub (ID 6). Even if BlockPlants_Spec covers
+the basics, the tree-growth call from sapling needs extra detail: exactly which WorldGenXxx
+generator is instantiated, with which parameters, for each sapling type.
+
+Note: this may be fully covered by `BlockPlants_Spec` above — if the Analyst feels the sapling
+detail there is sufficient, this request may be skipped.
+
+**Questions:**
+- When the sapling random-tick fires for growth: is the decision `nextInt(N)==0`? What is N?
+- Is the exact sapling-to-tree generator dispatch the same as the biome tree dispatch, or hardcoded?
+  - Meta 0 (oak): `nextInt(10)==0` → WorldGenBigTree, else WorldGenTrees?
+  - Meta 1 (spruce): WorldGenTaiga1 or WorldGenTaiga2?
+  - Meta 2 (birch): WorldGenForestTree?
+  - Meta 3 (jungle): WorldGenMegaJungle? (if jungle saplings exist in 1.0 — they may not)
+- Bonemeal: does bonemeal on sapling try to grow immediately? 100% success or still random?
+- 2×2 spruce/jungle tree: does vanilla 1.0 support 2×2 saplings for larger trees?
+
+**Expected deliverable:** Can be appended to `Specs/BlockPlants_Spec.md` as an extra section,
+or delivered as a standalone `Specs/BlockSapling_Spec.md`.
+
+---
+
+## BlockGlowstone_Drops
+[STATUS:PROVIDED]
+**Needed for:** `Core/Blocks/BlockGlowstone.cs` — glowstone (ID 89) is a plain `Block` stub.
+The only custom behaviour is its drop mechanic (yields dust, not the block itself).
+
+**Questions:**
+- Obfuscated class name?
+- Drops: `nextInt(4) + 2` glowstone dust (ID 348)? Fortune increases max?
+- Silk touch: drops glowstone block directly instead of dust?
+- Hardness: 0.3?
+- Light emission: 15?
+- Material: `p.p` (glass) — correct?
+- Placing glowstone dust back into the block: is there a recipe (4 dust → 1 glowstone)?
+  (This would be in CraftingRecipes, not in the block spec)
+
+**Expected deliverable:** Can be a short section in `Specs/CraftingRecipes_Spec.md` under drops,
+or a short standalone `Specs/BlockGlowstone_Spec.md`.
+
+---
+
+## BlockTrapDoor
+[STATUS:PROVIDED]
+**Needed for:** `Core/Blocks/BlockTrapDoor.cs` — trapdoor (ID 96) is a plain `Block` stub.
+Trapdoors are hatch-style single-block doors that open horizontally (lie flat) or vertically (stand up).
+
+**Obfuscated class:** unknown.
+
+**Questions:**
+- Obfuscated class name?
+- Metadata: bit 0-1 = placement side (attached to bottom or top of block? N/S/E/W?), bit 2 = isOpen?
+- AABB closed (bottom): 0–3/16 thick slab at floor?
+- AABB closed (top): 0–3/16 thick slab at ceiling?
+- AABB open: 0–3/16 thick slab at one wall (which wall)?
+- Can entities climb through an open trapdoor? Any collision with open trapdoor?
+- Right-click toggles; redstone also controls?
+- Wood only in 1.0 (iron trapdoor added in 1.8)?
+- Drops itself on break?
+
+**Expected deliverable:** `Specs/BlockTrapDoor_Spec.md`
+
+---
+
+## ItemBucket
+[STATUS:PROVIDED]
+**Needed for:** `Core/Items/ItemBucket.cs` — bucket items (IDs 325/326/327) are plain `Item`
+stubs. Buckets are essential for water/lava placement and milk collection from cows.
+
+**Obfuscated classes:** bucket base likely `rc`; sub-items for water/lava bucket may share same
+class with metadata, or be separate classes.
+
+**Questions:**
+- Is there one bucket class with a "fluid" field, or three separate item classes?
+  - Empty bucket (ID 325): `new rc(325)`?
+  - Water bucket (ID 326): `new rc(326, 8/9)` storing water block ID?
+  - Lava bucket (ID 327): `new rc(327, 10/11)` storing lava block ID?
+- Empty bucket `OnItemRightClick`:
+  - Ray-cast to find water or lava source block (material check)?
+  - Picks up still water (ID 9) and still lava (ID 11)?
+  - Replaces that block with air?
+  - Returns the filled bucket (ID 326 or 327)?
+- Water/lava bucket `OnItemRightClick`:
+  - Places source block at target position?
+  - Returns empty bucket (ID 325)?
+  - Can it overwrite grass/replaceable blocks?
+- Milk bucket (ID 335 or different?):
+  - Obtained by right-clicking a cow?
+  - `OnItemRightClick` drunk by player: removes all potion effects + 3 heal?
+  - Is milk a separate class or same `rc` with fluid type "milk"?
+- Dispensing: can a Dispenser dispense water/lava buckets?
+- Stack size: 1 (no stacking for filled buckets)?
+
+**Expected deliverable:** `Specs/ItemBucket_Spec.md`
+
+---
+
+## ItemDye_Bonemeal
+[STATUS:PROVIDED]
+**Needed for:** `Core/Items/ItemDye.cs` — item ID 351 (dye) is a plain `Item` stub. Dye is the
+most important coloring item; damage/metadata 15 = bonemeal which is critical for farming.
+
+**Obfuscated class:** confirmed `xv` (from the OpenQuestion_AcyAV resolution session).
+
+**Questions:**
+- Bonemeal (meta 15) `OnItemUse`:
+  - Applied to crops (ID 59): calls InstantGrow() → stage 7?
+  - Applied to sapling (ID 6): triggers tree growth attempt?
+  - Applied to grass block (ID 2): spawns WorldGenTallGrass/WorldGenFlowers on surface?
+  - Applied to melon/pumpkin stem: advances to fully grown?
+  - Applied to mushroom: grows into huge mushroom if space allows?
+  - Applied to any other block: no effect?
+- Other dye colors (meta 0-14): applied to wool (ID 35)?
+  - How is dyed wool metadata set?
+  - Can dye be applied to sheep directly to change their wool color?
+- Item texture: each of 16 dye types has its own items.png icon?
+- Stack size: 64?
+- ItemDye also dropped by squids (ink sac, meta 0)?
+
+**Expected deliverable:** `Specs/ItemDye_Spec.md`
+
+---
+
+## ItemShears
+[STATUS:PROVIDED]
+**Needed for:** `Core/Items/ItemShears.cs` — ItemShears (ID 359) is a plain `Item` stub.
+Shears are required for wool harvesting (without killing sheep), leaf collection, and vine breaking.
+
+**Obfuscated class:** unknown.
+
+**Questions:**
+- Obfuscated class name?
+- Durability: 238 uses?
+- `OnItemUse` on blocks:
+  - Leaves (IDs 18/161): drops leaves block directly (instead of sapling/nothing)?
+  - Vines (ID 106): drops vines?
+  - Cobweb (ID 30): drops string (ID 287)?
+  - Any other blocks?
+- `OnItemUse` on entities:
+  - Sheep: shears wool (drops 1-3 wool of the sheep's current color), sets `Sheared=true` flag?
+  - Mooshroom: shears 5 mushrooms + converts to normal cow?
+  - Snow Golem: removes pumpkin head, revealing its "face"?
+- Does shearing cost 1 durability per use?
+- `isItemTool`: true (so correct durability damage from `damageItem`)?
+- `canHarvestBlock`: true for cobweb?
+
+**Expected deliverable:** `Specs/ItemShears_Spec.md`
+
+---
+
+## ItemSign_Placement
+[STATUS:PROVIDED]
+**Needed for:** `Core/Items/ItemSign.cs` — sign item (ID 323) is a plain `Item` stub.
+Sign placement is unusual: wall signs (ID 68) and floor signs (ID 63) use separate block IDs,
+with floor signs storing yaw as metadata.
+
+**Questions:**
+- Obfuscated class name?
+- `OnItemUse`: places sign on the targeted block face?
+  - Placed on side faces → wall sign (ID 68), metadata = facing direction (2-5)?
+  - Placed on top face → floor sign (ID 63), metadata = Math.floor(player.yaw/22.5+0.5) & 15
+    → 16 yaw positions (each 22.5°)?
+- After placing the sign block, does the game open a "sign editing GUI"?
+  - If yes: what triggers the GUI open — a server packet? A block activation?
+  - Or does the block just place with empty text?
+- Sign item drops: floor/wall sign blocks both drop sign item (ID 323), not block form?
+- Stack size: 16?
+
+**Expected deliverable:** `Specs/ItemSign_Spec.md`
+
+---
+
+## VillagePieces
+[STATUS:PROVIDED]
+**Needed for:** `Core/WorldGen/Village/` directory (does not exist). `MapGenVillage` is
+implemented but calls a `VillageFactory` that does not exist yet — it currently generates nothing
+(no village structures appear in plains/desert biomes).
+
+The WorldGenStructures_Spec §3 documented the village placement algorithm but noted:
+> "start=yo; starting piece=yp" — piece list for Village pending dedicated spec.
+
+**Obfuscated classes:** village start `yo`, piece registry `yp`, pieces unknown.
+
+**Questions:**
+
+VillageFactory / piece registry:
+- What is the equivalent of `tc` (StrongholdPieceFactory) for villages — is it `yp`?
+- How does the factory choose pieces: is there a weight table? Or a fixed template?
+- Depth limit?
+- XZ radius from start?
+
+Road pieces:
+- Are there straight road segments and turns?
+- What blocks form the road (gravel ID 13? Dirt? Cobblestone)?
+
+House pieces (multiple sizes):
+- Small house, large house, hut?
+- Dimensions per house type?
+- Chest loot (if any)?
+- Door placement and direction?
+- Any NPC (Villager) spawned in houses?
+
+Well piece:
+- Dimensions?
+- Water source blocks?
+
+Blacksmith / forge piece:
+- Does it exist in 1.0?
+- Chest loot table (if yes)?
+
+Farm pieces:
+- Crops + farmland layout?
+- Water source?
+
+Library piece (if in 1.0):
+- Bookshelves + crafting table?
+
+Church / tower piece (if in 1.0)?
+
+**Expected deliverable:** `Specs/VillagePieces_Spec.md` — piece registry, weight/template table,
+full dimensions and block palette for each piece type, loot tables, door placement algorithm.
+
+---
+
+## EntityVillager
+[STATUS:PROVIDED]
+**Needed for:** `Core/Mobs/EntityVillager.cs` — Villager (ID 120) is a `RegisterId` stub.
+Villagers populate generated villages and offer trades.
+
+**Questions:**
+- Obfuscated class name?
+- Profession metadata (0-4 or 0-5): farmer/librarian/priest/blacksmith/butcher?
+- Trading system:
+  - `MerchantRecipe` class: buy1 + buy2 + sell ItemStacks?
+  - `MerchantRecipeList`: list of trades per villager?
+  - Trades unlocked based on profession?
+  - Use limit per trade before it resets?
+- AI: villager wanders, returns inside at night, flees from zombies?
+- Zombie villager in 1.0? (Zombie that infects villagers added 1.4 — probably not in 1.0)
+- NBT: profession int, trade list?
+- Breeding: do villagers reproduce when village has enough houses in 1.0?
+
+**Expected deliverable:** `Specs/EntityVillager_Spec.md`
+
+---
+
+## BlockCauldron
+[STATUS:PROVIDED]
+**Needed for:** `Core/Blocks/BlockCauldron.cs` — cauldron (ID 118) is a plain `Block` stub.
+Cauldrons were added in Beta 1.9 and are present in 1.0.
+
+**Questions:**
+- Obfuscated class name?
+- Water level metadata 0-3 (0=empty, 3=full)?
+- Right-click with water bucket: fills one level, returns empty bucket?
+- Right-click with empty bucket when full: takes one level, gives water bucket?
+- Right-click with leather armor: washes one dye off the leather color (or removes damage)?
+- Fills from rain: random tick increments level when raining?
+- AABB: partial height? What dimensions?
+- Drops itself when broken?
+
+**Expected deliverable:** `Specs/BlockCauldron_Spec.md`
+
+---
+
+## BlockBrewingStand
+[STATUS:PROVIDED]
+**Needed for:** `Core/Blocks/BlockBrewingStand.cs` (ID 117) and `Core/TileEntity/TileEntityBrewingStand.cs`
+— both are stubs. Brewing stands were added in Beta 1.9 and are in 1.0. TileEntityBrewingStand
+stub already exists in TileEntityStubs.cs but has no logic.
+
+**Questions:**
+- Obfuscated class name for the block?
+- Slots: 4 — ingredient slot + 3 potion bottle slots?
+- Brewing animation: `brewTime` counter (400 ticks)?
+- Recipe system: ingredient + base potion → output potion — full recipe table in 1.0?
+- Which potions can be brewed in 1.0 (some were added later)?
+- Fuel? (Blaze powder fuel was added in 1.9 snapshot, not in release 1.0 — confirm)
+- Light emission when active?
+- NBT: `Items` (4 slots), `BrewTime` short?
+
+**Expected deliverable:** `Specs/BlockBrewingStand_Spec.md`
+
+---
+
+## EntitySnowGolem
+[STATUS:PROVIDED]
+**Needed for:** promoted `Register<EntitySnowGolem>` in EntityRegistry (ID 97 "SnowMan").
+Snow golems are player-buildable utility mobs (2 snow blocks + pumpkin) that throw snowballs at
+hostiles and leave a snow trail.
+
+**Questions:**
+- Obfuscated class name?
+- Superclass: extends `zo` (EntityMonster)? Or `ww` (EntityAI)?
+- Build detection: does the world monitor for pumpkin placement on top of 2 snow blocks?
+  Or does the player use a pumpkin item to summon it?
+- AI: targets and throws snowballs at EntityMonster entities within range?
+- Snow trail: places snow layer (ID 78, meta 0) at the golem's position each tick? Condition?
+- Melting: dies in warm biomes (temp > 1.0)? Dies in rain?
+- NBT: just base entity fields?
+- Hitbox: same as player (0.6×1.8)?
+- HP: 4?
+
+**Expected deliverable:** `Specs/EntitySnowGolem_Spec.md`
+
+---
+
+## ItemGoldenApple
+[STATUS:PROVIDED]
+**Needed for:** `Core/Items/ItemGoldenApple.cs` — golden apple (ID 322) is a plain `Item` stub.
+The golden apple is special food that grants regeneration effects.
+
+**Questions:**
+- Obfuscated class name? Is it a subclass of ItemFood?
+- Regular golden apple (meta 0): heals how much? Grants Regeneration II for how long?
+- Enchanted golden apple (meta 1, "Notch apple"): heals? Grants Absorption, Fire Resistance, Regeneration?
+- Is meta 1 craftable in 1.0? (8 gold blocks + apple)?
+- In 1.0 was the regular golden apple crafted with 8 gold nuggets or 8 gold ingots?
+- Does it use the ItemFood `FinishUsingItem` path or its own implementation?
+
+**Expected deliverable:** Can be a section in `Specs/CraftingRecipes_Spec.md`, or short standalone
+`Specs/ItemGoldenApple_Spec.md`.
+
+---
+
+## BlockGrassPlant_CanBlockStay
+[STATUS:PROVIDED]
+**Needed for:** Multiple plain block stubs that share a "canBlockStay requires solid block below"
+base class pattern (`wg` = BlockFlower base). These blocks currently never drop themselves when
+their support is removed:
+- ID 31 — Tall Grass (meta 0=dead shrub, 1=tall grass, 2=fern)
+- ID 32 — Dead Bush
+- ID 37, 38 — Yellow Flower, Rose (may share `wg` base)
+- ID 27, 28 — Rails and detector rails (different base but also "detach on support removal")
+
+**Questions:**
+- What is `wg` (BlockFlower base class)? Fields, canBlockStay, onNeighborChange, drops?
+- Does `wg` shared by flowers AND tall grass AND dead bush?
+- Tall grass (ID 31): drops nothing normally; drops itself with shears; rare wheat seed drop with Fortune?
+- Dead bush (ID 32): drops stick? Or nothing?
+- Are rails (IDs 27/28) a subclass of `wg` or a completely separate class?
+
+**Expected deliverable:** Can be merged into `Specs/BlockPlants_Spec.md` or delivered as
+`Specs/BlockFlowerBase_Spec.md`.
+
+---
+
+## BlockRail_Full
+[STATUS:PROVIDED]
+**Needed for:** `Core/Blocks/BlockRail.cs` — plain `Block` stubs for IDs 27 (rail), 28 (powered
+rail), 66 (detector rail), 67 (activator rail — if in 1.0; may not exist until 1.5).
+
+**Questions:**
+- Obfuscated class names for each rail type?
+- Metadata encoding for ID 27 (plain rail):
+  - meta 0-5: straight segments (NS/EW/ascending)?
+  - meta 6-9: curved corners (NE/SE/SW/NW)?
+- Does the rail auto-connect on placement (updates neighbors)?
+- Powered rail (ID 28): meta 0-5 straight only (no curves); bit 3 = powered state?
+- Detector rail (ID 66): emits redstone signal when minecart is above?
+- Activator rail (ID 67): exists in 1.0? (may have been added in 1.5 with hoppers/droppers)
+- canBlockStay: requires solid block directly below?
+- Breaking: drops itself (1 rail item)?
+- What block IDs for the rail items: 66/67 as items too?
+
+**Expected deliverable:** `Specs/BlockRail_Spec.md`
+
+---
+
+## WorldServer_MinecraftServer
+[STATUS:PROVIDED]
+**Needed for:** `Core/Engine.cs` — the main game loop is wired but never properly ticks the
+server side: chunk loading for players, auto-save timing, and time-of-day progression are stubs.
+Several `IWorld` methods return stubs (e.g. `GameTime` is never incremented).
+
+**Questions:**
+- `MinecraftServer` or `Minecraft` (SP) — what manages the main tick loop?
+- Game time (`ry.j` / `worldTime`): incremented by 1 per tick? Field name on World?
+- Auto-save: does the server call `WorldInfo.setSaveVersion`, `SaveHandler.saveWorld`, and
+  `SaveHandler.saveAllChunks` on a timer? What interval in ticks?
+- Weather: `ry.e`/`f` (rainingStrength/thunderingStrength) — what randomises rain start/stop?
+  Duration formula: rain for 12000–24000 ticks, then clear for 12000–180000 ticks?
+- `WorldInfo` fields `rainTime`/`thunderTime`: countdown timers?
+- Moon phase: derived from `(worldTime / 24000) % 8`?
+- Difficulty changes: stored in WorldInfo or per-server config?
+- Spawn point: set on first world creation to the first grass block above Y=64 near origin?
+
+**Expected deliverable:** `Specs/WorldServer_Spec.md` — game-time tick, auto-save timer,
+weather randomisation formula, spawn-point generation, moon phase formula.
+
+---
+
+## LivingEntity_Drowning_Fire
+[STATUS:PROVIDED]
+**Needed for:** `Core/LivingEntity.cs` — drowning and fire damage are currently stubs.
+`Entity.cs` has `FireTicks` but the damage callback is never called. `AirSupply` is never
+decremented.
+
+**Questions:**
+- Air supply (`ia.aS` or similar field): starting value? 300 ticks?
+- Drowning tick logic in `nq.g()` (or wherever it lives):
+  - Decrements air by 1 per tick when head block is water/lava?
+  - At air == -20: deal 2 drowning damage and reset air to 0?
+  - Recovers 5 air per tick when not submerged?
+  - `Water Breathing` potion suppresses this completely?
+- Fire damage tick: at what interval is `DamageSource.OnFire` damage applied? (1 damage / 1 tick?)
+- Fire extinguish: water block extinguishes fire immediately?
+- Fall damage: `Entity.fallDistance` — at what threshold does fall damage start? Formula?
+  - `fallDistance > 3.0F` → `(fallDistance - 3.0F)` rounded damage?
+  - `Jump Boost` potion reduces effective fall distance?
+- Armour absorbs fall damage? Fire damage?
+
+**Expected deliverable:** `Specs/LivingEntity_Survival_Spec.md` — drowning, fire damage tick,
+fall damage formula, extinguish conditions.
+
+---
+
+## Entity_Physics_Move
+[STATUS:PROVIDED]
+**Needed for:** `Core/Entity.cs` — the `Move(dx, dy, dz)` method (sweep collision) is one of
+the most critical simulation paths. It exists but several details are unconfirmed:
+- Horizontal clip-up step (0.5-block auto-step for walking up blocks)
+- Ladder/vine climb detection
+- Entity push out of blocks (suffocation in wall)
+- Slipperiness factor per-block (BlockIce = 0.98F)
+
+**Questions:**
+- `ia.b(float dx, float dy, float dz)` — the main movement method:
+  - Does it call `world.a(entity, aabb.expand(dx,dy,dz))` to get list of block AABBs?
+  - Clip-up step (stair-like): after horizontal collision, tries `dy = 0.5F`, re-tests?
+  - What is the exact clip-up step height — 0.5F always, or `entity.stepHeight`?
+  - After movement: updates `onGround`, `isCollidedHorizontally`, `isCollidedVertically`?
+- Ladder/vine climb: how is `isOnLadder()` checked — specific block IDs (65, 106)?
+  - When on ladder: clamp upward/downward velocity?
+  - Sneak on ladder: hold position (no fall)?
+- Slipperiness: where is `block.slipperiness` applied? In the entity tick? In `ia.b()`?
+  - Default slipperiness: 0.6F; ice: 0.98F?
+  - Formula: `motionX *= slipperiness * 0.91F`?
+- Suffocation in blocks: is `isEntityInsideOpaqueBlock()` checked per-tick? What happens?
+- Entity-entity push: are entities pushed apart when overlapping? In `ia` or `ry`?
+
+**Expected deliverable:** `Specs/Entity_Physics_Spec.md` — full `ia.b()` sweep algorithm,
+clip-up step, ladder/vine logic, slipperiness, suffocation check, entity-entity push.
+
+---
+
+## Rendering_BlockModel
+[STATUS:PROVIDED]
+**Needed for:** `Graphics/` — the renderer currently uses a simple face-culling approach.
+Several block types need non-standard rendering that goes beyond simple 6-face cube rendering:
+fences, panes, glass, slabs, stairs, crossed-face plants, torches, levers, etc.
+This is a render-layer spec, not a Core spec.
+
+**Questions:**
+- `RenderBlocks` class (obf: `bx` or `jh`) — is there one method per special render type?
+- Render type IDs: which integer (0-25?) maps to which block shape?
+  - 0 = full cube?
+  - 1 = cross/X sprite (plants, sapling, mushroom, flower)?
+  - 2 = torch (leaning 4 directions + upright)?
+  - 3 = fire (animated multi-face)?
+  - 4 = fluid (variable height)?
+  - 5 = redstone wire (L/T/+/straight thin quad)?
+  - 6 = crops (multi-hash pattern)?
+  - 7 = door (thin panel with UV rotation)?
+  - 8 = ladder (flat face against wall)?
+  - 9 = rail (flat ground quad, curved variants)?
+  - 10 = stairs (two-AABB composite)?
+  - 11 = fence (dynamic post + arms)?
+  - 12 = lever (stick + base)?
+  - 13 = cactus (inset faces)?
+  - 14 = bed (low flat model)?
+  - 15 = vine (multi-face on wall/ceiling)?
+  - 16 = repeater (flat base + two torches)?
+  - 17 = piston + extension?
+  - 18 = glass pane / iron bars (thin cross)?
+  - 19 = lilypad (flat ground)?
+  - 20 = cauldron (hollow vessel)?
+  - 21 = brewing stand (rod + base)?
+  - 22 = end portal frame (with/without eye)?
+  - 23 = dragon egg (stepped pyramid)?
+  - 24 = cocoa pod (angled bump)?
+  - 25 = enchantment table (low, open-book animation handled by TESR)?
+  - Any custom TESR (TileEntitySpecialRenderer) for chests, enchantment table, signs?
+- How does `Block.getRenderType()` return the render type integer?
+- For cross/X sprites: two quads crossed at 45°? UV mapped from texture atlas?
+- For fluid: variable-height quads using `getFluidLevel`?
+
+**Expected deliverable:** `Specs/Rendering_BlockModel_Spec.md` — full render type integer table,
+one-paragraph description per render type, which block IDs use each type, TESR list.

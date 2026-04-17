@@ -87,4 +87,19 @@ public sealed class StructureBoundingBox
     public int SizeY => MaxY - MinY + 1;
     /// <summary>Z span of this box in blocks (inclusive).</summary>
     public int SizeZ => MaxZ - MinZ + 1;
+
+    /// <summary>
+    /// Convenience factory: no local offsets, origin is the piece's world anchor.
+    /// Equivalent to <c>Create(x, y, z, 0, 0, 0, w, h, d, orientation)</c>.
+    /// </summary>
+    public static StructureBoundingBox FromOrigin(int x, int y, int z, int w, int h, int d, int orientation)
+        => Create(x, y, z, 0, 0, 0, w, h, d, orientation);
+
+    /// <summary>Translates the bounding box by the given offset.</summary>
+    public void Offset(int dx, int dy, int dz)
+    {
+        MinX += dx; MaxX += dx;
+        MinY += dy; MaxY += dy;
+        MinZ += dz; MaxZ += dz;
+    }
 }

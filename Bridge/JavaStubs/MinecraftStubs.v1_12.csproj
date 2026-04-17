@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AssemblyName>MinecraftStubs.v1_12</AssemblyName>
+    <RootNamespace>net.minecraft</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <!-- Only compile files under v1_12/ — other version folders are separate projects -->
+    <Compile Remove="v1_0/**" />
+    <Compile Remove="v1_7_10/**" />
+    <Compile Remove="v1_16/**" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="IKVM" Version="8.*" />
+    <PackageReference Include="Lib.Harmony" Version="2.3.*" />
+    <!-- AllocGuard pools + ModRuntime contracts -->
+    <ProjectReference Include="..\..\SpectraEngine.ModRuntime\SpectraEngine.ModRuntime.csproj" />
+    <!-- Core interfaces (IWorld, IEngine, etc.) — never import concrete Core classes -->
+    <ProjectReference Include="..\..\SpectraEngine.csproj" />
+  </ItemGroup>
+</Project>

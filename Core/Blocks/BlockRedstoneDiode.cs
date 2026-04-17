@@ -35,6 +35,7 @@ public sealed class BlockRedstoneDiode : Block
     }
 
     public override bool IsOpaqueCube() => false;
+    public override int  GetRenderType()  => _isOn ? 17 : 16; // 16=unpowered repeater, 17=powered
     public override bool RenderAsNormalBlock() => false;
     public override bool CanProvidePower() => _isOn;
     public override int GetTickDelay() => 2;

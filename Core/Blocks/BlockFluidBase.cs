@@ -28,6 +28,7 @@ public abstract class BlockFluidBase : Block
     // ── Block property overrides ──────────────────────────────────────────────
 
     public override bool IsOpaqueCube() => false;
+    public override int  GetRenderType()  => 4;
     public override bool IsCollidable() => false;
     public override int  GetTickDelay() => 5; // default (water); lava overrides
 

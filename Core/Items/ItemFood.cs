@@ -107,8 +107,7 @@ public class ItemFood : Item
             if (!world.IsClientSide && _potionId > 0
                 && world.Random.NextFloat() < _potionChance)
             {
-                // Stub: potion effect application — PotionEffect system not yet implemented.
-                // ep.AddPotionEffect(new PotionEffect(_potionId, _potionDuration * 20, _potionAmplifier));
+                ep.AddPotionEffect(new PotionEffect(_potionId, _potionDuration * 20, _potionAmplifier));
             }
         }
 

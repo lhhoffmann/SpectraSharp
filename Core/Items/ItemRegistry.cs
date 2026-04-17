@@ -284,4 +284,231 @@ public static class ItemRegistry
     /// </summary>
     public static readonly ItemFlintAndSteel FlintAndSteel
         = (ItemFlintAndSteel)new ItemFlintAndSteel(259).SetIcon(5, 0).SetUnlocalizedName("flintAndSteel");
+
+    // ── Bow and Arrow (IDs 261-262) ───────────────────────────────────────────
+
+    /// <summary>
+    /// Bow — itemId=261, durability=384, stack=1, tex=(5,1). obf: acy.il.
+    /// Source spec: Documentation/VoxelCore/Parity/Specs/BowArrow_Spec.md §5.5
+    /// </summary>
+    public static readonly ItemBow Bow
+        = (ItemBow)new ItemBow(261).SetIcon(5, 1).SetUnlocalizedName("bow");
+
+    /// <summary>
+    /// Arrow — itemId=262, stack=64, tex=(5,2). obf: acy.im.
+    /// Plain item (no custom class). Pickup by EntityArrow uses this ID.
+    /// </summary>
+    public static readonly Item Arrow
+        = new Item(262).SetIcon(5, 2).SetUnlocalizedName("arrow");
+
+    // ── Fishing Rod (ID 346) ──────────────────────────────────────────────────
+
+    /// <summary>
+    /// Fishing Rod — itemId=346, durability=64, stack=1. obf: acy.hd.
+    /// Source spec: Documentation/VoxelCore/Parity/Specs/BowArrow_Spec.md §5.5
+    /// </summary>
+    public static readonly ItemFishingRod FishingRod
+        = (ItemFishingRod)new ItemFishingRod(346).SetIcon(5, 4).SetUnlocalizedName("fishingRod");
+
+    // ── Bone (ID 352) ─────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Bone — itemId=352, stack=64, tex=(5,3). obf: acy.hu.
+    /// Plain item dropped by Skeletons (ID used in loot tables).
+    /// </summary>
+    public static readonly Item Bone
+        = new Item(352).SetIcon(5, 3).SetUnlocalizedName("bone");
+
+    // ── Plain material items ────────────────────────────────────────────────────
+
+    /// <summary>Coal — itemId=7, charcoal meta=1, stack=64. obf: acy.l.</summary>
+    public static readonly Item Coal
+        = new Item(7).SetIcon(7, 0).SetUnlocalizedName("coal");
+
+    /// <summary>Diamond — itemId=8, stack=64. obf: acy.m.</summary>
+    public static readonly Item Diamond
+        = new Item(8).SetIcon(3, 3).SetUnlocalizedName("diamond");
+
+    /// <summary>Iron Ingot — itemId=9, stack=64. obf: acy.n.</summary>
+    public static readonly Item IronIngot
+        = new Item(9).SetIcon(7, 1).SetUnlocalizedName("ingotIron");
+
+    /// <summary>Gold Ingot — itemId=10, stack=64. obf: acy.o.</summary>
+    public static readonly Item GoldIngot
+        = new Item(10).SetIcon(7, 2).SetUnlocalizedName("ingotGold");
+
+    /// <summary>String — itemId=31, stack=64. obf: acy.J.</summary>
+    public static readonly Item String_
+        = new Item(31).SetIcon(8, 0).SetUnlocalizedName("string");
+
+    /// <summary>Feather — itemId=32, stack=64. obf: acy.K.</summary>
+    public static readonly Item Feather
+        = new Item(32).SetIcon(9, 0).SetUnlocalizedName("feather");
+
+    /// <summary>Gunpowder — itemId=33, stack=64. obf: acy.L.</summary>
+    public static readonly Item Gunpowder
+        = new Item(33).SetIcon(10, 0).SetUnlocalizedName("sulphur");
+
+    /// <summary>Wheat — itemId=40, stack=64. obf: acy.S.</summary>
+    public static readonly Item Wheat
+        = new Item(40).SetIcon(11, 0).SetUnlocalizedName("wheat");
+
+    /// <summary>Flint — itemId=62, stack=64. obf: acy.ao.</summary>
+    public static readonly Item Flint
+        = new Item(62).SetIcon(6, 0).SetUnlocalizedName("flint");
+
+    /// <summary>Redstone Dust — itemId=75, stack=64. obf: acy.aB.</summary>
+    public static readonly Item RedstoneDust
+        = new Item(75).SetIcon(3, 3).SetUnlocalizedName("redstone");
+
+    /// <summary>Snowball — itemId=76, stack=16. obf: acy.aC.</summary>
+    public static readonly Item Snowball
+        = new Item(76).SetIcon(14, 0).SetUnlocalizedName("snowball");
+
+    /// <summary>Leather — itemId=78, stack=64. obf: acy.aE.</summary>
+    public static readonly Item Leather
+        = new Item(78).SetIcon(7, 5).SetUnlocalizedName("leather");
+
+    /// <summary>Brick (item) — itemId=80, stack=64. obf: acy.aG (brick item → used in brick block recipe).</summary>
+    public static readonly Item BrickItem
+        = new Item(80).SetIcon(5, 7).SetUnlocalizedName("brick");
+
+    /// <summary>Clay Ball — itemId=81, stack=64. obf: acy.aH.</summary>
+    public static readonly Item ClayBall
+        = new Item(81).SetIcon(9, 2).SetUnlocalizedName("clay");
+
+    /// <summary>Sugar Cane (item) — itemId=82, stack=64. obf: acy.aI.</summary>
+    public static readonly Item SugarCane
+        = new Item(82).SetIcon(10, 4).SetUnlocalizedName("reeds");
+
+    /// <summary>Paper — itemId=83, stack=64. obf: acy.aJ.</summary>
+    public static readonly Item Paper
+        = new Item(83).SetIcon(11, 4).SetUnlocalizedName("paper");
+
+    /// <summary>Book — itemId=84, stack=64. obf: acy.aK.</summary>
+    public static readonly Item Book
+        = new Item(84).SetIcon(12, 4).SetUnlocalizedName("book");
+
+    /// <summary>Slimeball — itemId=85, stack=64. obf: acy.aL (slime, used in sticky piston).</summary>
+    public static readonly Item Slimeball
+        = new Item(85).SetIcon(10, 5).SetUnlocalizedName("slimeball");
+
+    /// <summary>Egg — itemId=88, stack=16. obf: acy.aO.</summary>
+    public static readonly Item Egg
+        = new Item(88).SetIcon(12, 0).SetUnlocalizedName("egg");
+
+    /// <summary>Blaze Rod — itemId=98, stack=64. obf: acy.aP.</summary>
+    public static readonly Item BlazeRod
+        = new Item(98).SetIcon(3, 5).SetUnlocalizedName("blazeRod");
+
+    /// <summary>Gold Nugget — itemId=100, stack=64. obf: acy.aR (likely).</summary>
+    public static readonly Item GoldNugget
+        = new Item(100).SetIcon(5, 5).SetUnlocalizedName("goldNugget");
+
+    /// <summary>Nether Wart (item) — itemId=115, stack=64. obf: acy.aS (likely).</summary>
+    public static readonly Item NetherWart
+        = new Item(115).SetIcon(3, 6).SetUnlocalizedName("netherStalkSeeds");
+
+    /// <summary>Ender Pearl — itemId=116, stack=16. obf: acy.bm.</summary>
+    public static readonly Item EnderPearl
+        = new Item(116).SetIcon(10, 5).SetUnlocalizedName("enderPearl");
+
+    /// <summary>Blaze Powder — itemId=117... wait — see spec note; itemId=99, stack=64. obf: acy.bv.</summary>
+    public static readonly Item BlazePowder
+        = new Item(99).SetIcon(4, 5).SetUnlocalizedName("blazePowder");
+
+    /// <summary>Stick — itemId=24, stack=64. obf: acy.C. Used in all tool/weapon recipes.</summary>
+    public static readonly Item Stick
+        = new Item(24).SetIcon(5, 3).SetUnlocalizedName("stick");
+
+    /// <summary>Rotten Flesh — itemId=111, stack=64. obf: acy.af.</summary>
+    public static readonly Item RottenFlesh
+        = new Item(111).SetIcon(3, 7).SetUnlocalizedName("rottenFlesh");
+
+    /// <summary>Ghast Tear — itemId=114, stack=64. obf: acy.aY.</summary>
+    public static readonly Item GhastTear
+        = new Item(114).SetIcon(5, 6).SetUnlocalizedName("ghastTear");
+
+    /// <summary>Spider Eye — itemId=119, stack=64. obf: acy.bb.</summary>
+    public static readonly Item SpiderEye
+        = new Item(119).SetIcon(4, 7).SetUnlocalizedName("spiderEye");
+
+    /// <summary>Empty Bowl — itemId=25, stack=64. obf: acy.ap.</summary>
+    public static readonly Item Bowl
+        = new Item(25).SetIcon(7, 4).SetUnlocalizedName("bowl");
+
+    /// <summary>Mushroom Stew — itemId=26, stack=1. obf: acy.aq.</summary>
+    public static readonly Item MushroomStew
+        = ((Item)new Item(26).SetIcon(8, 4).SetUnlocalizedName("mushroomStew")).SetMaxStackSize(1);
+
+    /// <summary>Painting item — itemId=65, stack=64. obf: acy.ar.</summary>
+    public static readonly Item Painting
+        = new Item(65).SetIcon(10, 1).SetUnlocalizedName("painting");
+
+    // ── Buckets (IDs 325-327, 335) ────────────────────────────────────────────
+
+    /// <summary>Empty Bucket — itemId=69, stack=1. obf: acy.av.</summary>
+    public static readonly ItemBucket EmptyBucket  = new ItemBucket(69,  0);
+
+    /// <summary>Water Bucket — itemId=70, stack=1. obf: acy.aw.</summary>
+    public static readonly ItemBucket WaterBucket  = new ItemBucket(70,  9);
+
+    /// <summary>Lava Bucket — itemId=71, stack=1. obf: acy.ax.</summary>
+    public static readonly ItemBucket LavaBucket   = new ItemBucket(71, 11);
+
+    /// <summary>Milk Bucket — itemId=79, stack=1. obf: acy.aF.</summary>
+    public static readonly ItemMilkBucket MilkBucket
+        = new ItemMilkBucket();
+
+    // ── Sign (ID 323 = 256+67) ───────────────────────────────────────────────
+
+    /// <summary>
+    /// Sign — itemId=67, stack=1. obf: acy.my.
+    /// Source spec: Documentation/VoxelCore/Parity/Specs/ItemSign_Spec.md
+    /// </summary>
+    public static readonly ItemSign Sign = new ItemSign();
+
+    // ── Shears (ID 359 = 256+103) ────────────────────────────────────────────
+
+    /// <summary>
+    /// Shears — itemId=103, durability=238, stack=1. obf: acy.abo.
+    /// Source spec: Documentation/VoxelCore/Parity/Specs/ItemShears_Spec.md
+    /// </summary>
+    public static readonly ItemShears Shears = new ItemShears();
+
+    // ── Dye (ID 351 = 256+95) ────────────────────────────────────────────────
+
+    /// <summary>
+    /// Dye — itemId=95, 16 subtypes (meta 0–15), meta 15 = bonemeal. obf: acy.bm.
+    /// Source spec: Documentation/VoxelCore/Parity/Specs/ItemDye_Spec.md
+    /// </summary>
+    public static readonly ItemDye Dye = new ItemDye().SetIcon(7, 2) as ItemDye
+        ?? throw new InvalidOperationException();
+
+    // ── Golden Apple (ID 322 = 256+66) ───────────────────────────────────────
+
+    /// <summary>
+    /// Golden Apple — itemId=66, always edible, Regeneration II on eat, EPIC rarity. obf: acy.afk.
+    /// Source spec: Documentation/VoxelCore/Parity/Specs/ItemGoldenApple_Spec.md
+    /// </summary>
+    public static readonly ItemGoldenApple GoldenApple
+        = (ItemGoldenApple)new ItemGoldenApple().SetIcon(11, 0);
+
+    // ── Glass Bottle (ID 374 = 256+118) ──────────────────────────────────────
+
+    /// <summary>
+    /// Glass Bottle (empty) — itemId=118, tex=(12,1). obf: acy.bs.
+    /// Returned by ItemPotion after drinking; used in brewing.
+    /// </summary>
+    public static readonly Item GlassBottle
+        = new Item(118).SetIcon(12, 1).SetUnlocalizedName("glassBottle");
+
+    // ── Potion (ID 373 = 256+117) ────────────────────────────────────────────
+
+    /// <summary>
+    /// Potion — itemId=117, stack=1. obf: acy.br.
+    /// Source spec: Documentation/VoxelCore/Parity/Specs/PotionEffect_Spec.md §7
+    /// </summary>
+    public static readonly ItemPotion Potion
+        = new ItemPotion();
 }

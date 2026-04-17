@@ -39,6 +39,7 @@ public class BlockFence : Block
 
     /// <summary>obf: <c>a()</c> — isOpaqueCube. Always false.</summary>
     public override bool IsOpaqueCube() => false;
+    public override int  GetRenderType()  => 11;
 
     /// <summary>obf: <c>b()</c> — renderAsNormal. Always false.</summary>
     public override bool RenderAsNormalBlock() => false;

@@ -24,26 +24,26 @@ public static class EntityRegistry
         // Rows for unimplemented entities only register the int ID → placeholder type.
 
         Register<EntityItem>("Item", 1);
+        Register<EntityXPOrb>("XPOrb", 2);
 
         // Unimplemented entities — int IDs only (no C# class yet)
-        RegisterId("XPOrb",        2);
         RegisterId("LeashKnot",    8);
-        RegisterId("Painting",     9);
-        RegisterId("Arrow",       10);
-        RegisterId("Snowball",    11);
-        RegisterId("Fireball",    12);
-        RegisterId("SmallFireball", 13);
-        RegisterId("ThrownEnderpearl", 14);
-        RegisterId("EyeOfEnderSignal", 15);
+        Register<EntityPainting>("Painting", 9);
+        Register<EntityArrow>("Arrow", 10);
+        Register<EntitySnowball>("Snowball", 11);
+        Register<EntityFireball>("Fireball", 12);
+        Register<EntitySmallFireball>("SmallFireball", 13);
+        Register<EntityEnderPearl>("ThrownEnderpearl", 14);
+        Register<EntityEyeOfEnder>("EyeOfEnderSignal", 15);
         RegisterId("ThrownPotion",  16);
         RegisterId("ThrownExpBottle", 17);
         RegisterId("ItemFrame",    18);
         RegisterId("WitherSkull",  19);
         Register<EntityTNTPrimed>("PrimedTnt", 20);
-        RegisterId("FallingSand",  21);
+        Register<EntityFallingSand>("FallingSand", 21);
         RegisterId("FireworksRocketEntity", 22);
-        RegisterId("Minecart",     40);
-        RegisterId("Boat",         41);
+        Register<EntityMinecart>("Minecart", 40);
+        Register<EntityBoat>("Boat", 41);
         RegisterId("Mob",          48);
         RegisterId("Monster",      49);
         Register<Mobs.EntityCreeper>("Creeper",    50);
@@ -51,15 +51,15 @@ public static class EntityRegistry
         Register<Mobs.EntitySpider>("Spider",     52);
         RegisterId("Giant",        53);
         Register<Mobs.EntityZombie>("Zombie",     54);
-        RegisterId("Slime",        55);
-        RegisterId("Ghast",        56);
-        RegisterId("PigZombie",    57);
-        RegisterId("Enderman",     58);
-        RegisterId("CaveSpider",   59);
-        RegisterId("Silverfish",   60);
+        Register<Mobs.EntitySlime>("Slime",        55);
+        Register<Mobs.EntityGhast>("Ghast",        56);
+        Register<Mobs.EntityZombiePigman>("PigZombie", 57);
+        Register<Mobs.EntityEnderman>("Enderman",   58);
+        Register<Mobs.EntityCaveSpider>("CaveSpider", 59);
+        Register<Mobs.EntitySilverfish>("Silverfish", 60);
         RegisterId("Blaze",        61);
-        RegisterId("LavaSlime",    62);
-        RegisterId("EnderDragon",  63);
+        Register<Mobs.EntityMagmaCube>("LavaSlime", 62);
+        Register<EntityDragon>("EnderDragon",  63);
         RegisterId("WitherBoss",   64);
         RegisterId("Bat",          65);
         RegisterId("Witch",        66);
@@ -67,14 +67,14 @@ public static class EntityRegistry
         Register<Mobs.EntitySheep>("Sheep",     91);
         Register<Mobs.EntityCow>("Cow",         92);
         Register<Mobs.EntityChicken>("Chicken", 93);
-        RegisterId("Squid",        94);
-        RegisterId("Wolf",         95);
-        RegisterId("MushroomCow",  96);
-        RegisterId("SnowMan",      97);
+        Register<Mobs.EntitySquid>("Squid",        94);
+        Register<Mobs.EntityWolf>("Wolf",          95);
+        Register<Mobs.EntityMooshroom>("MushroomCow", 96);
+        Register<Mobs.EntitySnowMan>("SnowMan",    97);
         RegisterId("Ozelot",       98);
         RegisterId("VillagerGolem",99);
-        RegisterId("Villager",    120);
-        RegisterId("EnderCrystal",200);
+        Register<Mobs.EntityVillager>("Villager", 120);
+        Register<EntityEnderCrystal>("EnderCrystal", 200);
     }
 
     // ── Public API ────────────────────────────────────────────────────────────

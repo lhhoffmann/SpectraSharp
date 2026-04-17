@@ -324,6 +324,12 @@ public sealed class AxisAlignedBB
         return new MovingObjectPosition(0, 0, 0, faceId, best);
     }
 
+    /// <summary>
+    /// Alias for <see cref="RayTrace"/> — same calculation, name used in EntityArrow.
+    /// obf: same as <c>a(fb, fb)</c>.
+    /// </summary>
+    public MovingObjectPosition? CalculateIntercept(Vec3 start, Vec3 end) => RayTrace(start, end);
+
     // Private ray-trace face validators — CLOSED intervals (spec §6 private helpers)
     // Opposite of IsVecInside which uses OPEN intervals (quirk 2).
     private bool IsOnYzFace(Vec3? v)

@@ -1,0 +1,30 @@
+{
+  "version": "1.7.10",
+  "obfuscated": true,
+  "stubs_version": "v1_7_10",
+  "loaders": ["forge"],
+  "searge": true,
+  "fingerprints": [
+    "bytecode:cpw/mods/fml/common/Mod",
+    "mcmod.info"
+  ],
+  "classes": {
+    "net.minecraft.world.World":                          "net.minecraft.world.World",
+    "net.minecraft.block.Block":                          "net.minecraft.block.Block",
+    "net.minecraft.item.Item":                            "net.minecraft.item.Item",
+    "net.minecraft.item.ItemStack":                       "net.minecraft.item.ItemStack",
+    "net.minecraft.entity.Entity":                        "net.minecraft.entity.Entity",
+    "net.minecraft.entity.EntityLivingBase":              "net.minecraft.entity.EntityLivingBase",
+    "net.minecraft.entity.player.EntityPlayer":           "net.minecraft.entity.player.EntityPlayer",
+    "net.minecraft.tileentity.TileEntity":                "net.minecraft.tileentity.TileEntity",
+    "net.minecraft.world.gen.feature.WorldGenerator":     "net.minecraft.world.gen.feature.WorldGenerator",
+    "cpw.mods.fml.common.Mod":                            "cpw.mods.fml.common.Mod",
+    "cpw.mods.fml.common.event.FMLPreInitializationEvent": "cpw.mods.fml.common.event.FMLPreInitializationEvent",
+    "cpw.mods.fml.common.event.FMLInitializationEvent":    "cpw.mods.fml.common.event.FMLInitializationEvent",
+    "cpw.mods.fml.common.registry.GameRegistry":           "cpw.mods.fml.common.registry.GameRegistry",
+    "net.minecraftforge.common.MinecraftForge":            "net.minecraftforge.common.MinecraftForge",
+    "net.minecraftforge.event.world.BlockEvent$BreakEvent": "net.minecraftforge.event.world.BlockEvent$BreakEvent",
+    "net.minecraftforge.fml.common.FMLCommonHandler":      "net.minecraftforge.fml.common.FMLCommonHandler"
+  },
+  "mojmap": false
+}

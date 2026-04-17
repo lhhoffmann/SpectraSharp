@@ -74,12 +74,8 @@ public static class BlockRegistry
             .SetHasTileEntity()      // T flag
             .SetBlockName("wood");
 
-        // 6 — Sapling (aet): p.e, texture 15, hard 0.0, sound e — stub (no growth tick)
-        new Block(6, 15, Material.RockTransp)
-            .SetHardness(0.0f)
-            .SetStepSound(Block.SoundGrass)
-            .SetHasTileEntity()
-            .SetBlockName("sapling");
+        // 6 — Sapling (aet / BlockSapling)
+        new BlockSapling();
 
         // 7 — Bedrock (yy base): p.e, texture 17, indestructible, res 6000000, N flag
         new Block(7, 17, Material.RockTransp)
@@ -206,19 +202,11 @@ public static class BlockRegistry
         new BlockBed(26)
             .SetBlockName("bed");
 
-        // 27 — Powered Rail (afr): texture 179, p.f(stone2), sound g, hard 0.7, T
-        new Block(27, 179, Material.RockTransp2)
-            .SetHardness(0.7f)
-            .SetStepSound(Block.SoundStoneHighPitch2)
-            .SetHasTileEntity()
-            .SetBlockName("goldenRail");
+        // 27 — Powered Rail
+        new BlockPoweredRail();
 
-        // 28 — Detector Rail (ags): texture 195, p.f, sound g, hard 0.7, T
-        new Block(28, 195, Material.RockTransp2)
-            .SetHardness(0.7f)
-            .SetStepSound(Block.SoundStoneHighPitch2)
-            .SetHasTileEntity()
-            .SetBlockName("detectorRail");
+        // 28 — Detector Rail
+        new BlockDetectorRail();
 
         // 29 — Sticky Piston (abr): texture 106, hard 0.5
         new BlockPiston(29, isSticky: true);
@@ -229,17 +217,11 @@ public static class BlockRegistry
             .SetLightOpacity(1)
             .SetBlockName("web");
 
-        // 31 — Tall Grass (kv): texture 39, p.e, sound e, hard 0
-        new Block(31, 39, Material.RockTransp)
-            .SetHardness(0.0f)
-            .SetStepSound(Block.SoundGrass)
-            .SetBlockName("tallgrass");
+        // 31 — Tall Grass (kv / BlockGrassPlant subclass)
+        new BlockTallGrass();
 
-        // 32 — Dead Bush (jl): texture 55, p.e, sound e, hard 0
-        new Block(32, 55, Material.RockTransp)
-            .SetHardness(0.0f)
-            .SetStepSound(Block.SoundGrass)
-            .SetBlockName("deadbush");
+        // 32 — Dead Bush (jl / BlockGrassPlant subclass — also allows sand soil)
+        new BlockDeadBush();
 
         // 33 — Piston (abr): texture 107, hard 0.5
         new BlockPiston(33, isSticky: false);
@@ -257,30 +239,17 @@ public static class BlockRegistry
         // 36 — Moving Piston proxy (qz): hardness -1.0 (unmined), T
         new BlockMovingPiston(36);
 
-        // 37 — Dandelion (wg): texture 13, p.e, sound e, hard 0
-        new Block(37, 13, Material.RockTransp)
-            .SetHardness(0.0f)
-            .SetStepSound(Block.SoundGrass)
-            .SetBlockName("flower");
+        // 37 — Dandelion (wg / BlockGrassPlant subclass)
+        new BlockDandelion();
 
-        // 38 — Rose (wg): texture 12, p.e, sound e, hard 0
-        new Block(38, 12, Material.RockTransp)
-            .SetHardness(0.0f)
-            .SetStepSound(Block.SoundGrass)
-            .SetBlockName("rose");
+        // 38 — Rose (wg / BlockGrassPlant subclass)
+        new BlockRose();
 
-        // 39 — Brown Mushroom (js): texture 29, p.e, sound e, hard 0, light 1 (0.125F)
-        new Block(39, 29, Material.RockTransp)
-            .SetHardness(0.0f)
-            .SetLightValue(0.125f)
-            .SetStepSound(Block.SoundGrass)
-            .SetBlockName("mushroom");
+        // 39 — Brown Mushroom (js / BlockMushroom)
+        new BlockMushroom(39, 29).SetLightValue(0.125f);
 
-        // 40 — Red Mushroom (js): texture 28, p.e, sound e, hard 0
-        new Block(40, 28, Material.RockTransp)
-            .SetHardness(0.0f)
-            .SetStepSound(Block.SoundGrass)
-            .SetBlockName("mushroom");
+        // 40 — Red Mushroom (js / BlockMushroom)
+        new BlockMushroom(40, 28);
 
         // 41 — Gold Block (rs): texture 23, p.f, sound g, hard 3.0, res 10
         new Block(41, 23, Material.RockTransp2)
@@ -361,12 +330,8 @@ public static class BlockRegistry
         new BlockStairs(53, Block.BlocksList[5]!)
             .SetBlockName("stairsWood");
 
-        // 54 — Chest (au): p.d, sound c, hard 2.5, T
-        new Block(54, 26, Material.Plants)
-            .SetHardness(2.5f)
-            .SetStepSound(Block.SoundWood)
-            .SetHasTileEntity()
-            .SetBlockName("chest");
+        // 54 — Chest (au): concrete BlockChest (single/double, scatter on break)
+        new BlockChest();
 
         // 55 — Redstone Dust (kw): BlockRedstoneWire
         new BlockRedstoneWire(55);
@@ -383,11 +348,8 @@ public static class BlockRegistry
             .SetStepSound(Block.SoundStoneHighPitch2)
             .SetBlockName("blockDiamond");
 
-        // 58 — Workbench (rn): p.d, sound c, hard 2.5
-        new Block(58, 59, Material.Plants)
-            .SetHardness(2.5f)
-            .SetStepSound(Block.SoundWood)
-            .SetBlockName("workbench");
+        // 58 — Workbench (rn): concrete BlockWorkbench — opens 3×3 crafting GUI
+        new BlockWorkbench();
 
         // 59 — Crops (aha): texture 88, plant material, sound grass, hard 0, random tick
         new BlockCrops(59, 88)
@@ -401,20 +363,11 @@ public static class BlockRegistry
             .SetStepSound(Block.SoundGravel)
             .SetBlockName("farmland");
 
-        // 61 — Furnace Off (eu): p.e, sound f, hard 3.5, T
-        new Block(61, 45, Material.RockTransp)
-            .SetHardness(3.5f)
-            .SetStepSound(Block.SoundStoneHighPitch)
-            .SetHasTileEntity()
-            .SetBlockName("furnace");
+        // 61 — Furnace Off (eu): concrete BlockFurnace, unlit
+        new BlockFurnace(61, isLit: false);
 
-        // 62 — Furnace On (eu): p.e, sound f, hard 3.5, light 13 (0.875F), T
-        new Block(62, 45, Material.RockTransp)
-            .SetHardness(3.5f)
-            .SetLightValue(0.875f)
-            .SetStepSound(Block.SoundStoneHighPitch)
-            .SetHasTileEntity()
-            .SetBlockName("furnace");
+        // 62 — Furnace On (eu): concrete BlockFurnace, lit (light 13 = 0.875F)
+        new BlockFurnace(62, isLit: true);
 
         // 63 — Standing Sign (mr): p.d, sound c, hard 1.0, N+T
         new Block(63, 4, Material.Plants)
@@ -438,12 +391,8 @@ public static class BlockRegistry
             .SetHasTileEntity()
             .SetBlockName("ladder");
 
-        // 66 — Rail (afr): texture 128, p.f, sound g, hard 0.7, T
-        new Block(66, 128, Material.RockTransp2)
-            .SetHardness(0.7f)
-            .SetStepSound(Block.SoundStoneHighPitch2)
-            .SetHasTileEntity()
-            .SetBlockName("rail");
+        // 66 — Normal Rail
+        new BlockRail();
 
         // 67 — Cobblestone Stairs (ahh): BlockStairs delegating to cobblestone (ID 4)
         new BlockStairs(67, Block.BlocksList[4]!)
@@ -524,12 +473,8 @@ public static class BlockRegistry
             .SetStepSound(Block.SoundGravel)
             .SetBlockName("clay");
 
-        // 83 — Reed (md): texture 73, p.e, sound e, hard 0, N
-        new Block(83, 73, Material.RockTransp)
-            .SetHardness(0.0f)
-            .SetStepSound(Block.SoundGrass)
-            .ClearNeedsRandomTick()
-            .SetBlockName("reeds");
+        // 83 — Reed (md / BlockReed)
+        new BlockReed();
 
         // 84 — Jukebox (abl): BlockJukebox, p.d (wood), sound f, hard 2.0, res 10, T
         new BlockJukebox(84);
@@ -559,12 +504,8 @@ public static class BlockRegistry
             .SetStepSound(Block.SoundSand)
             .SetBlockName("hellsand");
 
-        // 89 — Glowstone (sk): texture 105, p.q, sound h, hard 0.3, light 15
-        new Block(89, 105, Material.MatPass_Q)
-            .SetHardness(0.3f)
-            .SetLightValue(1.0f)
-            .SetStepSound(Block.SoundGlass)
-            .SetBlockName("lightgem");
+        // 89 — Glowstone (sk): concrete BlockGlowstone (2-4 dust drops)
+        new BlockGlowstone();
 
         // 90 — Nether Portal (sc): BlockPortal
         new Blocks.BlockPortal(90)
@@ -604,13 +545,8 @@ public static class BlockRegistry
             .SetHasTileEntity()
             .SetBlockName("lockedchest");
 
-        // 96 — Trapdoor (mf): p.d, sound c, hard 3.0, N+T
-        new Block(96, 84, Material.Plants)
-            .SetHardness(3.0f)
-            .SetStepSound(Block.SoundWood)
-            .ClearNeedsRandomTick()
-            .SetHasTileEntity()
-            .SetBlockName("trapdoor");
+        // 96 — Trapdoor (mf): concrete BlockTrapDoor (wood, hand-toggleable)
+        new BlockTrapDoor(96, Material.Plants, isIron: false);
 
         // 97 — Silverfish (vf): p.e, hard 0.75 — stub
         new Block(97, 1, Material.RockTransp)
@@ -636,17 +572,15 @@ public static class BlockRegistry
             .SetHasTileEntity()
             .SetBlockName("mushroom");
 
-        // 101 — Iron Bars (uh): p.f, sound g, hard 5.0, res 10
-        new Block(101, 85, Material.RockTransp2)
+        // 101 — Iron Bars (uh): concrete BlockPane, drops itself
+        new BlockPane(101, 85, Material.RockTransp2, dropsItem: true)
             .SetHardness(5.0f).SetResistance(10.0f)
-            .SetStepSound(Block.SoundStoneHighPitch2)
-            .SetBlockName("fenceIron");
+            .SetStepSound(Block.SoundStoneHighPitch2);
 
-        // 102 — Glass Pane (uh): texture 49, p.q, sound h, hard 0.3
-        new Block(102, 49, Material.MatPass_Q)
+        // 102 — Glass Pane (uh): concrete BlockPane, drops nothing
+        new BlockPane(102, 49, Material.MatPass_Q, dropsItem: false)
             .SetHardness(0.3f)
-            .SetStepSound(Block.SoundGlass)
-            .SetBlockName("thinGlass");
+            .SetStepSound(Block.SoundGlass);
 
         // 103 — Melon (of): p.d, sound c, hard 1.0
         new Block(103, 136, Material.Plants)
@@ -654,33 +588,17 @@ public static class BlockRegistry
             .SetStepSound(Block.SoundWood)
             .SetBlockName("melon");
 
-        // 104 — Pumpkin Stem (pu): p.d, sound c, hard 0, T
-        new Block(104, 111, Material.Plants)
-            .SetHardness(0.0f)
-            .SetStepSound(Block.SoundWood)
-            .SetHasTileEntity()
-            .SetBlockName("pumpkinStem");
+        // 104 — Pumpkin Stem (pu / BlockStem): produce=pumpkin(86), seed=361
+        new BlockStem(104, produceBlockId: 86, seedItemId: 361);
 
-        // 105 — Melon Stem (pu): p.d, sound c, hard 0, T
-        new Block(105, 111, Material.Plants)
-            .SetHardness(0.0f)
-            .SetStepSound(Block.SoundWood)
-            .SetHasTileEntity()
-            .SetBlockName("pumpkinStem");
+        // 105 — Melon Stem (pu / BlockStem): produce=melon(103), seed=362
+        new BlockStem(105, produceBlockId: 103, seedItemId: 362);
 
-        // 106 — Vines (ahl): p.e, sound e, hard 0.2, T
-        new Block(106, 143, Material.RockTransp)
-            .SetHardness(0.2f)
-            .SetStepSound(Block.SoundGrass)
-            .SetHasTileEntity()
-            .SetBlockName("vine");
+        // 106 — Vines (ahl): concrete BlockVine (spread, no collision, no drops without shears)
+        new BlockVine();
 
-        // 107 — Fence Gate (fp): texture 4, p.d, sound c, hard 2.0, res 5, T
-        new Block(107, 4, Material.Plants)
-            .SetHardness(2.0f).SetResistance(5.0f)
-            .SetStepSound(Block.SoundWood)
-            .SetHasTileEntity()
-            .SetBlockName("fenceGate");
+        // 107 — Fence Gate (fp): concrete BlockFenceGate (toggle open/close, 1.5-tall when closed)
+        new BlockFenceGate();
 
         // 108 — Brick Stairs (ahh): BlockStairs delegating to bricks (ID 45)
         new BlockStairs(108, Block.BlocksList[45]!)
@@ -718,30 +636,17 @@ public static class BlockRegistry
         new BlockStairs(114, Block.BlocksList[112]!)
             .SetBlockName("stairsNetherBrick");
 
-        // 115 — Nether Wart (vy): T stub
-        new Block(115, 0, Material.Plants)
-            .SetHasTileEntity()
-            .SetBlockName("netherStalk");
+        // 115 — Nether Wart (vy / BlockNetherWart)
+        new BlockNetherWart();
 
-        // 116 — Enchanting Table (sy): p.e, sound f, hard 5.0, res 2000
-        new Block(116, 122, Material.RockTransp)
-            .SetHardness(5.0f).SetResistance(2000.0f)
-            .SetStepSound(Block.SoundStoneHighPitch)
-            .SetBlockName("enchantmentTable");
+        // 116 — Enchanting Table (sy): concrete class — BlockEnchantmentTable
+        new BlockEnchantmentTable(116);
 
-        // 117 — Brewing Stand (ahp): p.e, sound f, hard 0.5, light 1, T
-        new Block(117, 157, Material.RockTransp)
-            .SetHardness(0.5f)
-            .SetLightValue(0.125f)
-            .SetStepSound(Block.SoundStoneHighPitch)
-            .SetHasTileEntity()
-            .SetBlockName("brewingStand");
+        // 117 — Brewing Stand (ahp): concrete BlockBrewingStand
+        new BlockBrewingStand();
 
-        // 118 — Cauldron (ic): p.e, hard 2.0, T
-        new Block(118, 154, Material.RockTransp)
-            .SetHardness(2.0f)
-            .SetHasTileEntity()
-            .SetBlockName("cauldron");
+        // 118 — Cauldron (ic): concrete BlockCauldron
+        new BlockCauldron();
 
         // 119 — End Portal (aid): BlockEndPortal
         new Blocks.BlockEndPortal(119)

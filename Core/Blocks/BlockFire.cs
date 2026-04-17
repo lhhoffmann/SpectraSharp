@@ -71,6 +71,7 @@ public sealed class BlockFire : Block
     // ── Block property overrides (spec §5) ────────────────────────────────────
 
     public override bool IsOpaqueCube() => false;
+    public override int  GetRenderType()  => 3;
     public override bool IsCollidable() => false;
     public override int  GetTickDelay() => 40;
 

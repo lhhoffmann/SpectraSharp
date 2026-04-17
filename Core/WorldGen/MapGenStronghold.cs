@@ -10,9 +10,10 @@ namespace SpectraEngine.Core.WorldGen;
 ///   evenly distributed at 120° angles (2π/3 apart), with valid-biome preference.
 ///
 /// Positions are computed once on first call (dc.f flag) and cached.
-/// Block palette: Stone Brick (ID 98) — full piece implementation pending StrongholdPieces spec.
+/// Full piece implementation via <see cref="StrongholdFactory"/> (see StrongholdPieces_Spec §4).
 ///
 /// Source spec: Documentation/VoxelCore/Parity/Specs/WorldGenStructures_Spec.md §3
+///              Documentation/VoxelCore/Parity/Specs/StrongholdPieces_Spec.md
 /// </summary>
 public sealed class MapGenStronghold
 {
@@ -77,7 +78,6 @@ public sealed class MapGenStronghold
 
             // Biome preference: find nearest valid biome within 112 blocks (spec §3.1)
             // Stub: use the computed position directly (biome search requires WorldChunkManager)
-            // Vanilla prints "Placed stronghold in INVALID biome" when no valid biome found — we skip the warning
             _positions[i] = (chunkX, chunkZ);
 
             // Advance angle by 2π/3 for even distribution
@@ -97,39 +97,14 @@ public sealed class MapGenStronghold
     {
         if (!ShouldGenerateHere(chunkX, chunkZ)) return [];
 
-        // Stub: place stone-brick starting room (aeh — StrongholdStartRoom pending piece spec)
-        // The full piece expansion (kg / StrongholdStart) is deferred to StrongholdPieces spec.
         var rng = new JavaRandom((long)chunkX * 341873128712L ^ (long)chunkZ * 132897987541L ^ _worldSeed);
-        var start = new StrongholdStartRoomStub(chunkX * 16 + 2, 50, chunkZ * 16 + 2, rng.NextInt(4), 0);
-        return [start];
-    }
-}
 
-// ── StrongholdStartRoomStub (aeh approximation) ──────────────────────────────
+        int originX = chunkX * 16 + 2;
+        int originY = 50;
+        int originZ = chunkZ * 16 + 2;
+        int startOri = rng.NextInt(4);
 
-/// <summary>
-/// Stub for the starting room (aeh) of a stronghold.
-/// Places a minimal stone brick shell at the stronghold origin.
-/// Full piece expansion requires StrongholdPieces_Spec (pending).
-/// </summary>
-internal sealed class StrongholdStartRoomStub : StructurePiece
-{
-    private const int StoneBrickId = 98; // yy.bm.bM
-
-    public StrongholdStartRoomStub(int ox, int oy, int oz, int orientation, int depth)
-        : base(StructureBoundingBox.Create(ox, oy, oz, -4, -1, 0, 10, 5, 11, orientation), orientation, depth)
-    { }
-
-    public override void Generate(World world, JavaRandom rng, StructureBoundingBox bounds)
-    {
-        // Shell: stone brick walls, floor, ceiling
-        FillBox(world, bounds, 0, 0, 0, 9, 0, 10, StoneBrickId);   // floor
-        FillBox(world, bounds, 0, 4, 0, 9, 4, 10, StoneBrickId);   // ceiling
-        FillBox(world, bounds, 0, 1, 0, 0, 3, 10, StoneBrickId);   // west wall
-        FillBox(world, bounds, 9, 1, 0, 9, 3, 10, StoneBrickId);   // east wall
-        FillBox(world, bounds, 0, 1, 0, 9, 3, 0, StoneBrickId);    // north wall
-        FillBox(world, bounds, 0, 1, 10, 9, 3, 10, StoneBrickId);  // south wall
-        // Interior air
-        ClearBox(world, bounds, 1, 1, 1, 8, 3, 9);
+        var factory = new StrongholdFactory();
+        return factory.GeneratePieces(originX, originY, originZ, startOri, rng);
     }
 }

@@ -38,6 +38,7 @@ public class BlockStairs : Block
 
     /// <summary>obf: <c>a()</c> — isOpaqueCube. Always false for stairs.</summary>
     public override bool IsOpaqueCube() => false;
+    public override int  GetRenderType()  => 10;
 
     /// <summary>obf: <c>b()</c> — renderAsNormal. Always false for stairs.</summary>
     public override bool RenderAsNormalBlock() => false;

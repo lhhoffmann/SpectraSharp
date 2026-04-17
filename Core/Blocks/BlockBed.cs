@@ -50,6 +50,7 @@ public sealed class BlockBed : Block
     }
 
     public override bool IsOpaqueCube() => false;
+    public override int  GetRenderType()  => 14;
     public override bool RenderAsNormalBlock() => false;
 
     // ── Bounds (spec §6) — fixed 9/16 height ─────────────────────────────────

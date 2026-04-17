@@ -218,6 +218,9 @@ public abstract class EntityPlayer : LivingEntity
         World.SpawnEntity(entity);
     }
 
+    /// <summary>Drops a stack when a container is closed — uses random throw direction.</summary>
+    public void DropPlayerItem(ItemStack stack) => DropItem(stack, randomDirection: true);
+
     // ── Tick override ─────────────────────────────────────────────────────────
 
     /// <summary>
@@ -480,4 +483,83 @@ public abstract class EntityPlayer : LivingEntity
     /// Full implementation requires server-side dimension routing (WorldServer spec pending).
     /// </summary>
     public virtual void TravelToDimension(int dimensionId) { /* stub */ }
+
+    // ── Fishing hook reference ────────────────────────────────────────────────
+
+    /// <summary>
+    /// obf: <c>vi.bT</c> — reference to the player's active fishing hook entity, if any.
+    /// Set by EntityFishHook on spawn; cleared on reel-in or despawn.
+    /// </summary>
+    public EntityFishHook? FishHook;
+
+    // ── Arm swing ─────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// obf: <c>vi.d()</c> — swingArm. Triggers arm-swing animation.
+    /// Stub: no-op until renderer reads SwingProgress.
+    /// </summary>
+    public void SwingArm() { /* stub — renderer reads SwingProgress */ }
+
+    // ── XP ────────────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// obf: <c>vi.a(int amount)</c> — adds experience points.
+    /// Advances XpProgress using level formula 7+(cd×7>>1). Levels up while progress ≥ 1.0.
+    /// Spec: EnchantingXP_Spec §2.
+    /// </summary>
+    public void AddXp(int amount)
+    {
+        Score  += amount;
+        XpTotal += amount;
+        XpProgress += (float)amount / GetXpToLevel();
+        while (XpProgress >= 1.0f)
+        {
+            XpProgress -= 1.0f;
+            XpLevel++;
+        }
+    }
+
+    /// <summary>
+    /// obf: <c>vi.aN()</c> — XP required to advance from current level to next.
+    /// Formula: 7 + (XpLevel × 7 >> 1) = 7 + floor(XpLevel × 3.5).
+    /// Spec: EnchantingXP_Spec §2.
+    /// </summary>
+    public int GetXpToLevel() => 7 + (XpLevel * 7 >> 1);
+
+    /// <summary>
+    /// obf: <c>vi.l(int value)</c> — deducts <paramref name="levels"/> from XpLevel (minimum 0).
+    /// XpProgress and XpTotal are NOT adjusted.
+    /// Spec: EnchantingXP_Spec §2.
+    /// </summary>
+    public void DeductLevels(int levels) => XpLevel = Math.Max(0, XpLevel - levels);
+
+    /// <summary>
+    /// obf: <c>vi.b(vi)</c> — XP drop on death: min(XpLevel × 7, 100).
+    /// Spec: EnchantingXP_Spec §2.
+    /// </summary>
+    public int GetXpDrop() => Math.Min(XpLevel * 7, 100);
+
+    // ── Inventory GUI ─────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// obf: <c>vi.a(de inventory)</c> — opens a container GUI backed by the given inventory.
+    /// Stub until Container_Spec is implemented. Concrete server-player subclass overrides this
+    /// to send the open-window packet to the client.
+    /// Spec: BlockChest_Spec §6 step 4.
+    /// </summary>
+    public virtual void OpenInventory(IInventory inventory) { /* stub — Container_Spec pending */ }
+
+    /// <summary>
+    /// Opens the 3×3 crafting grid at the given workbench position.
+    /// Stub until Container_Spec is implemented.
+    /// Spec: BlockWorkbench_Furnace_Cauldron_BrewingStand_Spec §1.4
+    /// </summary>
+    public virtual void OpenCraftingInventory(int x, int y, int z) { /* stub — Container_Spec pending */ }
+
+    /// <summary>
+    /// Opens the sign-editing GUI for the given sign tile entity.
+    /// Stub until Container_Spec / GUI_Spec is implemented.
+    /// Spec: ItemSign_Spec §3.3
+    /// </summary>
+    public virtual void OpenSignEditor(TileEntity.TileEntitySign sign) { /* stub — GUI pending */ }
 }

@@ -236,6 +236,13 @@ public class Block
     /// <summary>Used in static initializer to flag special-rendering blocks. Default 0. Spec: <c>c()</c>.</summary>
     public virtual int GetTickRandomly() => 0;
 
+    /// <summary>
+    /// Returns the render type integer used by RenderBlocks (acr) to select the geometry method.
+    /// Default 0 = full opaque cube. Spec: <c>acr.b() dispatch / Block.c()</c>.
+    /// Source spec: Documentation/VoxelCore/Parity/Specs/Rendering_BlockModel_Spec.md §2.
+    /// </summary>
+    public virtual int GetRenderType() => 0;
+
     /// <summary>Returns raw hardness value. Spec: <c>n()</c>.</summary>
     public float GetHardness() => BlockHardness;
 
@@ -323,8 +330,21 @@ public class Block
     /// <summary>Random tick. Default no-op. Spec: <c>a(World,x,y,z,Random)</c>.</summary>
     public virtual void BlockTick(IWorld world, int x, int y, int z, JavaRandom rng) { }
 
+    /// <summary>
+    /// Called when bonemeal (dye meta 15) is applied to this block.
+    /// Default: no-op. Growable blocks override to skip random-tick gates and grow instantly.
+    /// obf: called by <c>xv.a(dk, vi, ry, x,y,z,face)</c>.
+    /// </summary>
+    public virtual void BonemealGrow(IWorld world, int x, int y, int z, JavaRandom rng) { }
+
     /// <summary>Scheduled tick. Default no-op. Spec: <c>b(World,x,y,z,Random)</c>.</summary>
     public virtual void UpdateTick(IWorld world, int x, int y, int z, JavaRandom rng) { }
+
+    /// <summary>
+    /// Client-side cosmetic tick (particles, sounds). Default no-op.
+    /// Spec: <c>g(World,x,y,z,Random)</c> — randomDisplayTick.
+    /// </summary>
+    public virtual void RandomDisplayTick(World world, int x, int y, int z, JavaRandom rng) { }
 
     /// <summary>Called when a neighbour changes. Default no-op. Spec: <c>e(World,x,y,z,int neighbourId)</c>.</summary>
     public virtual void OnNeighborBlockChange(IWorld world, int x, int y, int z, int neighbourId) { }
@@ -334,6 +354,15 @@ public class Block
     /// Spec: <c>a(ry, x, y, z, vi player)</c>.
     /// </summary>
     public virtual bool OnBlockActivated(IWorld world, int x, int y, int z, EntityPlayer player) => false;
+
+    /// <summary>
+    /// Extended activate overload with side + hit coordinates.
+    /// Spec: 1.7.10 API — <c>a(ry, x, y, z, vi, side, hitX, hitY, hitZ)</c>.
+    /// Base delegates to the shorter overload (backward-compat).
+    /// </summary>
+    public virtual bool OnBlockActivated(IWorld world, int x, int y, int z,
+        EntityPlayer player, int side, float hitX, float hitY, float hitZ)
+        => OnBlockActivated(world, x, y, z, player);
 
     /// <summary>
     /// Called each tick while an entity walks on top of this block.
@@ -350,6 +379,13 @@ public class Block
 
     /// <summary>Called when placed. Default no-op. Spec: <c>a(World,x,y,z)</c>.</summary>
     public virtual void OnBlockAdded(IWorld world, int x, int y, int z) { }
+
+    /// <summary>
+    /// Called after a block is placed by a living entity (e.g. player).
+    /// Used by directional blocks (fence gate, piston) to set facing from placer yaw.
+    /// Spec: <c>a(World,x,y,z,EntityLiving placer)</c>.
+    /// </summary>
+    public virtual void OnBlockPlacedBy(IWorld world, int x, int y, int z, LivingEntity placer) { }
 
     /// <summary>Called when removed. Default no-op. Spec: <c>d(World,x,y,z)</c>.</summary>
     public virtual void OnBlockRemoved(IWorld world, int x, int y, int z) { }
@@ -391,6 +427,13 @@ public class Block
         => AxisAlignedBB.GetFromPool(
             x + MinX, y + MinY, z + MinZ,
             x + MaxX, y + MaxY, z + MaxZ);
+
+    /// <summary>
+    /// Returns the local-space block AABB (0-relative). Default = full unit cube.
+    /// Used for selection highlight and rendering. Spec: <c>b()</c>.
+    /// </summary>
+    public virtual AxisAlignedBB? GetBlockBoundsFromPool()
+        => AxisAlignedBB.GetFromPool(MinX, MinY, MinZ, MaxX, MaxY, MaxZ);
 
     /// <summary>
     /// Returns the world-space selection highlight AABB (pooled). Default = collision box.

@@ -29,9 +29,7 @@ public sealed class ItemStack
     public  int     StackSize;   // obf: a
     private int     _itemDamage; // obf: e (private)
     public  int     UseTimer;    // obf: b
-#pragma warning disable CS0649 // NBT field intentionally unused (ik spec pending)
-    private object? _nbtTag;     // obf: d — NBTTagCompound (ik spec pending)
-#pragma warning restore CS0649
+    private Nbt.NbtCompound? _nbtTag; // obf: d — NBTTagCompound
 
     // ── Constructors (spec §3) ────────────────────────────────────────────────
 
@@ -125,6 +123,25 @@ public sealed class ItemStack
     /// <summary>obf: <c>b()</c> — deep copy. Also deep-copies NBT (quirk 5).</summary>
     public ItemStack Copy() => new ItemStack(this);
 
+    // ── Static comparison helpers (used by Container click logic) ─────────────
+
+    /// <summary>Returns true if both stacks are null, or both have same ID/count/damage.</summary>
+    public static bool AreItemStacksEqual(ItemStack? a, ItemStack? b)
+    {
+        if (a == null && b == null) return true;
+        if (a == null || b == null) return false;
+        return a.ItemId == b.ItemId && a.StackSize == b.StackSize && a._itemDamage == b._itemDamage;
+    }
+
+    /// <summary>Returns true if both stacks have the same damage value.</summary>
+    public static bool AreDamagesEqual(ItemStack a, ItemStack b) => a._itemDamage == b._itemDamage;
+
+    /// <summary>Returns true if both stacks have the same NBT tag (both null counts as equal).</summary>
+    public static bool AreItemStackTagsEqual(ItemStack a, ItemStack b)
+        => a._nbtTag == null && b._nbtTag == null
+           || (a._nbtTag != null && b._nbtTag != null
+               && a._nbtTag.ToString() == b._nbtTag.ToString());
+
     // ── NBT serialization (spec: EntityNBT_Spec §7 / ItemStack_Spec) ────────────
 
     /// <summary>
@@ -136,8 +153,8 @@ public sealed class ItemStack
         tag.PutShort("id",     (short)ItemId);
         tag.PutByte( "Count",  (byte)StackSize);
         tag.PutShort("Damage", (short)_itemDamage);
-        if (_nbtTag is Nbt.NbtCompound nbtCompound)
-            tag.PutCompound("tag", nbtCompound);
+        if (_nbtTag != null)
+            tag.PutCompound("tag", _nbtTag);
     }
 
     /// <summary>
@@ -155,13 +172,41 @@ public sealed class ItemStack
         return stack;
     }
 
-    // ── Enchantment helpers (spec §4) — stubs (ik spec pending) ──────────────
+    // ── Enchantment helpers (spec §8) ────────────────────────────────────────
 
-    /// <summary>obf: <c>n()</c> / <c>u()</c> — true if NBT tag contains enchantments. Stub: false.</summary>
-    public bool HasEnchantments() => false;
+    /// <summary>
+    /// obf: <c>u()</c> — true if the item's NBT tag contains an "ench" list.
+    /// An item can only be enchanted once via the table (spec §8 dk.t() guard).
+    /// </summary>
+    public bool HasEnchantments() => _nbtTag != null && _nbtTag.HasKey("ench");
 
-    /// <summary>obf: <c>o()</c> — returns the NBT root tag. Stub: null.</summary>
-    public object? GetTagCompound() => _nbtTag;
+    /// <summary>
+    /// obf: <c>a(aef enchantment, int level)</c> — appends one enchantment entry to
+    /// the "ench" TAG_List on this item's NBT compound.
+    /// Creates the compound and list if not yet present.
+    /// Level is stored as short((byte)level) per spec §8.
+    /// </summary>
+    public void AddEnchantment(Enchantments.Enchantment enchantment, int level)
+    {
+        _nbtTag ??= new Nbt.NbtCompound();
+
+        Nbt.NbtList list;
+        if (_nbtTag.HasKey("ench"))
+            list = _nbtTag.GetList("ench")!;
+        else
+        {
+            list = new Nbt.NbtList();
+            _nbtTag.PutList("ench", list);
+        }
+
+        var entry = new Nbt.NbtCompound();
+        entry.PutShort("id",  (short)enchantment.Id);
+        entry.PutShort("lvl", (short)(byte)level); // byte→short cast as per spec §8
+        list.Add(entry);
+    }
+
+    /// <summary>obf: <c>o()</c> — returns the NBT root tag.</summary>
+    public Nbt.NbtCompound? GetTagCompound() => _nbtTag;
 
     // ── toString ──────────────────────────────────────────────────────────────
 

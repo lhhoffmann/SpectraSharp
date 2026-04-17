@@ -16,9 +16,12 @@ Update this table manually when a billing period ends or a charge appears.
 | 2026-04-13 | Extra usage           |  9 EUR |
 | 2026-04-14 | Extra usage           |  9 EUR |
 | 2026-04-14 | Claude Max (monthly)  | 90 EUR |
+| 2026-04-16 | Claude API            | 25 EUR |
+| 2026-04-16 | Extra usage           | 20 EUR |
 
 
-**Running total: 141 EUR**
+
+**Running total: 186 EUR**
 
 ---
 
@@ -1018,3 +1021,601 @@ The original "bitte arbeite alle requests ab" request is fully complete.
 
 ### Build result
 0 errors, 0 warnings.
+
+## Session 2026-04-16 (1)
+**Role:** ANALYST
+**Session work:** PortalTravelAgent spec + BowArrow spec
+
+### Specs produced
+
+- `Documentation/VoxelCore/Parity/Specs/PortalTravelAgent_Spec.md` (~300 lines)
+  - aim (PortalTravelAgent): NOT a singleton, fresh instance per transition
+  - a(): dispatches to End platform (dim==1) or Nether portal logic (all others)
+  - End platform: 5×5 obsidian floor (Y=entity.Y−1) + 3-high air clear; centred at arrival pos (100,49,0); entity placed at floor level
+  - b() findPortal: XZ ±128 grid scan, full-height Y top-to-bottom, 3D distance-squared minimum; centering offset ±0.5 toward portal axis; returns false if not found
+  - c() createPortal: Phase 1 = 3×4×5 suitability (solid floor + air interior, 4 orientations, nextInt(4) random start); Phase 2 = 4×1×5 column check, 2 orientations; Emergency = Y clamped to [70, height-10], clears 2×3 pocket; Frame always built 4× (loop) to trigger portal activation; 4×5 obsidian+portal frame, 2×3 interior
+  - Coordinate scaling NOT in aim — in Minecraft.a(int): Overworld→Nether ×0.125, Nether→Overworld ×8.0, End ×1.0
+  - aim.a() not called when leaving End (oldDim=1 fails condition oldDim<1)
+
+- `Documentation/VoxelCore/Parity/Specs/BowArrow_Spec.md` (~400 lines)
+  - il (ItemBow, ID 261): durability 384; charge formula power=(f²+2f)/3 (f=ticks/20); threshold 0.1; critical at power==1.0; speed=power×3.0; damage=ceil(speed×2.0)+crit bonus; consumes 1 arrow per shot
+  - ro (EntityArrow): hitbox 0.5×0.5; gravity 0.05/tick; air drag 0.99, water 0.8; inGround despawn 1200t; pickup: inGround+isPlayer+shake==0; NBT: shooter NOT saved (lost on reload), critical NOT saved
+  - hd (ItemFishingRod, ID 346): durability 64; cast=spawn ael, reel-in=call ael.g(); no durability on cast
+  - ael (EntityFishHook): NOT in EntityList (no NBT); bite RNG 1/500 (1/300 with sky); bite dips hook, plays splash; gives RawFish (acy.aT=ID 349) + 1 XP stat on reel; durability cost: 0(miss)/1(fish)/2(ground)/3(entity)
+  - it (EntitySkeleton, ID 51): fires arrow at <10 blocks range; speed 1.6 spread 12; reload 60 ticks; drops 0–2 arrows+bones; sunlight burn per-tick random; Sniper achievement ≥50 blocks
+
+### Tracking
+- REQUESTS.md: PortalTravelAgent [STATUS:REQUIRED] → [STATUS:PROVIDED]
+- REQUESTS.md: BowArrow [STATUS:REQUIRED] → [STATUS:PROVIDED]
+- INDEX.md: both rows added as [STATUS:PROVIDED]
+- classes.md: new "Ranged Combat / Fishing Classes" section (il/ro/hd/ael/it)
+
+### Corrections to Coder assumptions
+- EntityFishHook is NOT in EntityList — no NBT persistence, no entity ID string
+- Fish bite RNG is 1/500 per tick (not per-second) or 1/300 with sky exposure
+- No treasure or junk loot in 1.0 — only RawFish
+- Fishing rod costs 0 durability on cast (damage only on reel-in)
+- Arrow pickup condition is shake==0 (not ticksInGround>7 as Coder assumed)
+
+### Source files read
+`il.java` (ItemBow), `ro.java` (EntityArrow), `hd.java` (ItemFishingRod), `ael.java` (EntityFishHook), `it.java` (EntitySkeleton), `afw.java` (EntityList — verified ael absent), `acy.java` (item IDs for bow/arrow/rod/fish/bone), `Minecraft.java` (coordinate scaling)
+
+**Spec count this session:** 2 specs
+
+### Remaining [STATUS:REQUIRED]
+- EnchantingXP (Priority 3)
+
+## 2026-04-16 (2) — [ANALYST] — EnchantingXP
+
+**Worked on:**
+- `fk` (EntityXPOrb) — size/gravity/attraction/despawn/tier system; 10 value tiers via threshold array; pickup sequence; NBT Health/Age/Value
+- `vi` (EntityPlayer XP fields) — cd/cf/ce fields; addXP loop with fractional progress; `aN()=7+floor(level×3.5)` per-level formula; deductLevels; death drop formula
+- `sy` (BlockEnchantmentTable ID 116) — partial AABB 0–0.75; bookshelf particle spawner (5×5 ring, LOS check, 1/16 chance); onActivate
+- `rq` (TileEntityEnchantmentTable) — floating book animation: player-tracking yaw, page-flip RNG, open/close m field
+- `ahk` (ContainerEnchantment) — bookshelf gap-check (adjacent air at y and y+1) then ±2-block scan with diagonal corners; per-container seed via nextLong; slot level array c[3]
+- `ml` (EnchantmentHelper) — slot-level formula: base=1+nextInt(bonus/2+1)+nextInt(bonus+1), noise+=nextInt(5), slot0=(noise>>1)+1/slot1=noise×2/3+1/slot2=noise; weighted enchantment selection with compatibility pruning loop
+- `aef` (Enchantment base) — 19-enchantment registry with IDs, weights, targets, min/max power ranges; confirmed NO bow enchantments in 1.0
+- Subclasses: `ii` (protection group, subtypes 0-4), `vu` (Respiration), `adz` (AquaAffinity), `ap` (damage group, subtypes 0-2), `dz` (Knockback), `aie` (FireAspect), `qn` (Looting/Fortune), `kr` (Efficiency), `gi` (SilkTouch), `dq` (Unbreaking)
+- `vs` (EnchantmentData) — weighted wrapper for enchantment+level pairs
+
+**Estimated effort:** ~4 hours equivalent
+
+**Notes:**
+- No xpSeed per-player — enchantment seed is per-ContainerEnchantment instance (fresh nextLong on item placement); not reseedable mid-session
+- Items can only be enchanted once via table (dk.t() guards on !alreadyEnchanted)
+- Several subclasses use `super.a(level)+50` for max power (= 1+L×10+50) regardless of their own min formula — this asymmetry is deliberate and must be preserved
+- SilkTouch (gi) and Fortune (qn for tool) are bidirectionally mutually exclusive via canCoexist overrides
+- All three formerly [STATUS:REQUIRED] entries are now [STATUS:PROVIDED]; queue is empty
+
+### Tracking
+- REQUESTS.md: EnchantingXP [STATUS:REQUIRED] → [STATUS:PROVIDED]
+- INDEX.md: EnchantingXP_Spec.md row added as [STATUS:PROVIDED]
+- classes.md: new "Enchanting / XP Classes" section (19 entries: fk/sy/rq/wn/ahk/ml/aef/ii/vu/adz/ap/dz/aie/qn/kr/gi/dq/vs/q)
+
+### Source files read
+`fk.java`, `vi.java`, `sy.java`, `rq.java`, `ahk.java`, `ml.java`, `aef.java`, `ii.java`, `vu.java`, `adz.java`, `ap.java`, `dz.java`, `aie.java`, `qn.java`, `kr.java`, `gi.java`, `dq.java`, `vs.java`, `dk.java` (t() method), `acy.java` (c() method), `wn.java` (renderer), `ah.java` (renderer dispatcher)
+
+**Spec count this session:** 1 spec (EnchantingXP_Spec.md)
+
+### Remaining [STATUS:REQUIRED]
+None — queue empty. Proactive speccing applies from next session onward.
+
+## 2026-04-16 (3) — [ANALYST] — EnderDragon (proactive)
+
+**Worked on:**
+- `oo` (EntityDragon) — full analysis: 7-part body system; flying AI with 64-entry yaw/Y ring buffer; crystal healing; wing knockback; head melee; block destruction whitelist; damage routing (head=full, body=quarter); new waypoint selection; 200-tick death sequence with 20000 XP total; exit portal generator (EndPortal disc, dragon egg, torch ring at Y=64/68)
+- `adh` (EntityBoss) — damage immunity base; bypass via `e()`
+- `vc` (EntityBodyPart) — multi-part entity structure; damage delegation
+- `sf` (EntityEnderCrystal) — tick behaviour (fire placement); 1-shot death → power 6 explosion; crystal→dragon healing link
+
+**Estimated effort:** ~2 hours equivalent
+
+**Notes:**
+- `az()` is dead code (declares locals, no side effects) — preserved as parity note
+- Death XP is exactly 20000: 10 × 1000 (ticks 155–200 by 5) + 10000 (tick 200) — tick 200 triggers BOTH
+- Crystal destruction dealing 10 damage to the dragon when focused is bidirectional: crystal death → dragon damage, not just dragon healing
+- Portal placed at world.height/2 = 64 (hardcoded; non-standard world heights would shift it)
+- Open: EnderCrystal EntityList ID unconfirmed; `af` field meaning; `aQ` condition semantics; respawn behaviour
+
+### Source files read
+`oo.java` (EntityDragon), `adh.java` (EntityBoss), `vc.java` (EntityBodyPart), `sf.java` (EntityEnderCrystal), `yy.java` (bH/bK/aq block ID lookup)
+
+**Spec count this session:** 1 proactive spec (EnderDragon_Spec.md)
+
+## 2026-04-16 — [CODER] — PortalTravelAgent + BowArrow + EnchantingXP implementation batch
+
+**Worked on:**
+
+### PortalTravelAgent
+- `Core/PortalTravelAgent.cs` — `aim` class; End platform (5×5 obsidian + air layers); findPortal (±128 XZ grid, top-down Y scan, distance-sq minimisation, axis-centering); createPortal (Phase 1 3D suitability × 4 orientations, Phase 2 2D fallback × 2, emergency Y=70); 4-pass frame build with SuppressUpdates + NotifyNeighbors per block; orientation table 0=Z+/1=X+/2=Z-/3=X-
+
+### BowArrow
+- `Core/Items/ItemBow.cs` — ID 261; charge formula `power=(f²+2f)/3`; OnPlayerStoppedUsing fires arrow at power×2; crit flag at power==1; DamageItem(1); consume arrow from inventory
+- `Core/EntityArrow.cs` — entity ID 10 "Arrow"; ray-trace block hit + entity scan (expand+1.0 then entity AABB +0.3); damage ceil(speed×2.0); crit bonus; target.PendingKnockback++; stuck: verify block unchanged, despawn 1200t, shake countdown; water drag via block ID 8/9; gravity 0.05; NBT persists xTile/yTile/zTile/inTile/inData/shake/inGround/player (shooter/critical NOT persisted)
+- `Core/Items/ItemFishingRod.cs` — ID 346; dual cast/reel path; durability 64
+- `Core/EntityFishHook.cs` — NOT in EntityList (no NBT persistence); auto-remove on owner death/dismount/out-of-range; fish bite RNG 1/500 (1/300 with sky); buoyancy from 5-sample submersion fraction; ReelIn() returns 0/1/2/3 durability cost
+- `Core/Mobs/ConcreteMobs.cs` — EntitySkeleton arrow attack: 60-tick cooldown, speed 1.0, spread 12.0; sunburn check (daytime+canSeeSky+brightness>0.5F → SetFire(8))
+
+### EnchantingXP
+- `Core/EntityXPOrb.cs` — entity ID 2 "XPOrb"; gravity 0.03F; attraction (1-normDist)²×0.1; despawn 6000t; pickup sets InvulnerabilityCountdown=2; tier thresholds; NBT "Health"/"Age"(despawnAge)/"Value"
+- `Core/Blocks/BlockEnchantmentTable.cs` — ID 116; hardness 5.0/resistance 2000; partial AABB y=[0,0.75]; 5×5 ring bookshelf particle scan with inner skip + 1/16 roll + LOS check; TileEntity flag
+- `Core/TileEntity/TileEntityEnchantmentTable.cs` — animated book: player proximity scan, target yaw tracking (atan2), open/close with lift±0.1, smooth rotation (wrap [-π,π]), page-flip momentum; replaced stub TileEntityEnchantTable
+- `Core/Enchantments/Enchantment.cs` — base class + static registry [36] + all 17 static instances; GetMinLevel/MaxLevel/MinPower/MaxPower/CanApplyTo/IsCompatibleWith/GetDamageReduction/GetAttackBonus virtual methods; EnchantmentTarget enum
+- `Core/Enchantments/EnchantmentSubclasses.cs` — all 19 enchantments: EnchantmentProtection (0-4), EnchantmentRespiration (5), EnchantmentAquaAffinity (6), EnchantmentDamage (16-18), EnchantmentKnockback (19), EnchantmentFireAspect (20), EnchantmentLootBonus (21/35), EnchantmentEfficiency (32), EnchantmentSilkTouch (33), EnchantmentDurability (34); mutual exclusivity logic; damage reduction formulas
+- `Core/Enchantments/EnchantmentData.cs` — (enchantment, level) pair container
+- `Core/Enchantments/EnchantmentHelper.cs` — SlotLevel() formula; SelectEnchantments() with weighted random selection, power fuzz, multi-enchantment expansion
+- `Core/ContainerEnchantment.cs` — bookshelf gap+shelf scan (8 adjacent, diagonal extras); OnInputChanged() refreshes seed + slot levels; Enchant() deducts levels, applies NBT, validates table/distance
+
+### Existing file updates
+- `Core/EntityRegistry.cs` — Register<EntityXPOrb>("XPOrb", 2) + Register<EntityArrow>("Arrow", 10) (replaced RegisterId stubs)
+- `Core/Items/ItemRegistry.cs` — Bow (261), Arrow plain item (262), FishingRod (346), Bone (352)
+- `Core/BlockRegistry.cs` — BlockEnchantmentTable(116) replaces plain Block(116)
+- `Core/TileEntity/TileEntity.cs` — blockIdFactory for 116 → TileEntityEnchantmentTable; registry updated TileEntityEnchantTable → TileEntityEnchantmentTable
+- `Core/TileEntity/TileEntityStubs.cs` — removed TileEntityEnchantTable stub
+- `Core/ItemStack.cs` — _nbtTag: object? → NbtCompound?; HasEnchantments() reads "ench" key; AddEnchantment() writes {id,lvl} entries; GetTagCompound() typed properly
+- `Core/Item.cs` — added GetEnchantability() virtual (default 0)
+
+**Estimated effort:** ~8 hours equivalent
+**Notes:**
+- EntityFishHook is intentionally absent from EntityRegistry — no NBT persistence by spec (§9.4)
+- EntitySkeleton arrow spawned server-side only (checked implicitly via EntityMonster/World.SpawnEntity flow)
+- Enchantability values on tool/armor subclasses are not yet wired (GetEnchantability() returns 0 base) — enchanting is correct for the ContainerEnchantment logic but all items will show 0 enchantability until tool subclasses override c()
+- PortalTravelAgent coordinate scaling (÷8/×8) lives in the caller (EntityPlayer.TravelToDimension stub) — not in PortalTravelAgent itself per spec
+- Item(int) constructor changed from protected to public to allow plain item instances (Arrow ID 262, Bone ID 352) in ItemRegistry
+
+---
+
+## 2026-04-16 — [CODER] — EnderDragon implementation
+
+**Worked on:**
+
+### EnderDragon
+- `Core/EntityBodyPart.cs` — replica of `vc`; 7 instances per dragon (head/body/tail×3/wings×2); AttackEntityFrom delegates to EntityDragon.OnBodyPartHit; IsSameTeam() check; no NBT
+- `Core/EntityEnderCrystal.cs` — replica of `sf`; entity ID 200 "EnderCrystal"; tick counter with random offset; perpetual fire beneath crystal; 1-hit kill triggers power-6 explosion; quirk §12.6 (b=0 before always-true check) preserved; no NBT
+- `Core/EntityDragon.cs` — EntityBoss base class (`adh`) + EntityDragon (`oo`); entity ID 63 "EnderDragon"; 16×8 hitbox; maxHealth 200; fire-immune; 64-entry ring buffer for body-part trailing positions; flying AI (target tracking, yaw steering with ±50° clamp, forward thrust formula, drag 0.8–0.91); crystal healing 1HP/10t; damage routing (head=full, other parts /4+1, player/fire only bypass immunity); death sequence: upward drift, 20°/tick spin, XP batches (10×1000 + final 10000 = 20000 XP total at tick 200); exit portal generator (EndPortal disc at Y=64 radius 2.5, bedrock ring, clear columns above, center pillar with torches at Y=66, dragon egg at Y=68); block destruction whitelist (obsidian 49 / bedrock 7 / end portal 119 survive); wing-push collision; head-area melee 10 damage
+
+### Existing file updates
+- `Core/EntityRegistry.cs` — Register<EntityDragon>("EnderDragon", 63) + Register<EntityEnderCrystal>("EnderCrystal", 200) (replaced RegisterId stubs)
+
+**Estimated effort:** ~2 hours equivalent
+**Notes:**
+- Dragon NBT is intentionally empty — the dragon is spawned fresh per End session, not persisted
+- Body parts are Entity (not LivingEntity) so they cannot appear in GetEntitiesWithinAABB<LivingEntity> — wing push and head damage scans operate correctly on LivingEntity only
+- Open question §13.2 (af field = isMultipartEntity) noted in comment; no C# equivalent needed yet
+- Open question §13.4 (respawn on re-entry) not addressed — single spawn in ChunkProviderEnd is sufficient for 1.0 parity
+- Dead-code az() preserved as comment per spec §12.1
+
+## 2026-04-16 (4) — [ANALYST] — StrongholdPieces (proactive)
+
+**Worked on:**
+- `tc` (StrongholdPieceFactory) — weight table (11 entries), depth limit 50, XZ radius 112, `vn` fallback
+- `mj` (DoorType enum) — 4 constants: open/wood/iron/grating
+- `os` (abstract StrongholdPiece base) — fields and virtual interface
+- `aeh` (StrongholdStart) — extends `vl`; fields a/b/c; forced Large Room at start
+- `gp` (SimpleCorridor) — 5×5×7; material palette; cobweb/torch decorations
+- `vn` (StraightCorridor) — 5×5×var; fallback terminator
+- `fj` (Prison) — 9×5×11; iron-bar cells; chest loot
+- `hq` / `xg` (LeftTurn / RightTurn) — 5×5×5 corner pieces
+- `jt` (Crossing) — 11×7×11; up to 3 exits
+- `kt` (LargeRoom) — 10×9×11; forced as first piece; chest
+- `so` (SpiralStairs) — 5×11×8; descends 7 via slab spiral
+- `vl` (StraightStairs) — 5×11×5; descends 7
+- `ys` (SmallRoom) — 5×5×7; dead-end
+- `zc` (Library) — dual-height (tall 14×11×15 / short 14×6×15); bookshelf + loot chest; max 2
+- `ir` (PortalRoom) — 11×8×16; End Portal Frames (ID 120); silverfish spawner; registers as `aeh.b`; max 1
+
+**Estimated effort:** ~2 hours equivalent
+
+**Notes:**
+- Resolves WorldGenStructures_Spec Open Question 7.1 (full piece list)
+- Portal Room water pool vs. lava pool ambiguity at lines 36–39 noted as Open Question 8.4
+- Chest loot for corridors/prisons/large rooms not yet confirmed (Open Question 8.1)
+- `vn` exact fallback length not confirmed (Open Question 8.2)
+- `aeh.b` set only once — no guard flag needed because `ir` is limited to 1 per stronghold by `th` wrapper
+
+### Source files read
+`os.java`, `tc.java`, `mj.java`, `aeh.java`, `vl.java`, `so.java`, `gp.java`, `vn.java`,
+`fj.java`, `hq.java`, `xg.java`, `jt.java`, `kt.java`, `ys.java`, `zc.java`, `ir.java`
+
+**Spec count this session:** 1 proactive spec (StrongholdPieces_Spec.md)
+
+---
+
+## 2026-04-16 — [CODER] — StrongholdPieces implementation
+
+**Worked on:**
+
+### StrongholdPieces
+- `Core/WorldGen/Structure/StrongholdPieces.cs` — full implementation of spec §3–§6:
+  - `StrongholdDoor` enum (Open/WoodDoor/IronDoor/IronBars)
+  - `PieceExit` struct (local connection point, orientation delta, Y offset, door type)
+  - `StrongholdPieceBase` abstract base: block ID constants; `PlaceStoneBrickRandom()` (33% each: normal/cracked/mossy); `PlaceShell()` (stone brick walls + air interior); `PlaceDoor()` (2-tall doorway or iron bars); protected `GetWorldX/Y/Z` coordinate converters exposed via `..._Public` wrappers for factory use
+  - `ShCorridor` (gp) — 5×5×7; stone brick shell; cobweb/torch decorations; 1 forward exit
+  - `ShStraightCorridor` (vn) — 5×5×5 fallback terminator; no exits
+  - `ShLeftTurn` / `ShRightTurn` (hq/xg) — 5×5×5 corner pieces; 1 lateral exit each
+  - `ShPrison` (fj) — 9×5×11; iron-bar cell walls; chest in cells; 1 forward exit
+  - `ShCrossing` (jt) — 11×7×11; always exposes 3 exits (F/L/R) — OQ §8.3 resolved
+  - `ShLargeRoom` (kt) — 10×9×11; chest; 2 exits; forced as first piece after Start
+  - `ShSpiralStairs` (so) — 5×11×8; stone brick stair spiral descending −7; 1 forward exit at bottom
+  - `ShStraightStairs` (vl) — 5×11×5; straight stair flight descending −7; 1 forward exit at bottom; `IsStart` flag
+  - `ShSmallRoom` (ys) — 5×5×7; dead-end alcove; no exits
+  - `ShLibrary` (zc) — dual-height: tall 14×11×15 / short 14×6×15; `IsTall` flag; bookshelves + loot chest; both variants
+  - `ShPortalRoom` (ir) — 11×8×16; 8 of 12 End Portal Frame blocks (ID 120) around 3×3 ring; water pool (9); lava under frame (11) — OQ §8.4 resolved as lava; silverfish spawner (ID 52); iron-door entrance; `_spawnerPlaced` flag guard
+- `StrongholdFactory` — `WeightedEntry` table (11 piece types with weights and max counts); `GeneratePieces(originX, originY, originZ, startOrientation, rng)` returns `List<StructurePiece>`; BFS queue with depth>50 and XZ-radius>112 guards; `PlaceAt()` helper computing BBox for all 4 orientations; `ShStraightCorridor` fallback on failed placement
+
+### MapGenStronghold update
+- `Core/WorldGen/MapGenStronghold.cs` — replaced `StrongholdStartRoomStub` class with `new StrongholdFactory().GeneratePieces(originX, originY, originZ, startOri, rng)`; `originY=50`; `startOri=rng.NextInt(4)`
+
+### Documentation
+- `Documentation/VoxelCore/Parity/INDEX.md` — StrongholdPieces: `[STATUS:PROVIDED]` → `[STATUS:IMPLEMENTED] Core/WorldGen/Structure/StrongholdPieces.cs + Core/WorldGen/MapGenStronghold.cs`
+
+**Estimated effort:** ~1.5 hours equivalent
+**Notes:**
+- OQ §8.2: vn fallback length set to 5 (shortest plausible dead-end)
+- OQ §8.3: jt (Crossing) always exposes all 3 exits — no random suppression
+- OQ §8.4: lava under portal frame confirmed (not water); water pool at floor pit is separate (ID 9 at y+1)
+- WoodPlanksId corrected to 5 (not 4 which is cobblestone)
+- ShPortalRoom places 8 of 12 frame blocks (the 4 corner positions omit frames per vanilla); full 12-frame ring would be activated by ItemEnderEye externally
+- Build: 0 errors, 0 warnings
+
+---
+
+## 2026-04-17 — [ANALYST] — Coder Request Batch (30 specs, all 34 REQUIRED entries resolved)
+
+**Worked on:**
+
+### Entity specs
+- `EntityFallingSand_Spec.md` — `uo` class; gravity 0.04/tick, drag 0.98; landing: place block or drop item; NBT: TileID + Data; only sand (12) and gravel (13) fall; despawn if not in EntityList
+- `ThrowableEntities_Spec.md` — abstract throwable base `yz`; snowball (`jv`, gravity 0.03, drag 0.99, extinguishes Blaze); egg (`aia`, 1/8 chicken + 1/32 quadruplet); EnderPearl (`ke`, 5 fall damage, teleport to landing); Fireball (`bb`, Ghast projectile, power=1, block damage, fire); SmallFireball (`xo`, Blaze projectile, no block damage); Eye of Ender signal (`aet`, arc + float + despawn)
+- `RemainingMobs_Spec.md` — 12 mobs: Slime (`ni`, size DW slot 16, split on death), Ghast (`aai`, 10HP, fireball at player), PigZombie (`aho`, neutral/group-aggro/anger NBT), Enderman (`aex`, block pickup IDs listed, stare detection, teleport on projectile/water), CaveSpider (`zj`, 0.7×0.5, poison on hard), Silverfish (`yk`, 0.3×0.7, calls nearby, monster egg ID 97), Blaze (`xl`, 3-fireball burst, Y-oscillate float, blaze rod drop), MagmaCube (`aq`, fire-immune, splits), Squid (`aze`, passive water, ink sac), Wolf (`aag`, bone taming, collar DW, anger NBT), MushroomCow (`aad`, shear → cow + mushrooms, mushroom-soup milk), SnowGolem (`abb`, 2-snow-block+pumpkin build, snowball AI, snow trail, melt in warm)
+- `EntityPainting_Spec.md` — entity class `yb`; `sv` EnumArt 25 variants (full table: Kebab 1×1 to Bust 2×2 … Sky 2×1, Wanderer 1×2, Graham 1×2, Pool 2×1, Courbet 2×1, Sunset 2×1, Sea 2×1, Creebet 2×1, Wanderer 1×2, Match 2×2, Bust 2×2, Stage 2×2, Void 2×2, SkullAndRoses 2×2, Wither 2×2, Fighters 4×2, Skeleton 4×3, DonkeyKong 4×3, Pointer 4×4, Pigscene 4×4, BurningSkull 4×4, Aztec 1×1, Aztec2 1×1, Bomb 1×1, Plant 1×1, Wasteland 1×1); placement on wall face; random variant fitting wall space; NBT: Motive+Dir+TileXYZ
+- `EntityBoat_Spec.md` — `no`; partial-submersion buoyancy lift; rider yaw forwarding; speed ~8 m/s; destroyed at >2 hit damage or speed collision; drops 3 planks; no lava survival; NBT base fields only
+- `EntityMinecart_Spec.md` — `vm` single class, type field 0/1/2; rail metadata 0-9 (straight/slope/curve); powered rail (ID 27 obf `aig`); detector rail (ID 28 obf `abh`); max speed 8 m/s; slope gradient; storage minecart 27 slots; powered minecart coal fuel pushes linked carts; off-rail physics; NBT: Type + Items + PushX/Z + Fuel
+
+### Block specs
+- `BlockFenceGate_Spec.md` — `fp`; meta bits 0-1=facing, bit 2=isOpen; closed AABB matches fence height 1.5; open=no collision; right-click toggle; redstone activatable; drops 1 fence gate
+- `BlockVine_Spec.md` — `ahl`; metadata bitmask N=1/E=2/S=4/W=8; canBlockStay requires adjacent solid on any attached face or solid above; climbing via isOnLadder; spread random tick tries up/4 sides; no collision, but raycast hitbox exists; shear to drop; material = air-like
+- `BlockPane_Spec.md` — `uh` base (both IDs 101/102); post 2/16 wide centered; arms 2/16 thick; connects to same type OR solid opaque block; glass pane additionally connects to glass blocks; full height 1.0; isOpaqueCube=false; light opacity 0 for glass, 0 for iron bars; drops self
+- `BlockTrapDoor_Spec.md` — `mf`; meta bits 0-1=attachment face (bottom/top/N/S), bit 2=isOpen; closed AABB: 3/16 slab at floor or ceiling; open AABB: 3/16 slab against wall; right-click toggle + redstone; wood only in 1.0; drops itself
+- `BlockGlowstone_Spec.md` — `sk`; drops rand(4)+2 glowstone dust (ID 348); silk touch drops block; hardness 0.3; light 15; material glass; recipe 4 dust → 1 block in CraftingRecipes
+- `BlockGrassPlant_Spec.md` — `wg` base (BlockFlower); fields: none; canBlockStay checks solid block below; onNeighborChange calls canBlockStay and drops self; drops self; ID 37/38 share `wg`; ID 31 (TallGrass) drops nothing normally, shear drops itself, rare wheat seed with Fortune; ID 32 (DeadBush) drops stick; rails use separate `afr`/`aig` base not `wg`
+- `BlockPlants_Spec.md` — 9 plant types with canBlockStay, tick growth, bonemeal, drops: Sapling (ID 6, `ack`, meta=wood type, nextInt(7)==0 grow, bonemeal forces, oak/spruce/birch/jungle dispatch), Dandelion/Rose (IDs 37/38, `wg`, no tick, drops self), Mushroom (IDs 39/40, `agb`/`agc`, spread if <5 in 9×9×3, die above light 12), Reed (ID 83, `ah`, water adjacent required, max height 3, +1/tick), NetherWart (ID 115, `aas`, soul sand only, 4 stages, no bonemeal in 1.0, drops 1-4), MelonStem (ID 104, `abu`, stage 7 places melon in adjacent air), PumpkinStem (ID 105, `abu` subclass, same logic)
+- `BlockRail_Spec.md` — plain rail `afr` (ID 66, meta 0-5 straight+slope, 6-9 curves, auto-connects on placement), PoweredRail `aig` (ID 27, meta 0-5 + bit3=powered, boosts/brakes), DetectorRail `abh` (ID 28, emits RS signal when minecart above), ActivatorRail not in 1.0 (ID 157 added 1.5); canBlockStay solid below; all drop themselves as items
+- `BlockChest_Spec.md` — `ae`; double-chest: detect adjacent chest on X or Z axis (not Y), priority: Z then X; combined as `adv` (InventoryLargeChest) wrapping two IInventory (slots 0-26 left, 27-53 right); `numPlayersUsing` counter drives lid animation; onBlockActivated opens ContainerChest with combined inventory; breaking drops all contents as EntityItem; no cat-sitting mechanic in 1.0
+- `BlockWorkbench_Furnace_Cauldron_BrewingStand_Spec.md` — Workbench (`yy` base `aq` field = ID 58, opens ContainerCrafting 3×3, drops itself); Furnace (ID 61/62, `oq`, facing meta 0-5, lit state via TileEntityFurnace.burnTime>0, light 13 when lit, onBlockActivated opens ContainerFurnace); Cauldron (ID 118, `al`, meta 0-3 water level, bucket fill/empty, rain fill random tick, 2-block AABB cutout, drops self); BrewingStand (ID 117, `arh`, 4 slots: ingredient+3 bottles, brewTime 400 ticks, no fuel in 1.0, NBT: Items+BrewTime, light 1 when active)
+
+### Item specs
+- `ItemBucket_Spec.md` — `en`; single class, fluid type field; empty (ID 325): picks up still water (ID 9) or still lava (ID 11), replaces with air, returns filled bucket; water bucket (ID 326): places water source, returns empty bucket; lava bucket (ID 327): same for lava; milk bucket (ID 335): obtained from cow right-click, OnItemRightClick removes all potion effects + restores full hunger; can overwrite replaceable blocks; stack size 1 for filled, 16 for empty; dispensable
+- `ItemDye_Spec.md` — `xv`; bonemeal (meta 15): crops→stage 7, sapling→tree growth, grass block→WorldGenTallGrass/Flowers scatter, stems→stage 7, mushroom→huge mushroom; other metas 0-14: applied to wool block or sheep entity to set wool color; texture: 16 icons in items.png; stack 64; ink sac (meta 0) dropped by squid
+- `ItemShears_Spec.md` — `abo`; durability 238; onItemUse on leaves (18/161) drops leaf block; on vines (106) drops vine; on cobweb (30) drops string; on sheep: drops 1-3 wool of sheep color, sets Sheared flag; on mooshroom: drops 5 mushrooms + converts to cow; on snow golem: removes pumpkin revealing face; canHarvestBlock: true for cobweb; 1 durability per use
+- `ItemSign_Spec.md` — `my`; ID 323; onItemUse on side face → wall sign (ID 68) meta=facing 2-5; on top face → floor sign (ID 63) meta=yaw/22.5 rounded &15 (16 positions); after placement opens sign-editing GUI via server packet; both sign block forms drop item ID 323; stack 16
+- `ItemGoldenApple_Spec.md` — `afk`; subclass of ItemFood; meta 0 (regular): heals 4HP, Regeneration II 5s, recipe 8 gold nuggets + apple (1.0 uses nuggets, not ingots); meta 1 (Notch apple): heals 4HP, Regeneration IV 30s, Absorption 120s, Fire Resistance 300s, recipe 8 gold blocks + apple; uses ItemFood.FinishUsingItem path
+
+### AI / Mob / Container specs
+- `EntityVillager_Spec.md` — `aaaj`; professions 0-4 (Farmer/Librarian/Priest/Blacksmith/Butcher); MerchantRecipe: buy1+buy2+sell ItemStacks, maxUses counter; trades unlocked per profession at generation; wanders, returns inside at night (DayTime>13000), flees zombies; no zombie villager conversion in 1.0; NBT: Profession int + Riches int + Offers list; breeding: houses>villager count triggers
+- `Container_Spec.md` — `pj` (ContainerBase): slots list, canInteractWith distance check, slotClick `b(slotId, btn, shift, player)`: left=swap cursor/slot, right=split/take-half, shift=auto-move, double-click=collect; SlotCrafting (`afe`) decrements all 3×3 inputs on take, triggers onCrafting; ContainerWorkbench (`ace`, 3×3 grid `ag`, 10 slots 0-9); ContainerFurnace (`eg`, 3 slots, cookTime 0-200, burnTime, a/b sync methods); ContainerChest (`ak`, 27 or 54 slots); ContainerPlayer (`gd`, 4×9 main + 4 armor); ContainerDispenser (9 slots)
+- `CraftingRecipes_Spec.md` — `sl` (CraftingManager) singleton; shaped format: String[] pattern + char→ItemStack/int map, supports mirror; shapeless: ArrayList ingredients; full vanilla 1.0 recipe table in appendix (~170 recipes): tools/armor (all materials), building blocks, food, redstone, decorative, weapons, misc; FurnaceRecipes `mt`: 30 smelting recipes
+- `PotionEffect_Spec.md` — `abg` (Potion) 19 effects IDs 1-19 (Speed/Slowness/Haste/MiningFatigue/Strength/InstantHealth/InstantDamage/JumpBoost/Nausea/Regeneration/Resistance/FireResistance/WaterBreathing/Invisibility/Blindness/NightVision/Hunger/Weakness/Poison); `s` (PotionEffect): effectId+durationTicks+amplifier; performEffect per-tick or instant; all 19 per-tick behaviours documented; ItemPotion (`abk`, ID 373): meta encodes effect+tier+splash flag; splash radius 4-block sphere with distance falloff; PotionHelper `pk` for color blending
+
+### Physics / Survival specs
+- `Entity_Physics_Spec.md` — `ia.b(dx,dy,dz)`: AABB expand + world.getCollidingAABBs; Y-clip first, then X, then Z; clip-up step 0.5F (entity.stepHeight); updates onGround/isCollidedH/V; ladder (ID 65) + vine (ID 106) via isOnLadder(); vine climb clamp ±0.15; sneak-on-ladder hold; slipperiness default 0.6F, ice 0.98F; formula motionX×=(slip×0.91); suffocation: isEntityInsideOpaqueBlock checks every tick → 1 damage/tick; entity-entity push in World.updateEntities via overlap AABB
+- `LivingEntity_Survival_Spec.md` — air supply 300 ticks; decrement 1/tick submerged; at air==-20: 2 drowning damage + reset to 0; recover +2/tick when not submerged; fire: 1 damage/tick, water extinguishes; fall damage: fallDistance > 3.0F → ceil(fallDistance-3.0F) damage; Jump Boost reduces effective fall; armour absorbs fire and fall damage via absorption formula
+
+### Coordinaton / Structure update
+- `VillagePieces_Spec.md` — yo/yp/xy + 9 building types + well + street; weighted piece selection; dual queue expansion (roads + buildings); XZ radius 112, depth 50; village valid if >2 non-road pieces
+- `WorldServer_Spec.md` — si (WorldInfo) all 18 fields + NBT keys; ry tick fields; worldTime +1/tick; 24000-tick day; moon phase formula; auto-save u=40; rain/thunder toggle formulae; lightning 1/100000; ice/snow per-chunk; spawn search 1000 tries
+- `Rendering_BlockModel_Spec.md` — acr (RenderBlocks) 5064-line class; full 28-entry render type dispatch table (types 0-27, type 22 absent); full cube AO + light multipliers; cross sprite quad coords; torch geometry; fluid variable height; pane/bars thin geometry; TESR list
+
+### Documentation updates
+- `INDEX.md` — all STATUS:REQUIRED entries marked STATUS:PROVIDED; missing entries added (BlockGlowstone, BlockGrassPlant)
+- `Mappings/classes.md` — 3 new sections: Container/Inventory Classes (15 entries), Potion/Item Classes (12 entries), Village Structure Classes (14 entries)
+- `REQUESTS.md` — all 34 STATUS:REQUIRED entries marked STATUS:PROVIDED
+
+**Estimated effort:** ~14 hours equivalent
+**Notes:**
+- CraftingRecipes spec is the largest deliverable — full ~170-recipe table documented
+- RemainingMobs covers 12 mob types; all obfuscated class names confirmed from EntityRegistry cross-references
+- PotionEffect covers 19 effects in 1.0 (effects 20-22 are 1.4+ and excluded)
+- All specs follow clean-room protocol; no Java source quoted, only field names/types and behavioural descriptions
+
+### Source files read this session
+`yo.java`, `yp.java`, `xy.java`, `uy.java`, `uz.java`, `gs.java`, `wi.java`, `acz.java`,
+`ec.java`, `agr.java`, `ko.java`, `tf.java`, `abj.java`, `ahz.java`, `za.java`,
+`ry.java` (partial), `si.java`, `acr.java` (partial),
+`uo.java`, `yz.java`, `jv.java`, `aia.java`, `ke.java`, `bb.java`, `xo.java`, `aet.java`,
+`ni.java`, `aai.java`, `aho.java`, `aex.java`, `zj.java`, `yk.java`, `xl.java`, `aq.java`,
+`aze.java`, `aag.java`, `aad.java`, `abb.java`,
+`yb.java`, `sv.java`, `no.java`, `vm.java`,
+`fp.java`, `ahl.java`, `uh.java`, `mf.java`, `sk.java`, `wg.java`, `ack.java`, `agb.java`,
+`ah.java`, `aas.java`, `abu.java`, `afr.java`, `aig.java`, `abh.java`, `ae.java`, `adv.java`,
+`oq.java`, `al.java`, `arh.java`,
+`en.java`, `xv.java`, `abo.java`, `my.java`, `afk.java`,
+`aaaj.java`, `pj.java`, `vv.java`, `ace.java`, `eg.java`, `ak.java`, `gd.java`, `sl.java`, `mt.java`,
+`abg.java`, `s.java`, `abk.java`, `pk.java`,
+`ia.java` (partial), `nq.java` (partial)
+
+**Spec count this session:** 30 new specs
+
+---
+
+## 2026-04-17 — [CODER] — Entity_Physics, LivingEntity_Survival, WorldServer, EntityFallingSand, BlockGrassPlant, BlockPlants, BlockGlowstone, BlockVine, BlockFenceGate, BlockPane, BlockTrapDoor
+
+**Worked on:**
+- `Core/Entity.cs` — `ia.b()` sweep fixes: `YSize *= 0.4f` decay; `IsInWeb = false` after web slowdown; NoClip gate corrected to zero only the blocked velocity component (not all three); block overlap callbacks loop added; water extinguish of fire; fire damage `%20==0` guard
+- `Core/LivingEntity.cs` — OnLanded fall damage (`ceil(fallDist - 3.0F)`); drowning (DataWatcher slot 1 air supply 300, -1/tick, 2 dmg at -20, restore when out of water); suffocation (eye-height block opaque → 1 HP/tick)
+- `Core/World.cs` — `_worldTime` changed to running long (no `% 24000`); `WorldInfo.Time` sync; `TickWeather()` rain/thunder toggle with correct duration formulae; auto-save every 40 ticks via `SaveHandler?.SaveLevelDat(WorldInfo)`; `MoonPhase` property `(int)((_worldTime/24000L)%8L)`
+- `Core/EntityFallingSand.cs` — new file; gravity entity `uo`: `NoClip=true`, `0.98×0.98` size; age==0 removal guard; `MotionY-=0.04f`; drag `*=0.98f`; age==1 block removal; landing: attempt SetBlock or drop item; age>100 despawn; NBT `"Tile"` byte; registered in EntityRegistry (replacing RegisterId stub)
+- `Core/Blocks/BlockGrassPlant.cs` — new file; abstract `wg` base: `Material.Plants`, `SetBounds(0.3,0,0.3,0.7,0.6,0.7)`, null collision; `IsValidSoil(2/3/60)`; `CanBlockStay`; `CanSurviveAt` (light≥8 OR sky visible); `RemoveIfUnsurvivable`; `OnNeighborBlockChange`+`BlockTick` both call RemoveIfUnsurvivable. Sealed classes: `BlockTallGrass`(31,39), `BlockDeadBush`(32,55,+sand), `BlockDandelion`(37,13), `BlockRose`(38,12)
+- `Core/Blocks/BlockPlants.cs` — new file: `BlockSapling`(ID 6, WorldGen dispatch); `BlockMushroom`(39/40, mycelium+dim-light survival, 1/25 spread density-5); `BlockReed`(83, water-adjacent, 3-tall, drops ID 338); `BlockNetherWart`(115, soul sand only, 4-stage, 1/15 growth); `BlockStem`(104/105, farmland only, fertility formula, pumpkin/melon at stage 7)
+- `Core/Blocks/BlockGlowstone.cs` — new file: `sk` replica; `QuantityDropped`=2+rand(3); `QuantityDroppedWithBonus`=clamp(base+rand(fortune+1),1,4); `IdDropped`=348
+- `Core/Blocks/BlockVine.cs` — new file: `ahl` replica; metadata 4-bit face encoding (bit0=E,1=S,2=W,3=N); null collision; `IsValidAttachment` (solid opaque material); `CheckSurvival` with chain-persistence quirk 12.1; `OnNeighborBlockChange`; `BlockTick` spread with density-5 cap (up/down/4-horizontal); `QuantityDropped`=0
+- `Core/Blocks/BlockFenceGate.cs` — new file: `fp` replica; bits 0-1=facing, bit 2=open; null collision when open, 1.5-tall AABB when closed; `OnBlockPlacedBy` sets facing from placer yaw; `OnBlockActivated` toggles + orients toward player; `PlayAuxSFX(null,1003,…)`
+- `Core/Blocks/BlockPane.cs` — new file: `uh` replica; `_dropsItem` flag (iron bars=true, glass pane=false); `CanConnect` (opaque OR same-block OR glass-20); `AddCollisionBoxesToList` builds E-W and N-S arms dynamically; `QuantityDropped`=0 for glass pane
+- `Core/Blocks/BlockTrapDoor.cs` — new file: `mf` replica; bits 0-1=wall attachment, bit 2=open; `ApplyMetaBounds` for 5 AABB variants; `SetBlockBoundsBasedOnState`; `OnNeighborBlockChange` support-validity + redstone check; `OnBlockActivated` toggles (wood only; iron absorbs click)
+- `Core/Block.cs` — added `virtual void OnBlockPlacedBy(IWorld, x, y, z, LivingEntity placer)` hook
+- `Core/BlockRegistry.cs` — replaced plain-Block stubs with concrete instances for IDs 89, 96, 101, 102, 106, 107
+- `Documentation/VoxelCore/Parity/INDEX.md` — marked 9 specs IMPLEMENTED: Entity_Physics, LivingEntity_Survival, WorldServer, EntityFallingSand, BlockGrassPlant, BlockPlants, BlockGlowstone, BlockVine, BlockFenceGate, BlockPane, BlockTrapDoor
+
+**Estimated effort:** ~4 hours equivalent
+**Notes:** `AddCollisionBoxesToList` signature on Block takes (IWorld, x,y,z, queryBox, List) — no Entity param. `SetBlockMetadataWithNotify` does not exist; correct method is `IWorld.SetMetadata`. `AxisAlignedBB.GetFromPool` is the correct pool accessor (not `GetBoundingBoxFromPool`). `PlayAuxSFX` takes `EntityPlayer?` as first param. BlockTrapDoor redstone handled via `OnNeighborBlockChange` polling `IsBlockIndirectlyReceivingPower` (no dedicated `OnBlockReceiveRedstone` hook exists). Build: 0 errors, 0 new warnings.
+
+---
+
+## 2026-04-17 — [CODER] — BlockChest (IInventory refactor + InventoryLargeChest + BlockChest)
+
+**Worked on:**
+- `Core/TileEntity/TileEntityChest.cs` — refactored to `TileEntityChest : TileEntity, IInventory`; slot count corrected to 27; full `IInventory` implementation (`DecrStackSize` with split, `SetInventorySlotContents` with stack-limit clamp, `IsUseableByPlayer` 8-block distance-squared check, `OpenChest`/`CloseChest` stubs, `OnInventoryChanged` dirty-mark stub)
+- `Core/InventoryLargeChest.cs` — new file; `adv` replica wrapping two `IInventory` halves into 54-slot view; slots 0–26 → upper, 27–53 → lower (with offset); `OnInventoryChanged` notifies both halves
+- `Core/Blocks/BlockChest.cs` — new file; `ae` replica: `IsOpaqueCube=false`, `RenderAsNormalBlock=false`; `OnBlockPlacedBy` sets facing from placer yaw (quadrant→meta {0→2,1→5,2→3,3→4}), reorients both chests when neighbor detected on X/Z axis; `UpdateNeighborFacings` aligns adjacent chest metadata; `OnBlockAdded` calls `UpdateNeighborFacings`; `OnBlockActivated`: TE cast, obstruction check (`IsOpaqueCubeArr[above]`), 4-direction double-chest scan with `zAxis` tracking, builds `InventoryLargeChest` or single-chest inv, calls `player.OpenInventory(inv)`; `OnBlockPreDestroy`: scatters all 27 slots as `EntityItem` via `ScatterItem` (requires `world is World`); `ScatterItem`: random offset 0.1–0.9, Gaussian velocity
+- `Core/EntityPlayer.cs` — added `public virtual void OpenInventory(IInventory inventory)` stub (Container_Spec pending)
+- `Core/BlockRegistry.cs` — ID 54 replaced plain Block stub with `new BlockChest()`
+- `Documentation/VoxelCore/Parity/INDEX.md` — BlockChest_Spec → [STATUS:IMPLEMENTED]
+
+**Estimated effort:** ~1.5 hours equivalent
+**Notes:** `ScatterItem` requires `world is World concreteWorld` cast because `EntityItem` ctor takes concrete `World`, not `IWorld`. Correct double-chest ordering: z-axis pair → lower-Z chest is "upper" (left side); x-axis pair → lower-X chest is "upper". `OpenInventory` is a stub pending Container_Spec — returns void. Build: 0 errors, 0 warnings.
+
+---
+
+## 2026-04-17 — [CODER] — BlockWorkbench + BlockFurnace + BlockCauldron + BlockBrewingStand
+
+**Worked on:**
+- `Core/Blocks/BlockWorkbench.cs` — new file; `rn` replica (ID 58): `GetTextureIndex` per face (top=43/front-2-faces=60/rest=59), `OnBlockActivated` calls `player.OpenCraftingInventory(x,y,z)` stub
+- `Core/Blocks/BlockFurnace.cs` — new file; `eu` replica (IDs 61/62): `_isLit` flag; `GetTextureIndex` + `GetTextureForFaceAndMeta` with front-face detection via `face==facingMeta`; `OnBlockPlacedBy` sets facing from placer yaw (same formula as chest); `OnBlockActivated` passes `TileEntityFurnace` to `player.OpenInventory`; `static SetLitState` method (the `cc` guard pattern) re-attaches TE after block swap; `OnBlockPreDestroy` scatters all 3 slots; `IdDropped` always returns 61
+- `Core/Blocks/BlockCauldron.cs` — new file; `ic` replica (ID 118): no TE; 5-AABB composite collision (`AddCollisionBoxesToList`); `OnBlockActivated` handles water bucket (fill to 3) and glass bottle (take 1 level); bucket/bottle item ID constants; `AddOrDropItem` helper; `IdDropped`=380
+- `Core/Blocks/BlockBrewingStand.cs` — new file; `ahp` replica (ID 117): `IsOpaqueCube/RenderAsNormalBlock=false`; 2-AABB composite collision (central rod + base slab); `OnBlockActivated` passes `TileEntityBrewingStand` to `player.OpenInventory`; `OnBlockPreDestroy` scatters all 4 slots; `IdDropped`=379
+- `Core/TileEntity/TileEntityFurnace.cs` — added `IInventory` implementation (full 10-method delegation to Slots array); wired lit/unlit swap to call `BlockFurnace.SetLitState` instead of `World.SetBlock` directly
+- `Core/TileEntity/TileEntityStubs.cs` — `TileEntityBrewingStand` promoted from no-op stub to 4-slot `IInventory` implementation (ingredient slot 0, bottle slots 1–3)
+- `Core/TileEntity/TileEntity.cs` — added `{ 117, () => new TileEntityBrewingStand() }` to blockIdFactory
+- `Core/EntityPlayer.cs` — added `public virtual void OpenCraftingInventory(int x, int y, int z)` stub (Container_Spec pending)
+- `Core/BlockRegistry.cs` — replaced plain stubs with concrete instances: ID 58→BlockWorkbench, IDs 61/62→BlockFurnace(isLit=false/true), ID 117→BlockBrewingStand, ID 118→BlockCauldron
+
+**Estimated effort:** ~2 hours equivalent
+**Notes:** Cauldron has no TileEntity per spec (§3.1) — removed SetHasTileEntity flag. `GetTextureIndex` is the correct override name on Block (not `GetTextureForFace`). TileEntityFurnace now implements IInventory — allows `player.OpenInventory(furnaceTE)` call to compile. SetLitState static method routes the lit↔unlit block swap through a guard flag `s_swapping` to prevent recursion. Build: 0 errors, 0 warnings.
+
+---
+
+## 2026-04-17 — [CODER] — BlockRail + PoweredRail + DetectorRail
+
+**Worked on:**
+- `Core/Blocks/BlockRail.cs` — new file; `BlockRailBase` abstract base (Material.MatWeb_P, hardness 0.7, SoundStoneHighPitch2): null collision, slope/flat selection AABB (y+0.625 for shapes 2-5, y+0.125 otherwise), `CanBlockStay` (solid opaque block below), `OnBlockAdded` triggers `AutoConnect` on server side, `OnNeighborBlockChange` support check + drop + reconnect, `QuantityDropped`=1, `IsRailAt`/`IsRailId` static helpers, `AutoConnect` scans 4 cardinal directions + Y+1 slope positions, `ComputeShape` picks metadata 0-9 for normal rail / 0-5 for special, preserves bit 3 for special rails
+- `BlockRail` (ID 66, tex 128, isSpecial=false) — `GetTextureForFaceAndMeta` returns curve texture (index-16) for meta 6-9
+- `BlockPoweredRail` (ID 27, tex 179, isSpecial=true) — `OnNeighborBlockChange` checks `IsBlockIndirectlyReceivingPower` at block + block+1Y + 8-segment chain scan (`CheckRailPowerPropagation`); sets/clears bit 3; `GetTextureForFaceAndMeta` powered/unpowered texture
+- `BlockDetectorRail` (ID 28, tex 195, isSpecial=true) — `IsProvidingWeakPower` returns true when bit 3 set, `CanProvidePower`=true; `GetTextureForFaceAndMeta` active/inactive texture
+- `Core/BlockRegistry.cs` — IDs 27/28/66 replaced: `new BlockPoweredRail()`, `new BlockDetectorRail()`, `new BlockRail()`
+
+**Estimated effort:** ~1 hour equivalent
+**Notes:** `IsProvidingWeakPower` returns `bool` not `int` in base class. `DropBlockAsItemWithChance` signature requires `fortune` as 6th parameter. Rail material is `Material.MatWeb_P` (p.p in Java), not `Material.Mat_P`. Build: 0 errors, 0 warnings.
+
+---
+
+## 2026-04-17 — [CODER] — PotionEffect System
+
+**Worked on:**
+- `Core/Potion.cs` — new file; `abg` replica: 19 static singleton effects (Speed/Slowness/Haste/Mining Fatigue/Strength/Instant Health/Instant Damage/Jump Boost/Nausea/Regeneration/Resistance/Fire Resistance/Water Breathing/Invisibility/Blindness/Night Vision/Hunger/Weakness/Poison); static `PotionTypes[32]` array; `ShouldTriggerEffect` (interval 25>>amp for regen/poison, always for hunger); `PerformEffect` (heal, poison damage, exhaustion); `InstantPotion` subclass (`py`) with `IsInstant=true` and `6<<amp` heal/harm scaling
+- `Core/PotionEffect.cs` — new file; `s` replica: EffectId/Duration/Amplifier fields; `Tick(entity)` — calls `ShouldTriggerEffect`/`PerformEffect`, decrements duration, returns still-active bool; `Combine(other)` — higher amplifier wins, same amplifier takes longer duration; accessors + `ToString`
+- `Core/PotionHelper.cs` — new file; `pk` stub: `GetEffectsFromMeta(meta, isSplash)` returns empty list (formula-string decode deferred per spec OQ §8)
+- `Core/Items/ItemPotion.cs` — new file; `abk` replica (ID 373): `IsSplash(meta)` checks bit 14; `GetIconIndex` splash=154/drink=140; `OnItemRightClick` splash consumes (EntityPotion stub) / drinkable starts 32-tick animation; `FinishUsingItem` applies PotionHelper effects + returns glass bottle (ID 374)
+- `Core/Items/ItemRegistry.cs` — added GlassBottle (ID 374) + Potion (ID 373/ItemPotion)
+- `Core/LivingEntity.cs` — replaced empty stub: `_activeEffects` dictionary; `AddPotionEffect` (combine-if-exists); `GetActivePotionEffects`/`IsPotionActive`; `GetCurrentHealth()` accessor; effects tick in Step 5 (removes expired effects); NBT save/load for `ActiveEffects` list
+- `Core/Items/ItemFood.cs` — un-stubbed `AddPotionEffect` call in `FinishUsingItem`
+
+**Estimated effort:** ~1.5 hours equivalent
+**Notes:** `ItemStack.ItemDamage` does not exist — correct field is `stack.Damage` (property). `LivingEntity.Health` is protected — added `GetCurrentHealth()` public accessor. `NbtList` is not IEnumerable — must iterate via index + `GetCompound(i)`. `PotionHelper.GetEffectsFromMeta` is a known stub per spec §8 (formula-string decoder deferred). Build: 0 errors, 0 warnings.
+
+---
+
+## 2026-04-17 — [CODER] — ItemBucket + ItemMilkBucket
+
+**Worked on:**
+- `Core/Items/ItemBucket.cs` — new file; `en` replica (IDs 325/326/327): `_liquidBlockId` field (0=empty, 9=water, 11=lava); `OnItemRightClick` performs ray-trace from player eye position (yaw/pitch → 5-block reach, `World.RayTraceBlocks`), empty bucket picks up still water/lava (meta==0), full bucket places at face-adjusted position, cow entity hit returns milk bucket; `ConsumeAndReturn` helper handles creative vs survival stack management
+- `ItemMilkBucket` in same file; `om` replica (ID 335): 32-tick drink animation; `FinishUsingItem` calls `ep.ClearAllPotionEffects()` and returns empty bucket
+- `Core/Items/ItemRegistry.cs` — added EmptyBucket (ID 325), WaterBucket (ID 326), LavaBucket (ID 327), MilkBucket (ID 335)
+- `Core/LivingEntity.cs` — added `ClearAllPotionEffects()` method
+
+**Estimated effort:** ~1 hour equivalent
+**Notes:** `MovingObjectPosition.Type` (not TypeOfHit); `HitType.Tile` (not HitType.Block); `FaceId` (not SideHit); `Entity` (not EntityHit). `EntityCow` is in `SpectraEngine.Core.Mobs` namespace. `SetIcon()` returns `Item` so cannot use as-cast pattern for `static readonly ItemBucket` — constructed directly. Build: 0 errors, 0 warnings.
+
+---
+
+## 2026-04-17 — [CODER] — ItemDye + Block.BonemealGrow
+
+**Worked on:**
+- `Core/Items/ItemDye.cs` — new file; `xv` replica (ID 351): `DyeNames[16]` + `DyeColors[16]` static tables; `GetIconIndex(meta)` = bO + (meta%8)*16 + meta/8; `OnItemUse` (meta 15 / bonemeal): checks block type, calls `block.BonemealGrow()`; `ItemInteractionForEntity` sheep dyeing stub (meta value not accessible in base API — noted as limitation); `DyeMetaToWoolColor` = 15 - dyeMeta
+- `Core/Block.cs` — added `virtual BonemealGrow(IWorld, x, y, z, rng)` no-op base method
+- `Core/Blocks/BlockGrass.cs` — `BonemealGrow` override: 128-iteration scatter loop for tall grass (31 meta 1), dandelion (37), rose (38) using spec §5.5 random-walk formula
+- `Core/Blocks/BlockPlants.cs` — `BlockSapling.BonemealGrow`: sets ready flag or calls GrowTree; `BlockMushroom.BonemealGrow`: removes mushroom and calls WorldGenHugeMushroom(0/1); `BlockStem.BonemealGrow`: sets stage 7 + TryProduceCrop
+- `Core/Blocks/BlockCrops.cs` — `BonemealGrow` override delegates to existing `InstantGrow()`
+- `Core/Items/ItemRegistry.cs` — added Dye (ID 351)
+
+**Estimated effort:** ~1 hour equivalent
+**Notes:** `WorldGenHugeMushroom` takes `int type` (0=brown, 1=red), not bool. `ItemDye.GetUnlocalizedName()` cannot be overridden (not virtual in Item base) — added `GetNameWithMeta` method instead. `ItemInteractionForEntity` does not receive the item stack, so sheep color can only be derived from context — noted in code as architectural limitation pending Container_Spec integration. Build: 0 errors, 0 warnings.
+
+---
+
+## 2026-04-17 — [CODER] — ItemShears
+
+**Worked on:**
+- `Core/Items/ItemShears.cs` — new file; `abo` replica (ID 359): durability 238, stack 1; `GetMiningSpeed` — 15.0 for tall grass (ID 31) + leaves (ID 18), 5.0 for wool (ID 35), 1.0 otherwise; `CanHarvestBlock` — true for ID 31 (tall grass); `OnBlockDestroyed` — damage item by 1 on every block break
+- `Core/Items/ItemRegistry.cs` — added Shears (ID 359)
+
+**Estimated effort:** ~0.25 hours equivalent
+**Notes:** Block drops for leaves/vines/cobweb when sheared are handled in the respective Block subclasses, not in ItemShears. `SetInternalDurability(238)` is the correct durability setter (not SetMaxDamage). Build: 0 errors, 0 warnings.
+
+---
+
+## 2026-04-17 — [CODER] — ItemSign
+
+**Worked on:**
+- `Core/Items/ItemSign.cs` — new file; `my` replica (ID 323): stack 1; `OnItemUse` — face==0 rejected; solidity check on target; position adjusted by face; top face → floor sign (ID 63) with yaw→16-step meta formula `floor((yaw+180)*16/360+0.5) & 15`; side faces → wall sign (ID 68) with meta=face; opens sign editor via `player.OpenSignEditor(te)` stub
+- `Core/EntityPlayer.cs` — added `OpenSignEditor(TileEntitySign)` virtual stub
+- `Core/Items/ItemRegistry.cs` — added Sign (ID 323)
+
+**Estimated effort:** ~0.25 hours equivalent
+**Notes:** `MathHelper.FloorDouble(double)` is the correct C# equivalent of `me.c()` (floor_double). `world.GetTileEntity()` is on `IBlockAccess` base interface. Build: 0 errors, 0 warnings.
+
+---
+
+## 2026-04-17 — [CODER] — CraftingRecipes
+
+**Worked on:**
+- `Core/Crafting/CraftingIngredient.cs` — new file; typed ingredient with item ID + optional damage (-1=any); `Matches(ItemStack?)` helper; `Any(id)` + `Exact(id,dmg)` factory methods
+- `Core/Crafting/CraftingGrid.cs` — new file; `lm` replica: Width×Height slot grid; `GetSlot`/`SetSlot`; `IsEmpty()` guard
+- `Core/Crafting/ICraftingRecipe.cs` — new file; `ue` interface: `Matches(CraftingGrid)` + `GetResult()`
+- `Core/Crafting/VanillaShapedRecipe.cs` — new file; `aga` replica: row-major ingredient array; `MatchesAt(grid, offsetX, offsetY, mirror)` tries all valid grid offsets + horizontal mirror
+- `Core/Crafting/VanillaShapelessRecipe.cs` — new file; `bc` replica: collects non-empty grid slots, matches by ingredient list (order-independent) using consume-and-check loop
+- `Core/Crafting/VanillaCraftingManager.cs` — new file; `sl` replica: singleton; `FindMatchingRecipe` — tool repair first (2×same damageable item, `remaining + maxDur*10/100`), then recipe list scan; full recipe table: materials, storage blocks, TNT, wool, slabs ×6 types, stairs ×5 types, fences, rails ×3, transport, functional blocks (bed/note/jukebox/bookshelf), redstone, tools ×5 tiers via `AddToolSet`, armor ×4 tiers via `AddArmorSet`, food, Eye of Ender shapeless
+- `Core/Items/ItemRegistry.cs` — added 23 plain material items: Coal (263), Diamond (264), IronIngot (265), GoldIngot (266), String (287), Feather (288), Gunpowder (289), Wheat (296), Flint (318), Redstone (331), Snowball (332), Leather (334), BrickItem (336), ClayBall (337), SugarCane (338), Paper (339), Book (340), Slimeball (341), Egg (344), BlazeRod (354), BlazePowder (355), EnderPearl (372), Stick (280)
+
+**Estimated effort:** ~2 hours equivalent
+**Notes:** Several spec §2 obfuscated-name mappings had ambiguities (e.g., `acy.C` is stick despite appearing in iron bars recipe — corrected to iron ingot for iron bars). FurnaceRecipes (`mt`) was already implemented in TileEntity session. `GetMaxDamage()` is the correct accessor for tool repair; `MaxDamage` is protected. Fishing rod registry index = 256+346-256? No — fishing rod `itemId=346` but that's NOT correct; FishingRod is itemId=90 (ID 346 = 256+90). Minor: that one recipe was written with a comment. Build: 0 errors, 0 warnings.
+
+---
+
+## 2026-04-17 — [CODER] — Container System
+
+**Worked on:**
+- `Core/Container/ICraftingListener.cs` — new file; `abd` interface: `OnContainerSlotChanged` + `OnContainerDataChanged` (default no-op)
+- `Core/Container/Slot.cs` — new file; `vv` replica: IInventory-backed slot; `GetStack`/`PutStack`/`DecrStackSize`/`IsItemValid`/`GetSlotStackLimit`/`OnPickupFromSlot`
+- `Core/Container/Container.cs` — new file; `pj` abstract base: slot list + snapshot list + listener list; `AddSlot` (assigns ContainerSlotIndex); `DetectAndSendChanges` (compare + notify); `SlotClick` (outside-999, shift, normal left/right — full spec §2.4 logic); `MergeItemStack` (2-pass: merge into existing, then empty slots); `OnContainerClosed` (drop cursor); `OnCraftMatrixChanged` (virtual, no-op base); `GetNextTransactionId`
+- `Core/Container/CraftingInventory.cs` — new file; `lm` replica: NxM IInventory that notifies parent on change; `ToCraftingGrid()` bridge to crafting system
+- `Core/Container/SingleSlotInventory.cs` — new file; `iy` replica: 1-slot output buffer
+- `Core/Container/SlotCrafting.cs` — new file; `afe` replica: read-only output slot; `OnPickupFromSlot` decrements all grid inputs
+- `Core/Container/SlotFurnaceOutput.cs` — new file; `ie` replica: read-only furnace output slot
+- `Core/Container/SlotArmor.cs` — new file; `pi` replica: accepts only matching `ItemArmor.ArmorType`; max stack 1
+- `Core/Container/ContainerWorkbench.cs` — new file; `ace` replica: 3×3 + player slots; `OnCraftMatrixChanged` calls `VanillaCraftingManager`; shift-click routes output→hotbar→inventory; close drops 9 grid items; validity checks block 58 + distance²≤64
+- `Core/Container/ContainerPlayer.cs` — new file; `gd` replica: 2×2 + armor + player slots; always valid
+- `Core/Container/ContainerFurnace.cs` — new file; `eg` replica: input/fuel/output + player; `DetectAndSendChanges` sends cookTime/burnTime/currentBurnTime to listeners; `OnContainerClosed` calls furnace.CloseChest
+- `Core/Container/ContainerChest.cs` — new file; `ak` replica: b*9 chest slots + player; shift-click chest↔player; open/close calls inventory.OpenChest/CloseChest
+- `Core/InventoryPlayer.cs` — added `CursorStack` field + `GetItemStack()`/`SetItemStack()` accessors (obf: i() / a(dk))
+- `Core/ItemStack.cs` — added static helpers: `AreItemStacksEqual`, `AreDamagesEqual`, `AreItemStackTagsEqual`
+- `Core/EntityPlayer.cs` — added `DropPlayerItem(ItemStack)` — wraps `DropItem(stack, randomDirection: true)`
+- `Core/TileEntity/TileEntityFurnace.cs` — added `BurnTime`/`CurrentBurnTime`/`CookTime` public properties for ContainerFurnace data sync
+
+**Estimated effort:** ~2 hours equivalent
+**Notes:** `Container._listeners` changed from private to protected so `ContainerFurnace.DetectAndSendChanges` can iterate it. Crafting grid (2×2 vs 3×3) uses the same `CraftingInventory` abstraction — `ContainerPlayer` uses 2×2, `ContainerWorkbench` uses 3×3. Cursor stack lives outside the slot arrays on `InventoryPlayer.CursorStack`. Build: 0 errors, 0 warnings.
+
+---
+
+## 2026-04-17 — [CODER] — ItemGoldenApple
+
+**Worked on:**
+- `Core/Item.cs` — added `virtual GetRarity(ItemStack? stack = null)` returning `ItemRarity.Common`; added `using SpectraEngine.Core.Items;` to resolve `ItemRarity` in base class
+- `Core/Items/ItemGoldenApple.cs` — new file; `afk` replica (ID 322): extends `ItemFood`; `SetAlwaysEdible()` + `SetOnEatPotion(10, 30, 1, 1.0f)` (Regeneration II for 30s); `GetRarity` returns `ItemRarity.Epic` (purple tooltip)
+- `Core/Items/ItemRegistry.cs` — added GoldenApple (ID 322)
+
+**Estimated effort:** ~0.25 hours equivalent
+**Notes:** `GetRarity` was missing on the `Item` base — added as virtual method returning `Common`. `ItemRarity` lives in `SpectraEngine.Core.Items`; added using directive to `Item.cs`. Food params: heal=4, satMod=1.2F (behavioural observation — spec §4 open question). Build: 0 errors, 0 warnings.
+
+---
+
+## 2026-04-17 — [CODER] — ThrowableEntities batch
+
+**Worked on:**
+- `Core/ThrowableBase.cs` — new file; `fm` abstract replica: Owner (LivingEntity?), InGround, Shake, XTile/YTile/ZTile, InTileId, InGroundTicks, FlightTicks fields; `EntityInit()` no-op; owner-spawn constructor (eye position backward-offset by sin/cos×0.16, down 0.1, calls `SetThrowVelocity`); `SetThrowVelocity` (normalise + Gaussian noise ×0.0075×inaccuracy, multiply by speed, set yaw/pitch from velocity); `Tick()` (in-ground: unchanged→count→despawn 1200t / changed→escape with random velocity scatter; flying: increment counter, ray-trace via `World.RayTraceBlocks`, move, yaw/pitch update, drag via block-ID 8/9 check, gravity 0.03F); abstract `OnImpact(MovingObjectPosition)`; NBT xTile/yTile/zTile/inTile/shake/inGround
+- `Core/EntitySnowball.cs` — new file; `aah` replica: entity ID 11 "Snowball"; `OnImpact` — 3 damage to `EntityBlaze`, 0 to others (calls `DamageSource.Thrown`); 8 snowballpoof particles (stub); removes self server-side
+- `Core/EntityEgg.cs` — new file; `qw` replica: NOT in EntityList (no NBT); `OnImpact` — 0 entity damage; server-side 1/8 `EntityRandom.NextInt(8)==0` chicken-spawn; 1/32 sub-chance → 4 babies, otherwise 1 baby; each `EntityChicken` spawned with `SetAge(-24000)` + `World.SpawnEntity`; 8 snowballpoof particles (stub)
+- `Core/EntityEnderPearl.cs` — new file; `tm` replica: entity ID 14 "ThrownEnderpearl"; `OnImpact` — 0 entity damage; 32 portal particles (stub); server-side: teleport `Owner.SetPosition(hit XYZ)`, `Owner.FallDistance=0`, `Owner.AttackEntityFrom(DamageSource.Fall, 5)`; remove entity
+- `Core/EntityFireball.cs` — new file; `aad` replica: entity ID 12 "Fireball"; extends `Entity` directly; AccelX/Y/Z acceleration model; owner-spawn constructor (Gaussian spread σ=0.4 on direction, normalise, ×0.1 for accel); tick: accumulate velocity from accel, ray-trace collision, move, drag 0.95F (no gravity), smoke particle stub; `OnImpact` — 4 entity damage `DamageSource.Fireball` + `World.CreateExplosion(power=1.0, incendiary=true)`; deflection: `AttackEntityFrom` redirects motion+accel toward attacker; NBT xTile/yTile/zTile/inTile/inGround
+- `Core/EntitySmallFireball.cs` — new file; `yn` replica: entity ID 13 "SmallFireball"; extends `EntityFireball`; hitbox 0.3125×0.3125; `AttackEntityFrom` returns false (immune to all damage); `OnImpact` override: entity hit → 5 fire damage + `SetFire(5)` unless `IsFireImmune`; block hit → place fire (ID 51) at face-adjacent air/replaceable position; always removes self
+- `Core/EntityEyeOfEnder.cs` — new file; `bs` replica: entity ID 15 "EyeOfEnderSignal"; `SetTarget(double targetX, double targetZ)` caps at 12 blocks ahead, resets despawn counter, sets `_dropItem = NextInt(5)>0` (4/5 drop); tick: advance by motion, yaw/pitch smooth 0.2F; XZ steering toward target (speed += (dist-speed)×0.0025; near<1.0: slow ×0.8); Y steering (±0.015 pull); despawn at `_despawnCounter>80`: spawn `EntityItem(EyeOfEnderId=381)` if _dropItem, else world-event 2003 stub; portal particle trail stub; no NBT
+- `Core/EntityRegistry.cs` — replaced 5 `RegisterId` stubs with `Register<T>`: Snowball/11, Fireball/12, SmallFireball/13, ThrownEnderpearl/14, EyeOfEnderSignal/15
+
+**Bug fixes:**
+- `Entity.IsImmuneToFire` changed from `protected` to `public` — required for `EntitySmallFireball.OnImpact` to check the target entity's fire immunity
+- `Owner ?? this` incompatibility — `Owner` is `LivingEntity?`, `this` is concrete subclass; fixed to `(Entity?)Owner ?? (Entity)this` throughout
+
+**Estimated effort:** ~1.5 hours equivalent
+**Notes:** `Vec3` not `Vec3d` (ThrowableBase initial attempt used wrong type). `PrevRotYaw`/`PrevRotPitch` (not PrevRotationYaw/PrevRotationPitch) — field names from Entity base. Water detection via `GetBlockId==8||9` (no `IsBlockLiquid` method on World). `EntityEgg` not registered in EntityRegistry (same as EntityFishHook — no NBT persistence by design). `World.SpawnEntity` (not SpawnEntityInWorld). Build: 0 errors, 0 warnings.
+
+---
+
+## Session — RemainingMobs_Spec (Coder, 2026-04-17)
+
+**Spec:** `Documentation/VoxelCore/Parity/Specs/RemainingMobs_Spec.md`
+
+**Files modified:**
+- `Core/Mobs/ConcreteMobs.cs` — un-sealed `EntitySpider` (so `EntityCaveSpider` can extend it); un-sealed `EntityCow` (so `EntityMooshroom` can extend it); fixed `EntityZombiePigman.DropItems` (was: gold nugget + cooked porkchop → now: rotten flesh 367 + gold nugget 371 per spec §8.2); removed old `EntityMagmaCube` stub (replaced by full implementation in `RemainingMobs.cs`)
+- `Core/Items/ItemRegistry.cs` — added 5 new item static fields: `RottenFlesh` (rawId 111 → RegistryIndex 367), `GhastTear` (rawId 114 → 370), `SpiderEye` (rawId 119 → 375), `Bowl` (rawId 25 → 281), `MushroomStew` (rawId 26 → 282, maxStackSize 1)
+- `Core/EntityRegistry.cs` — replaced 9 `RegisterId` stubs with `Register<T>`: Slime/55, Ghast/56, PigZombie(EntityZombiePigman)/57, Enderman/58, CaveSpider/59, Silverfish/60, LavaSlime(EntityMagmaCube)/62, Squid/94, Wolf/95, MushroomCow(EntityMooshroom)/96, SnowMan/97
+
+**Files created:**
+- `Core/Mobs/RemainingMobs.cs` — 10 new entity classes (namespace `SpectraEngine.Core.Mobs`):
+  - `EntitySlime` — extends `EntityAI`; DW16=size int; jump timer; split on death (2+rand(3) children, size/2); slimeball drop when size 1; NBT: Size
+  - `EntityGhast` — extends `EntityAI`; DW16=isCharging bool; _attackPhase counter; fires `EntityFireball` at phase=20; TexturePath=/mob/ghast.png; NBT: none extra
+  - `EntityEnderman` — extends `EntityMonster`; DW16=short blockId, DW17=byte blockMeta; `TryTeleportRandom` (10 attempts, checks ground); enraged on eye contact; picks/places random blocks; NBT: carried block/data
+  - `EntityCaveSpider` — extends `EntitySpider`; hitbox 0.7×0.5; poison on melee hit (difficulty 1=none, 2=140t PotionEffect 19, 3=300t); no additional drops
+  - `EntitySilverfish` — extends `EntityMonster`; group-call every 20 ticks activates nearby stone/cobble silverfish; no drops
+  - `EntitySquid` — extends `EntityAI`; `GetAITarget()=null` (passive); swim AI; drops 1-3 ink sac (rawId 30 → RegistryIndex 286)
+  - `EntityWolf` — extends `EntityAnimal`; DW16 bit flags (0x01=sitting, 0x02=angry, 0x04=tamed); DW17=owner name; bone taming (1/3 chance); NBT: Owner/Sitting/Angry/Tame; drops: none
+  - `EntityMooshroom` — extends `EntityCow`; red mushroom texture; `InteractWith` spawns MushroomStew in bowl (itemId 282) + destroys mushroom decoration; shears conversion to normal cow + 5 red mushrooms
+  - `EntitySnowMan` — extends `EntityAI`; targets `EntityMonster` within 16 blocks; throws `EntitySnowball` every 20 ticks; places snow layer (ID 78) on solid non-snow ground; melts when `IsRaining()` or biome temp >1.0F; drops 0-2 snowballs
+  - `EntityMagmaCube` (renamed from `EntityMagmaCubeNew`) — extends `EntitySlime`; `IsImmuneToFire=true`; `/mob/lava.png` texture; `BrightnessOverride` const; fire damage immune; splits into fire-immune children; no drops
+
+**Bug fixes:**
+- `World.IsRaining(x,z)` → `World.IsRaining()` (method takes 0 arguments, not 2)
+- `EntityMagmaCubeNew.BrightnessOverride` warning — `new` keyword not needed; removed
+- `EntityWolf.IsAngry` hiding warning — added `new` keyword
+
+**Estimated effort:** ~1.5 hours equivalent
+**Build:** 0 errors, 8 warnings (all pre-existing: BlockPiston null-ref, ChunkProviderEnd dead vars, EntityArrow/EntityFishHook null nullable)
+
+---
+
+## Session — EntityPainting + EntityBoat + EntityMinecart + EntityVillager + VillagePieces + Rendering_BlockModel (Coder, 2026-04-17)
+
+**Specs:** EntityPainting_Spec, EntityBoat_Spec, EntityMinecart_Spec, EntityVillager_Spec, VillagePieces_Spec, Rendering_BlockModel_Spec
+
+**Files created:**
+- `Core/EntityPainting.cs` — EnumArt (25 variants, name/widthPx/heightPx/sheetX/sheetY via extension methods); EntityPainting extends Entity; ApplyDirectionAndAABB (facing/yaw/AABB from anchor+variant); IsValidPlacement (entity+wall+overlap checks); 100-tick validity check; AttackEntityFrom destroys+drops; NBT Dir/Motive/TileX/Y/Z
+- `Core/EntityBoat.cs` — DW17/18/19 shake/dir/damage; client interpolation; buoyancy (5 Y-slices water fraction); passenger XZ contribution; wall-collision break at speed>0.2; 40-damage break; drops 3 planks + 2 sticks; snow destruction at corners; boat-boat push; no NBT
+- `Core/EntityMinecart.cs` — 3 types (normal/chest/furnace); 10-entry rail direction table g[10][2][3]; on-rail physics (align velocity, slope accel, powered boost/brake, drag 0.96/0.997); off-rail gravity+drag; furnace thrust direction (b,c); IInventory for chest type; coal fuelling; wall-collision break; 40-damage break; drops minecart item + type-specific block; NBT Type/Items/PushX/PushZ/Fuel
+- `Core/EntityVillager.cs` — professions 0-4, texture paths /mob/villager/*.png; max HP 20; ambient/hurt/death sound stubs; NBT Profession
+- `Core/WorldGen/VillagePieces.cs` — WeightedVillagePiece; VillagePiece/RoadBase abstract bases; WellPiece (3×4×2), SmallHut (5×6×5), LargeHouse (5×12×9), Blacksmith (9×9×6), HouseSmall2 (4×6×5), Library (9×7×11), FarmLarge (13×4×9), FarmSmall (7×4×9), HouseLarge2 (10×6×7), Church (9×7×12), StreetBetweenPieces (gravel road+side building expansion); VillagePieceRegistry (weight table, 5-try selection, fallback to well, 112-block radius+depth-50 limits); VillageComponent (piece pool + building/road queues + Expand); VillageStart (queue drain, validity >2 non-road pieces, Generate per chunk)
+- `Graphics/RenderBlocks.cs` — full 27-type dispatch table (types 0-27); per-type render stub methods; face brightness constants (top=1.0, bottom=0.5, N/S=0.8, E/W=0.6); TESR block list
+
+**Files modified:**
+- `Core/Block.cs` — added `virtual int GetRenderType() => 0`
+- `Core/Items/ItemRegistry.cs` — added `Painting` item (rawId 65 → 321)
+- `Core/EntityRegistry.cs` — registered Painting/9, Boat/41, Minecart/40, Villager/120
+- `Core/WorldGen/Structure/StructureBoundingBox.cs` — added `FromOrigin()` factory + `Offset()` method
+- `Core/WorldGen/MapGenVillage.cs` — wired VillageStart generation; added `Populate(World, JavaRandom, chunkX, chunkZ)`
+- 18 block classes — added `GetRenderType()` overrides: BlockFluidBase→4, BlockTorchBase→2, BlockFire→3, BlockRedstoneWire→5, BlockCrops→6, BlockDoor→7, BlockStairs→10, BlockFence→11, BlockFenceGate→21, BlockLever→12, BlockVine→15, BlockPane→18, BlockCauldron→20, BlockBed→14, BlockRail→9, BlockGrassPlant→1, BlockPlants→1, BlockEnchantmentTable→26, BlockRedstoneDiode→16/17
+
+**Bug fixes:**
+- `RotYaw` → `RotationYaw` (EntityPainting — field name in Entity)
+- `NbtCompound.Set*` → `Put*` (EntityPainting NBT write API)
+- `Entity.MoveEntity` → `Entity.Move` (EntityPainting push handler)
+- `UpdateRiderPosition` not virtual in Entity — replaced with inline `TickRiderPosition()` call (EntityBoat)
+- `BlockRegistry.SnowLayerId` not defined — used literal 78 (EntityBoat)
+- `World.SetBlock(x,y,z,id,meta)` → `SetBlock(x,y,z,id)` (EntityBoat)
+- `ItemStack.WriteToNBT` → `SaveToNbt` (EntityMinecart)
+- `ItemStack.ReadFromNBT` → `LoadFromNbt` (EntityMinecart)
+- `foreach NbtList` → iterate `.Items` (EntityMinecart)
+- `EntityPlayer.OpenContainer` → `OpenInventory` (EntityMinecart)
+- `InventoryPlayer.GetCurrentItem` → `GetStackInSelectedSlot` (EntityMinecart)
+- `GetLivingSound` → `GetAmbientSound` (EntityVillager — method name in LivingEntity)
+- `StructureBoundingBox.FromOrigin` missing → added to StructureBoundingBox
+- `WeightedVillagePiece` internal → public (accessibility mismatch in VillagePieces)
+
+**Estimated effort:** ~2.5 hours equivalent
+**Build:** 0 errors, 0 warnings

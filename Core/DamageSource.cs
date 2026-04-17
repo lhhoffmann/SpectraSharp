@@ -74,6 +74,17 @@ public class DamageSource
     /// <summary>obf: <c>r</c> — isProjectile.</summary>
     public bool IsProjectile   { get; private set; }
 
+    // ── Derived type helpers (used by Enchantment damage reduction) ───────────
+
+    /// <summary>True when this source is fall damage (TypeString == "fall").</summary>
+    public bool IsFallDamage        => TypeString == "fall";
+
+    /// <summary>True when this source is explosion damage (TypeString == "explosion").</summary>
+    public bool IsExplosionDamage   => TypeString == "explosion";
+
+    /// <summary>True when this source is a projectile (IsProjectile flag).</summary>
+    public bool IsProjectileDamage  => IsProjectile;
+
     // ── Constructor ───────────────────────────────────────────────────────────
 
     protected DamageSource(string typeString)

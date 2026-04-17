@@ -23,6 +23,7 @@ public class BlockTorchBase : Block
     }
 
     public override bool IsOpaqueCube() => false;
+    public override int  GetRenderType()  => 2;
     public override bool RenderAsNormalBlock() => false;
     public override int GetMobilityFlag() => 1; // can be pushed by pistons
 

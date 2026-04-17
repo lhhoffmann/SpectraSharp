@@ -18,26 +18,75 @@ public sealed class EntityZombie : EntityMonster
     }
 
     public override int GetMaxHealth() => 20;
+    public override bool IsUndead => true;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
 
 /// <summary>
 /// Replica of <c>it</c> (EntitySkeleton) — ID 51.
-/// Extends <see cref="EntityMonster"/>. Attacks with bow (stub — melee fallback).
-/// No extra NBT fields.
-/// Source spec: EntityMobBase_Spec §6.2
+/// Extends <see cref="EntityMonster"/>. Shoots arrows at targets.
+///
+/// Arrow attack (spec BowArrow_Spec §6):
+///   60-tick cooldown between shots; speed=1.0, spread=12.0.
+///
+/// Sunburn (spec §6):
+///   When daytime AND canSeeSky AND getBrightness > 0.5F: SetFire(8).
+///
+/// Source spec: Documentation/VoxelCore/Parity/Specs/BowArrow_Spec.md §6
 /// </summary>
 public sealed class EntitySkeleton : EntityMonster
 {
+    private int _arrowCooldown;
+
     public EntitySkeleton(World world) : base(world)
     {
         TexturePath    = "/mob/skeleton.png";
-        AttackStrength = 2; // attacks via bow, melee is fallback
-        // moveSpeed = 0.7F (nq default, not overridden)
+        AttackStrength = 2; // melee fallback (bow is primary)
     }
 
     public override int GetMaxHealth() => 20;
+    public override bool IsUndead => true;
+
+    public override void Tick()
+    {
+        base.Tick();
+
+        // Sunburn: daytime + sky exposure + bright enough → catch fire
+        if (World != null && World.IsDaytime())
+        {
+            int bx = (int)Math.Floor(PosX);
+            int by = (int)Math.Floor(PosY);
+            int bz = (int)Math.Floor(PosZ);
+            bool canSeeSky = World.GetHeightValue(bx, bz) <= by;
+            float brightness = World.GetBrightness(bx, by, bz, 0);
+            if (canSeeSky && brightness > 0.5f)
+                SetFire(8);
+        }
+
+        if (_arrowCooldown > 0) _arrowCooldown--;
+    }
+
+    protected override void OnTargetInRange(Entity target, float dist)
+    {
+        if (_arrowCooldown > 0) return;
+        if (World == null || target is not LivingEntity) return;
+
+        _arrowCooldown = 60;
+
+        double dx = target.PosX - PosX;
+        double dy = target.BoundingBox.MinY + target.Height / 3.0 - (PosY + Height * 0.62);
+        double dz = target.PosZ - PosZ;
+        double distXZ = Math.Sqrt(dx * dx + dz * dz);
+
+        var arrow = new EntityArrow(World, this, 1.0f);
+        // Override with skeleton-specific aim: dy += distXZ * 0.2 (spec §6)
+        dy += distXZ * 0.2;
+        arrow.SetShootingVector(dx, dy, dz, 1.0f, 12.0f);
+
+        World.PlaySoundAt(this, "random.bow", 1.0f, 1.0f / (EntityRandom.NextFloat() * 0.4f + 0.8f));
+        World.SpawnEntity(arrow);
+    }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -48,7 +97,7 @@ public sealed class EntitySkeleton : EntityMonster
 /// No extra NBT fields.
 /// Source spec: EntityMobBase_Spec §6.3
 /// </summary>
-public sealed class EntitySpider : EntityMonster
+public class EntitySpider : EntityMonster
 {
     public EntitySpider(World world) : base(world)
     {
@@ -57,6 +106,8 @@ public sealed class EntitySpider : EntityMonster
         PushbackWidth  = 0.8f;  // bw moveSpeed
         SetSize(1.4f, 0.9f);
     }
+
+    public override bool IsArthropod => true;
 
     protected override void EntityInit()
     {
@@ -427,7 +478,7 @@ public sealed class EntitySheep : EntityAnimal
 /// Extends <see cref="EntityAnimal"/>. AABB 0.9×1.3. No extra NBT fields.
 /// Source spec: EntityMobBase_Spec §6.7
 /// </summary>
-public sealed class EntityCow : EntityAnimal
+public class EntityCow : EntityAnimal
 {
     public EntityCow(World world) : base(world)
     {
@@ -548,6 +599,7 @@ public sealed class EntityZombiePigman : EntityMonster
     }
 
     public override int GetMaxHealth() => 20;
+    public override bool IsUndead => true;
 
     public new bool IsAngry => _anger > 0;
 
@@ -571,11 +623,11 @@ public sealed class EntityZombiePigman : EntityMonster
 
     protected override void DropItems(bool playerKilled, int looting)
     {
-        // 0 to (1+looting) gold nuggets + cooked porkchops (spec §8.2)
-        int nuggets  = EntityRandom.NextInt(2 + looting);
-        int pork     = EntityRandom.NextInt(2 + looting);
+        // 0 to (1+looting) rotten flesh + gold nuggets (spec §8.2)
+        int flesh   = EntityRandom.NextInt(2 + looting);
+        int nuggets = EntityRandom.NextInt(2 + looting);
+        if (flesh   > 0) SpawnDropItem(367, flesh);   // rotten flesh (rawId 111 → 367)
         if (nuggets > 0) SpawnDropItem(371, nuggets); // gold nugget
-        if (pork    > 0) SpawnDropItem(320, pork);    // cooked porkchop
     }
 
     protected override void WriteEntityToNBT(Nbt.NbtCompound tag)
@@ -593,34 +645,3 @@ public sealed class EntityZombiePigman : EntityMonster
     }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-
-/// <summary>
-/// Replica of <c>aea</c> (EntityMagmaCube) — ID 62.
-/// Slime-like mob (extends <see cref="EntityMonster"/> as approximation — full Slime base pending).
-/// Fire immune. No drops. Full-brightness rendering.
-/// Splits into smaller MagmaCubes on death (stub — splitting logic pending Slime spec).
-/// Source spec: NetherFortress_Spec §8.3
-/// </summary>
-public sealed class EntityMagmaCube : EntityMonster
-{
-    /// <summary>
-    /// Full-brightness override (spec §8.3: same as Blaze).
-    /// </summary>
-    public const int BrightnessOverride = 15728880;
-
-    /// <summary>Size field (1 = small, 2 = medium, 4 = large). Default: 2.</summary>
-    public int Size = 2; // obf: slime size field
-
-    public EntityMagmaCube(World world) : base(world)
-    {
-        TexturePath    = "/mob/lava.png";
-        IsImmuneToFire = true;
-        AttackStrength = Size * 3;
-    }
-
-    public override int GetMaxHealth() => Size * Size; // spec §8.3 — health scales with size
-
-    // No drops (spec §8.3 — k() returns 0)
-    protected override void DropItems(bool playerKilled, int looting) { }
-}

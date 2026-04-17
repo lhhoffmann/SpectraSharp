@@ -24,6 +24,48 @@ public sealed class BlockGrass : Block
 
     public override int GetTextureForFaceAndMeta(int face, int meta) => GetTextureIndex(face);
 
+    // ── Bonemeal (ItemDye_Spec §5.5) ─────────────────────────────────────────
+
+    public override void BonemealGrow(IWorld world, int x, int y, int z, JavaRandom rng)
+    {
+        // Scatter 128 random plants on the surface above and around the target position.
+        for (int i = 0; i < 128; i++)
+        {
+            int tx = x, ty = y + 1, tz = z;
+            bool abort = false;
+            for (int step = 0; step < i / 16; step++)
+            {
+                tx += rng.NextInt(3) - 1;
+                ty += (rng.NextInt(3) - 1) * rng.NextInt(3) / 2;
+                tz += rng.NextInt(3) - 1;
+                if (world.GetBlockId(tx, ty - 1, tz) != 2 || world.GetBlockId(tx, ty, tz) != 0)
+                {
+                    abort = true;
+                    break;
+                }
+            }
+            if (abort) continue;
+            if (world.GetBlockId(tx, ty, tz) != 0) continue;
+
+            // Place tall grass or flower
+            if (rng.NextInt(10) != 0)
+            {
+                // Tall grass (meta 1) — ID 31
+                world.SetBlockAndMetadata(tx, ty, tz, 31, 1);
+            }
+            else if (rng.NextInt(3) != 0)
+            {
+                // Dandelion — ID 37
+                world.SetBlock(tx, ty, tz, 37);
+            }
+            else
+            {
+                // Rose — ID 38
+                world.SetBlock(tx, ty, tz, 38);
+            }
+        }
+    }
+
     // ── Random tick (spec §1 — Tick Behaviour) ────────────────────────────────
 
     /// <summary>

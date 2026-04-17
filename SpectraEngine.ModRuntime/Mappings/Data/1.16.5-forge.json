@@ -1,0 +1,29 @@
+{
+  "version": "1.16.5",
+  "obfuscated": false,
+  "stubs_version": "v1_16",
+  "loaders": ["forge"],
+  "mojmap": true,
+  "fingerprints": [
+    "bytecode:net/minecraftforge/fml/common/Mod",
+    "mcmod.info"
+  ],
+  "classes": {
+    "net.minecraft.world.World":                          "net.minecraft.world.World",
+    "net.minecraft.world.server.ServerWorld":             "net.minecraft.world.server.ServerWorld",
+    "net.minecraft.block.Block":                          "net.minecraft.block.Block",
+    "net.minecraft.block.AbstractBlock":                  "net.minecraft.block.AbstractBlock",
+    "net.minecraft.item.Item":                            "net.minecraft.item.Item",
+    "net.minecraft.item.ItemStack":                       "net.minecraft.item.ItemStack",
+    "net.minecraft.util.math.BlockPos":                   "net.minecraft.util.math.BlockPos",
+    "net.minecraft.entity.Entity":                        "net.minecraft.entity.Entity",
+    "net.minecraft.entity.LivingEntity":                  "net.minecraft.entity.LivingEntity",
+    "net.minecraft.entity.player.PlayerEntity":           "net.minecraft.entity.player.PlayerEntity",
+    "net.minecraft.util.ResourceLocation":                "net.minecraft.util.ResourceLocation",
+    "net.minecraftforge.fml.common.Mod":                  "net.minecraftforge.fml.common.Mod",
+    "net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent": "net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent",
+    "net.minecraftforge.registries.DeferredRegister":     "net.minecraftforge.registries.DeferredRegister",
+    "net.minecraftforge.registries.RegistryObject":       "net.minecraftforge.registries.RegistryObject",
+    "net.minecraftforge.registries.ForgeRegistries":      "net.minecraftforge.registries.ForgeRegistries"
+  }
+}
