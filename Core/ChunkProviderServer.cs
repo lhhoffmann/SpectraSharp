@@ -183,7 +183,9 @@ public sealed class ChunkProviderServer : IChunkLoader
     /// <inheritdoc/>
     public IEnumerable<(int chunkX, int chunkZ)> GetLoadedChunkCoords()
     {
-        foreach (Chunk c in _loadedList)
+        // Snapshot: chunk ticks may load/unload chunks, which modifies _loadedList
+        var snapshot = _loadedList.ToList();
+        foreach (Chunk c in snapshot)
             yield return (c.ChunkX, c.ChunkZ);
     }
 
@@ -245,8 +247,12 @@ public sealed class ChunkProviderServer : IChunkLoader
 
         if (chunk == null)
         {
-            // Generate fresh
+            // Generate fresh — but the generator may be mid-generation and return an empty
+            // placeholder instead of real terrain (re-entrancy guard in ChunkProviderGenerate).
+            // Only cache the result if the generator actually stored it (i.e. real chunk).
             chunk = _generator.GetChunk(chunkX, chunkZ);
+            if (!_generator.IsChunkLoaded(chunkX, chunkZ))
+                return chunk; // placeholder — not cached; next explicit request regenerates properly
         }
         else
         {

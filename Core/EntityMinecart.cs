@@ -28,10 +28,10 @@ public class EntityMinecart : Entity, IInventory
     private int      _fuel;                       // obf: e  (furnace ticks remaining)
     private bool     _facingFlipped;              // obf: f
 
-    // ── Client interpolation ──────────────────────────────────────────────────
-    private int    _lerpSteps;
-    private double _lerpX, _lerpY, _lerpZ;
-    private double _lerpYaw, _lerpPitch;
+    // ── Client interpolation (not yet driven — stub fields) ──────────────────
+    private int    _lerpSteps  = 0;
+    private double _lerpX      = 0, _lerpY = 0, _lerpZ = 0;
+    private double _lerpYaw    = 0, _lerpPitch = 0;
 
     // ── Item RegistryIndex constants ──────────────────────────────────────────
     // Minecart item rawId=72 → 256+72=328

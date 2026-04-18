@@ -180,7 +180,7 @@ public sealed class EntityArrow : Entity
             int   damage = (int)Math.Ceiling(speed * 2.0f);
             if (IsCritical) damage += EntityRandom.NextInt(damage / 2 + 2);
 
-            if (target.AttackEntityFrom(DamageSource.Arrow(this, Shooter), damage))
+            if (target.AttackEntityFrom(DamageSource.Arrow(this, Shooter!), damage))
             {
                 target.PendingKnockback++;
                 conWorld.PlaySoundAt(this, "random.bowhit", 1.0f,

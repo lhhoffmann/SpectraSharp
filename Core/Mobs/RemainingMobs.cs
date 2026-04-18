@@ -510,7 +510,7 @@ public sealed class EntityWolf : EntityAnimal
     }
 
     public bool IsSitting => (DataWatcher.GetByte(16) & 1) != 0;
-    public bool IsAngry   => (DataWatcher.GetByte(16) & 2) != 0;
+    public new bool IsAngry   => (DataWatcher.GetByte(16) & 2) != 0;
     public bool IsTamed   => (DataWatcher.GetByte(16) & 4) != 0;
     public string OwnerName => DataWatcher.GetString(17);
 
@@ -673,7 +673,7 @@ public sealed class EntitySnowMan : EntityAI
 /// </summary>
 public sealed class EntityMagmaCube : EntitySlime
 {
-    public new const int BrightnessOverride = 15728880;
+    public const int BrightnessOverride = 15728880;
 
     public EntityMagmaCube(World world) : base(world)
     {

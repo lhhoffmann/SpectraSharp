@@ -2420,3 +2420,649 @@ This is a render-layer spec, not a Core spec.
 
 **Expected deliverable:** `Specs/Rendering_BlockModel_Spec.md` — full render type integer table,
 one-paragraph description per render type, which block IDs use each type, TESR list.
+
+
+---
+
+## MineshaftPieces
+[STATUS:PROVIDED]
+**Needed for:** `Core/WorldGen/MapGenMineshaft.cs` — the three mineshaft piece classes
+(`aba` MineshaftCorridor, `ra` MineshaftCrossing, `id` MineshaftStaircase) are stubbed.
+The corridor is the most complex (70% chance), the crossing is a 4-way junction (10%),
+and the staircase is a descending segment (20%). `uk` (MineshaftStartPiece) is also a
+stub — it may be identical to the corridor but with `isMain=true`.
+
+**Questions:**
+- `aba` MineshaftCorridor — bounding box size? Spec notes "wooden support every 5 blocks":
+  what exactly is placed (planks, fence posts, log cross-beams)?
+  Rail (ID 66) runs along the centre — full length or only when above ground?
+  Cobwebs (ID 30): random placement frequency?
+  Cave-spider spawner: `isMain+1/23` — what does `isMain` mean and where is it stored?
+  Chest wagon loot: 1% per support — what items? Same table as dungeon?
+  Torch placement: every N blocks? On wall or ceiling?
+- `ra` MineshaftCrossing (4-way junction) — bounding box? Pillar/ceiling details?
+  Does it always generate 4 exits or conditionally?
+- `id` MineshaftStaircase — bounding box? How many blocks does it descend per piece?
+  Stair geometry: actual BlockStairs (ID 53) or just air-carved diagonal?
+- `uk` MineshaftStartPiece — is it identical to `aba` with `isMain=true`, or a different layout?
+- Depth limit: classes.md says max depth=8. Is this checked per-piece or globally?
+- Radius limit: classes.md says radius<=80. How is this measured (from start piece)?
+- All pieces: do they call AdjustToGround() like village pieces, or generate at fixed Y?
+- Torches, rails, chest wagons — any metadata details (torch facing, rail direction)?
+
+**Expected deliverable:** `Specs/MineshaftPieces_Spec.md` — full bounding box and block
+placement logic for `uk`/`aba`/`ra`/`id`; loot table; torch/rail/cobweb frequency; depth
+and radius limits; `isMain` semantics.
+
+---
+
+## IWorldAccess
+[STATUS:PROVIDED]
+**Needed for:** `Core/World.cs` — `world.notifyRenderListeners` is stubbed throughout
+the codebase (6+ call sites) with the comment `// bd spec pending`. `bd` is an interface
+that the world notifies when blocks change, light updates, or entities are added/removed.
+In the client, this drives chunk mesh rebuilds and particle/sound events.
+
+**Questions:**
+- `bd` interface — what methods does it declare?
+  - `a(int x, int y, int z, int oldBlockId, int newBlockId)` — block changed?
+  - `a(int x1, int y1, int z1, int x2, int y2, int z2)` — mark dirty range?
+  - `b(...)` — light update notification?
+  - Entity add/remove methods?
+- How does `ry` (World) hold listeners — a `List<bd>` field? What is the field name?
+- What method on `ry` adds/removes a listener? (e.g., `ry.a(bd)` / `ry.b(bd)`)
+- `ry.notifyBlockChange(x, y, z, oldId, newId)` — calls `bd.a()` on all listeners,
+  then also calls `notifyNeighbors(x, y, z, newId)`? Or separate?
+- Which call sites in `ry` fire which `bd` method?
+  - `setBlock` fires block-change notify?
+  - `setBlockMetadata` fires block-change notify?
+  - Light propagation fires light-update notify?
+  - `addEntity`/`removeEntity` fire entity notify?
+- On the client, is `bd` implemented by the `RenderGlobal` / `WorldRenderer` class?
+  Does it rebuild chunk display lists on `a(x,y,z,...)`?
+
+**Expected deliverable:** `Specs/IWorldAccess_Spec.md` — full `bd` interface method
+signatures, semantics of each, how `ry` holds and notifies listeners, all call sites.
+
+---
+
+## SoundManager
+[STATUS:PROVIDED]
+**Needed for:** Multiple stubs across `Core/Blocks/` — `BlockFluid.cs`, `BlockFluidBase.cs`,
+`BlockPortal.cs` etc. reference "sound spec pending". Sound calls appear as
+`world.playSoundAtEntity(...)`, `world.playSound(x,y,z,name,vol,pitch)`,
+`world.playAuxSFX(eventId, x,y,z,data)`. None of these are wired up.
+
+**Questions:**
+- `ry.a(ia, String name, float vol, float pitch)` — `playSoundAtEntity` — exact signature?
+- `ry.a(double x, double y, double z, String name, float vol, float pitch)` — `playSound`?
+- `ry.w(String, double x, double y, double z, float vol, float pitch)` — variant?
+- `ry.b(int eventId, int x, int y, int z, int data)` — `playAuxSFX` / `playWorldEvent`:
+  what event IDs are defined in 1.0? (1000=click, 1001=door, 1002=fire-extinguish,
+  1003=record, 1004=bow, 1005=jukebox-insert, 2000=smoke, 2001=block-break, 2002=potion,
+  2003=eye-of-ender — are these all correct?)
+  What data value does each event use?
+- Sound name strings — are they resource-path keys like "random.fizz", "step.wood", etc.?
+  What string format exactly?
+- Volume and pitch conventions: 1.0F = full volume, 2.0F louder? Pitch 1.0 = normal, 0.5 = half speed?
+- Is there a SoundManager or SoundPool class separate from World?
+  Or does World dispatch directly to the audio system?
+- `world.playSoundEffect(x,y,z,name,vol,pitch)` — same as `playSound`?
+  Or does `playSoundEffect` skip sending to the server?
+
+**Expected deliverable:** `Specs/SoundManager_Spec.md` — all sound-call signatures on
+`ry`, full `playAuxSFX` event ID table with data semantics, sound name string format,
+volume/pitch conventions, server vs. client-only distinction.
+
+---
+
+## ParticleSystem
+[STATUS:PROVIDED]
+**Needed for:** `Core/Blocks/BlockFluidBase.cs` — "Play random.fizz + 8 largesmoke
+particles — stub (sound/particle spec pending)". Also referenced in enchantment table
+block, portal, explosion, and fluid lava-water contact.
+
+**Questions:**
+- `ry.a(String particleName, double x, double y, double z, double vx, double vy, double vz)`
+  — is this the main particle spawn method? Exact method signature and obfuscated name?
+- Particle name strings in 1.0 — what names are valid?
+  ("largesmoke", "smoke", "flame", "portal", "enchantmenttable", "explode",
+  "blockcrack_N", "blockdust_N", "crit", "largeSplash", "splash", "bubble",
+  "reddust", "snowballpoof" — which are present in 1.0?)
+- For BlockFluidBase lava-water contact: exactly how many particles? Which names?
+  Velocity distribution (random spread)?
+- For BlockEnchantmentTable random-tick: particle fired toward bookshelf?
+  Velocity toward bookshelf position, or random? How many per tick?
+- For portal block: "4 portal particles per tick" — velocity? Position?
+- Client-only: are particle spawns skipped on the dedicated server? How?
+- EffectRenderer class (if exists) — obfuscated name?
+
+**Expected deliverable:** `Specs/ParticleSystem_Spec.md` — main particle spawn method
+signature, full particle name table with visual descriptions, velocity conventions,
+server/client filtering, per-block usage examples.
+
+---
+
+## WorldGenLakes
+[STATUS:PROVIDED]
+**Needed for:** `Core/WorldGen/` — lake generation (water pools and lava pools) is part
+of chunk population but no WorldGenLakes class exists yet. BiomeDecorator specced
+springs (ib) but lakes are larger depressions filled with water/lava.
+
+**Questions:**
+- Is there a WorldGenLakes class (separate from WorldGenSpring)? Obfuscated name?
+- How does lake generation work geometrically? Irregular blob carved into terrain?
+  - Reads 2D noise or uses a fixed radius?
+  - Carves air then fills with fluid?
+  - Any minimum depth/width constraints?
+- Water lake vs. lava lake — same generator with different block IDs?
+  At what Y-range does each type generate?
+- How often does each type appear per chunk (nextInt frequency)?
+- Does a lake require solid blocks below? Any neighbor checks before placing?
+- Does lava lake ignite adjacent flammable blocks?
+- Is this called in ChunkProviderGenerate.b() (populateChunk) directly, or via biome decorator?
+- What is the call order relative to ores, dungeons, and trees?
+
+**Expected deliverable:** `Specs/WorldGenLakes_Spec.md` — obfuscated class name, full
+algorithm, geometry, Y-range per fluid type, frequency, call site in terrain gen.
+
+---
+
+## BlockDispenser
+[STATUS:PROVIDED]
+**Needed for:** `Core/Blocks/` — BlockDispenser (`cu`, ID 23) is registered in BlockRegistry
+but the dispense logic (what happens per item type when powered by redstone) is not specced.
+TileEntityDispenser is already implemented (9 slots, NBT). The block behavior — selecting
+a slot, firing/placing/spawning per item — is the missing part.
+
+**Questions:**
+- `cu.a(ry, int x, int y, int z)` — the dispense method: exact algorithm?
+  - Picks a random non-empty slot? Or first non-empty?
+- Per-item dispatch table in 1.0 — what does the dispenser do with each item?
+  - Arrow (ID 262) → spawn EntityArrow?
+  - Snowball (ID 332) → spawn EntitySnowball?
+  - Egg (ID 344) → spawn EntityEgg?
+  - Fire charge (ID 385) — exists in 1.0? → spawn EntitySmallFireball?
+  - Bucket water (ID 326) → place water block in front?
+  - Bucket lava (ID 327) → place lava block in front?
+  - Empty bucket (ID 325) → pick up fluid block in front?
+  - Flint and steel (ID 259) → place fire block in front?
+  - Bone meal (ID 351 meta 15) → apply bonemeal effect?
+  - Default (unknown item) → drop as EntityItem?
+- Facing: meta bits 0-2 = facing (same as piston)?
+- Projectile velocity from dispenser — same as player throw, or different?
+- Sound: plays a dispense sound on fire? "click" when empty?
+
+**Expected deliverable:** `Specs/BlockDispenser_Spec.md` — full `cu` dispense algorithm,
+complete per-item dispatch table for 1.0, facing metadata layout, projectile velocity,
+sound events, empty-dispenser behavior.
+
+---
+
+## BlockCocoaPlant
+[STATUS:PROVIDED]
+**Needed for:** `Core/Blocks/` — render type 24 (cocoa pod) is handled by RenderBlocks
+but there is no BlockCocoaPlant implementation. ID 127 is listed in BlockRegistry.
+The block has 3 growth stages and attaches to jungle log faces.
+
+**Questions:**
+- Obfuscated class name?
+- Metadata layout:
+  - Bits 0-1 = facing (N/S/E/W direction of the jungle log face)?
+  - Bits 2-3 = growth stage (0=small, 1=medium, 2=large/ripe)?
+- Bounding box: each stage has a different size — exact AABB values per stage?
+- canBlockStay: must be adjacent to jungle log (ID 17 with meta bits 0-1 = 3)?
+  Checks all 4 horizontal faces or only the stored facing?
+- Random tick growth probability (nextInt(N)==0 — what N)?
+- Drops:
+  - Stage 0/1: nothing?
+  - Stage 2: cocoa beans (dye ID 351 meta 3), how many (2-3)?
+  - Fortune modifier?
+- Hardness value?
+
+**Expected deliverable:** `Specs/BlockCocoaPlant_Spec.md` — metadata layout, AABB per
+stage, canBlockStay, growth tick, drops table, hardness.
+
+---
+
+## GameMode
+[STATUS:PROVIDED]
+**Needed for:** `Core/EntityPlayer.cs` — block-breaking mechanics are stubs.
+`ItemInWorldManager` handles breaking progress (animation frames 0-9), reach distance,
+and attack cooldown. No ItemInWorldManager exists in Core.
+
+**Questions:**
+- ItemInWorldManager — obfuscated class name? Fields?
+  - curBlockX/Y/Z — coordinates of block being broken?
+  - curBlockDamage — float [0.0, 1.0] breaking progress?
+  - blockHitDelay — attack-swing cooldown in ticks?
+  - isDestroyingBlock — boolean flag?
+- Block-breaking tick: progress += miningSpeed / hardness / (underwater?5:1) / (onGround?1:5)?
+  Completes at breakProgress >= 1.0F?
+- Attack swing: cooldown on blockHitDelay — how many ticks?
+- Reach distance: survival = 4.5 blocks, creative = 5.0?
+- EnumGameType (or equivalent) — values in 1.0? (0=SURVIVAL, 1=CREATIVE, others?)
+- Creative mode specifics:
+  - Instant block break?
+  - No durability loss?
+  - Flight enabled (PlayerAbilities.allowFlying=true)?
+  - No hunger?
+  - Infinite items?
+- Where is game mode stored — in EntityPlayer, WorldInfo, or on the server?
+
+**Expected deliverable:** `Specs/GameMode_Spec.md` — ItemInWorldManager fields and
+breaking-tick algorithm, reach distance values, EnumGameType values, creative mode flags,
+block-break animation frames 0-9 timing.
+
+---
+
+## RenderManager
+[STATUS:PROVIDED]
+**Needed for:** `Graphics/` — entity rendering is not wired up. RenderManager dispatches
+rendering to per-entity renderer classes, mapping entity class to renderer instance and
+calling `doRender(entity, x, y, z, yaw, partialTick)`.
+
+**Questions:**
+- RenderManager — obfuscated class name? Singleton?
+- entityRenderMap — type? HashMap<Class, Renderer>? How populated?
+- What renderers exist in 1.0? (one per entity type)
+  - RenderPlayer for EntityPlayer?
+  - RenderBiped for zombie/skeleton?
+  - RenderSpider, RenderCreeper, RenderGhast, RenderSlime?
+  - RenderSnowball for throwables?
+  - RenderItem for dropped items (EntityItem)?
+  - RenderArrow, RenderBoat, RenderMinecart, RenderPainting, RenderXPOrb?
+  Full list with obfuscated names.
+- `doRenderEntity(entity, partialTick)` — translates to entity position interpolated by
+  partialTick, calls the matching renderer?
+- Shadow: flat shadow drawn under entities? Radius formula?
+- Name tags — when rendered above entities?
+
+**Expected deliverable:** `Specs/RenderManager_Spec.md` — obfuscated class name,
+entity-renderer map, `doRenderEntity` call flow, full renderer list with obfuscated
+names, shadow and name-tag rules.
+
+---
+
+## EntityRenderer
+[STATUS:PROVIDED]
+**Needed for:** `Graphics/` — the main game view is not wired. EntityRenderer handles
+the camera, frustum, fog, sky, and render sequence (terrain → entities → particles →
+weather → hand). This spec covers the render pipeline from `renderWorld(partialTick)` down.
+
+**Questions:**
+- EntityRenderer — obfuscated class name?
+- `renderWorld(float partialTick)` call sequence:
+  1. Clear buffers?
+  2. Set up projection matrix (FOV, near=0.05, far=?)?
+  3. Apply camera transform (player eye + head rotation interpolated)?
+  4. Frustum cull?
+  5. Render sky (sky colour, void colour)?
+  6. Render terrain opaque pass?
+  7. Render entities (RenderManager)?
+  8. Render terrain transparent pass (water/glass)?
+  9. Render particles?
+  10. Render weather (rain/snow)?
+  11. Render hand/held item?
+  12. Render GUI overlay (HUD)?
+- Camera position: player eye at posY + eyeHeight, interpolated by partialTick?
+- FOV: default 70? Modified by speed potion / sprinting?
+- Fog: distance fog start/end — formula in overworld vs. Nether vs. End?
+  Nether red fog at short distance? End dark sky, no fog?
+- Sky: day colour (0.5, 0.66, 1.0?), night colour, sunrise/sunset?
+  Sun/moon rendered as flat billboard quads?
+- Void fog (Y<32): darkens screen? How?
+- Rain/snow overlay: directional particles streaking downward?
+- Hand offset from camera: FOV 87 for hand? Depth-tested separately?
+
+**Expected deliverable:** `Specs/EntityRenderer_Spec.md` — full renderWorld call sequence
+with numbered steps, camera setup, FOV formula, fog start/end per dimension, sky colour
+values, sun/moon quad geometry, void fog threshold, hand rendering transform.
+
+---
+
+## FontRenderer
+[STATUS:PROVIDED]
+**Needed for:** `Graphics/` — text rendering is needed for signs (TileEntitySign),
+chat, GUI labels, and item tooltips. No FontRenderer class exists in Graphics/ yet.
+
+**Questions:**
+- FontRenderer — obfuscated class name?
+- Texture source: `font/default.png` in the JAR? Dimensions? How many chars per row?
+  ASCII (128 chars) or extended?
+- Character width: fixed (8px) or variable with a width array?
+  If variable: how are widths determined?
+- `drawString(String text, int x, int y, int colour)` — left-aligned, no shadow?
+- `drawStringWithShadow(String text, int x, int y, int colour)` — +1/+1 dark shadow?
+- Colour codes: section-sign (S0-Sf) for chat colours? Bold/italic/reset in 1.0?
+- `getStringWidth(String text)` — width in pixels?
+- Line height: 9px (8px glyph + 1px gap)?
+- For signs: max 4 lines, 15 chars — enforced by renderer or by the block?
+- OpenGL state: 2D orthographic projection? Alpha test enabled?
+
+**Expected deliverable:** `Specs/FontRenderer_Spec.md` — texture layout, character width
+method (fixed or variable), all draw methods, colour code table, line height, sign
+rendering rules, OpenGL state.
+
+---
+
+## GuiScreen
+[STATUS:PROVIDED]
+**Needed for:** `Graphics/` — the GUI system (inventory, main menu, pause screen, HUD)
+has no implementation. GuiScreen is the base for all overlay screens. GuiIngame (HUD)
+displays health, hunger, armor, XP bar, crosshair, and hotbar.
+
+**Questions:**
+- GuiScreen — obfuscated class name? Key virtual methods?
+  - initGui() — called on open/resize?
+  - drawScreen(mouseX, mouseY, partialTick)?
+  - keyTyped(char c, int key)?
+  - mouseClicked(x, y, button)?
+  - onGuiClosed()?
+  - doesGuiPauseGame()?
+- Button system (GuiButton) — click detection, hover highlight?
+- GuiIngame (HUD) — elements and screen positions?
+  - Crosshair at centre?
+  - Hotbar (9 slots) at bottom centre — slot size 20px?
+  - Health bar (10 hearts) above hotbar left?
+  - Hunger bar (10 chicken legs) above hotbar right?
+  - Armor bar above health when armor > 0?
+  - XP bar above hotbar centre?
+  - Air bubbles when underwater?
+  Exact pixel offsets (assumes 320x240 base scaled by scaleFactor)?
+- GUI scale: scaleFactor — calculated from window size? Values 1/2/3/4?
+- Texture source: gui/gui.png, gui/icons.png — dimensions and atlas layout?
+- `drawTexturedModalRect(x, y, u, v, w, h)` — 2D blitted quad from GUI texture?
+- Screen stack: only one screen at a time, or can multiple be open?
+
+**Expected deliverable:** `Specs/GuiScreen_Spec.md` — GuiScreen base methods, GuiIngame
+HUD element positions and texture sources, button system, scale factor formula, GUI
+texture atlas layout, screen stack behaviour.
+
+---
+
+## EntityPlayerSP / ServerPlayer
+[STATUS:PROVIDED]
+**Needed for:** `Core/EntityPlayerSP.cs` — concrete server-side player class.
+`EntityPlayer` (`vi`) is abstract; the game needs a concrete subclass that handles
+respawn, block interaction dispatch, item use, and eating. Obfuscated name unknown.
+
+**Questions:**
+- What is the obfuscated class name for the concrete single-player entity?
+  (Search tip: class that extends `vi`, is instantiated when a world is loaded,
+  and overrides `onUpdate`/`b()` with hunger, sleep, XP, or respawn logic.)
+- Does it extend `vi` directly or through an intermediate class?
+- Key method overrides: which of these exist and what do they do?
+  - Per-tick logic (`b()` / `onUpdate`) — hunger tick, sleep, XP gain?
+  - Death / respawn — does it clear inventory, reset position, call `vi.respawnPlayer`?
+  - `travelToDimension(int)` — portal dimension switch?
+  - `openContainer(Container)` / `closeContainer()` — inventory screen open/close?
+- How does block left-click (break) dispatch server-side?
+  Which method is called on the player or a helper class?
+- How does block right-click (place/interact) dispatch?
+  Does the player call `Block.onBlockActivated` or go through a helper?
+- Any fields on the concrete class not in `vi`?
+
+**Expected deliverable:** `Specs/EntityPlayerSP_Spec.md`
+
+---
+
+## ItemInWorldManager (Block Breaking Progress)
+[STATUS:PROVIDED]
+**Needed for:** `Core/ItemInWorldManager.cs` — block-breaking progress tracker.
+`EntityPlayer.StartUsingItem` is a stub. This class was not found in the first
+analyst session (flagged in `GameMode_Spec.md`); a second targeted search is needed.
+
+**Questions:**
+- Obfuscated class name? Search hints: contains fields for current target block
+  coordinates (curBlockX/Y/Z), a float break-progress counter (0.0 to 1.0),
+  and a method that advances progress each tick based on mining speed.
+- Fields: exact names/types for target block, progress counter, tick counter?
+- Per-tick advance formula: `progress += miningSpeed / hardness / 30`? Or different?
+- At progress >= 1.0: which method breaks the block, drops items, resets state?
+  Does it call `world.setBlock(x,y,z,0)` or go through a dedicated break method?
+- Creative mode path: instabuild=true → single tick, skip progress?
+- Block crack animation stages 0-9: what calls `world.markBlockRangeForRenderUpdate`
+  or a similar visual-update method for the crack overlay?
+- Reset conditions: player moves too far, switches tool, block changes externally?
+- How is this class held — field on the player, or standalone ticked separately?
+
+**Expected deliverable:** `Specs/ItemInWorldManager_Spec.md`
+
+---
+
+## WorldServer SpawnSearch and Chunk Preloading
+[STATUS:PROVIDED]
+**Needed for:** `Core/World.cs` spawn initialization and `Core/Engine.cs` startup.
+Currently spawn is hardcoded to (0, 64, 0). The original searches for a valid grass
+surface and pre-loads 25 spawn chunks.
+
+**Questions:**
+- Which class/method runs the spawn search at world creation?
+  Is it on `si` (WorldInfo), `ry` (World), or a dedicated WorldServer subclass?
+- Search algorithm: random walk from (0,0,0) or deterministic scan?
+  Validity condition: grass block (ID 2) on top? Not over water? Min Y?
+- How many attempts before defaulting?
+- Spawn chunk preloading: confirm 5x5 = 25 chunks preloaded synchronously.
+  Which method drives this? Progress bar on the loading screen?
+- `si` (WorldInfo) spawn fields: "SpawnX", "SpawnY", "SpawnZ" confirmed in level.dat?
+  Is there a `spawnRadius` or equivalent that keeps spawn chunks loaded?
+- Does `jz` (ChunkProviderServer) have a "force-loaded" set that prevents
+  spawn chunks from being unloaded? If so, how is it populated?
+
+**Expected deliverable:** `Specs/WorldSpawn_Spec.md`
+
+---
+
+## Chunk Loading Radius Loop
+[STATUS:PROVIDED]
+**Needed for:** `Core/ChunkProviderServer.cs` + `Core/Engine.cs` game loop.
+Currently only chunk (0,0) is generated. Need the per-tick loop that generates
+all chunks within render distance around each player.
+
+**Questions:**
+- Which class drives the per-tick chunk-load loop? (`MinecraftServer`, `WorldServer`,
+  or a method on `jz` ChunkProviderServer itself?)
+- Loop pattern: spiral out from player chunk position to render distance (10 chunks)?
+  Or rectangular? Exact iteration order?
+- Budget per tick: max new chunks generated before deferring the rest?
+- Method signature: `jz.b(vi player)` or similar — what does it do exactly?
+  Does it call `jz.loadChunk` / `provideChunk` for each position in range?
+- Population trigger timing: does loading trigger population immediately, or
+  is it deferred until all 4 quadrant-neighbours are loaded?
+- Unloading: `jz.unloadChunksIfNotNearSpawn` or similar — cadence and distance?
+
+**Expected deliverable:** `Specs/ChunkLoadingLoop_Spec.md`
+
+---
+
+## BlockCocoaPlant (Second Attempt)
+[STATUS:PROVIDED]
+**Needed for:** `Core/Blocks/BlockCocoaPlant.cs`. Class not found in first session.
+The existing `BlockCocoaPlant_Spec.md` documents Cauldron/BrewingStand instead.
+
+**Search hints:**
+- Block ID 127. Attaches to side face of jungle log (ID 17, meta 3).
+- 3 growth stages. Metadata likely encodes stage (2 bits) + facing direction (2 bits).
+- `canBlockStay` must check adjacent jungle log.
+- Drops cocoa beans (`acy.aX`?) — quantity by stage.
+- Custom AABB smaller than full block, oriented to one of 4 faces.
+- Search decompiled output for a class with these characteristics.
+
+**Questions:**
+- Obfuscated Java class name?
+- Exact metadata bit layout (stage bits, facing bits)?
+- Growth random-tick probability (standard 1/25 or different)?
+- AABB dimensions for each stage and each facing direction?
+- Item drop counts: stage 0, 1, 2?
+- Block ID confirmed 127 in 1.0?
+
+**Expected deliverable:** `Specs/BlockCocoaPlant_Spec.md` (new dedicated file,
+replacing the Cauldron/BrewingStand content which belongs in a separate spec)
+
+---
+
+## Minecraft Main Class and Input Loop
+[STATUS:PROVIDED]
+**Needed for:** `Core/Engine.cs` — understanding vanilla game loop structure
+to correctly wire SpectraEngine input → player action → world mutation.
+
+**Questions:**
+- Obfuscated class name for the main `Minecraft` singleton class?
+- Game loop: single-threaded or separate game/render threads?
+- Fixed-rate tick: 20 Hz timer-based, or frame-coupled with catchup?
+- Order of operations per frame: input → ticks → render, or interleaved?
+- `Minecraft.thePlayer` field: type — `EntityPlayerSP` or `vi` (EntityPlayer)?
+- Timer class (obf `z`?): fields `elapsedTicks` (int) and `renderPartialTicks` (float)?
+  How is `renderPartialTicks` computed for smooth interpolation?
+- Right-click block placement end-to-end:
+  Mouse input → which method → `ItemBlock.onItemUse`?
+- Left-click block breaking end-to-end:
+  Mouse input → `ItemInWorldManager.onPlayerDamageBlock` (or equivalent)?
+- `Minecraft.currentScreen` field: null during gameplay, GuiScreen when open?
+- How are key bindings stored — hardcoded or a `KeyBinding` registry?
+
+**Expected deliverable:** `Specs/MinecraftMain_Spec.md`
+
+---
+
+## GuiIngame HUD Texture Layout
+[STATUS:PROVIDED]
+**Needed for:** `Graphics/GuiScreen.cs` — `GuiIngame.RenderGameOverlay` is a stub.
+Need exact UV coordinates from `gui/icons.png` and `gui/gui.png`.
+
+**Questions:**
+- `gui/icons.png` dimensions and atlas UV coordinates for:
+  - Crosshair?
+  - Full/half/empty heart? (health bar)
+  - Full/half/empty hunger icon (drumstick)?
+  - Full/half/empty armor icon (chestplate)?
+  - Air bubble / empty bubble?
+  - XP bar background strip and filled strip?
+  - Hotbar selection highlight box?
+- `gui/gui.png` layout:
+  - Hotbar strip UV and pixel size?
+  - Individual slot positions within hotbar?
+- Screen coordinate system (320×240 base × scaleFactor):
+  - Hotbar Y offset from bottom?
+  - Health bar position relative to hotbar?
+  - Hunger bar position?
+  - XP bar position?
+  - Crosshair: exact screen centre?
+- `drawTexturedModalRect(int x, y, u, v, w, h)` GL state requirements?
+- Which texture is bound for icons.png vs. gui.png rendering?
+
+**Expected deliverable:** `Specs/GuiIngameHUD_Spec.md`
+
+---
+
+## PlayerMovement — EntityPlayerSP Movement Physics
+[STATUS:PROVIDED]
+**Needed for:** `Core/EntityPlayerSP.cs` — `MovementInput` is applied via `AiForward`/`AiStrafe`
+but the exact movement speed values, sprint multiplier, sneak multiplier, and jump horizontal
+boost have not been sourced from the decompile. Currently using LivingEntity's default
+`GroundSpeed = 0.1f` which may not match the player-specific path in `di`.
+
+**Questions:**
+- Does `di` (EntityPlayerSP) override `GroundSpeed` / `AirSpeed`, or does it call a different
+  movement method than `LivingMove`?
+- Player walking speed constant: is it still `0.1f` on-ground, or overridden to a different value?
+- Sprinting speed: what multiplier is applied to `AiForward` when sprinting? (vanilla: ×1.3)
+- Sneak speed: what factor is applied when `IsSneaking`? (vanilla: ×0.3 of normal)
+- Jump horizontal boost when sprinting: does `Jump()` add extra horizontal impulse?
+  What exact value? (vanilla: 0.2 × sin/cos of yaw)
+- Is there a separate "moveEntityWithHeading" path for the player that differs from mob AI?
+  Obfuscated method name?
+- Sprint food-drain: does sprinting deplete food (`FoodStats.FoodExhaustion`) — what amount/tick?
+- Sprint conditions: what fields control whether sprinting is possible?
+  (food > 6 AND not sneaking AND moving forward — confirm)
+
+**Expected deliverable:** `Specs/PlayerMovement_Spec.md`
+
+---
+
+## PlayerMovement — Mouse Look and Camera
+[STATUS:PROVIDED]
+**Needed for:** `Core/Engine.cs` — `RotationYaw`/`RotationPitch` are currently updated with a
+placeholder sensitivity of 0.15f. Need the exact vanilla yaw/pitch update path and pitch clamp.
+
+**Questions:**
+- Where does vanilla read mouse delta? Is it in `Minecraft.x()` (the frame method) or in `di.e()`?
+  Obfuscated method name for mouse-look update?
+- Pitch clamp: vanilla clamps to [−90, +90] — confirmed?
+- Sensitivity formula: is there a `GameSettings.mouseSensitivity` (obf: `ki.M`) field?
+  What is the multiplier formula? (vanilla: `(sensitivity * 0.6 + 0.2)^3 * 8 * 0.15`)
+- Yaw wraps to [0, 360] or is it unbounded? Does vanilla normalise it?
+- Does vanilla invert Y by default? Is there an `invertMouse` setting field on `ki`?
+
+**Expected deliverable:** `Specs/MouseLook_Spec.md` (can be a section in `MinecraftMain_Spec.md`)
+
+---
+
+## GuiInventory — Inventory Screen Layout
+[STATUS:PROVIDED]
+**Needed for:** `Graphics/GuiScreen.cs` — pressing E should open the player inventory.
+Need slot positions, 2×2 crafting grid, and armour slot layout.
+
+**Questions:**
+- Obfuscated class name for the player inventory screen? (`gd` ContainerPlayer + what GuiScreen subclass?)
+- How many slots total? (36 main + 4 armour + 4 crafting output + result = 45 slots?)
+- UV source for the inventory background texture — is it `/gui/inventory.png`?
+- Slot grid positions in the texture: top-left of each slot group?
+- Armour slot positions (head/chest/legs/feet): exact screen XY in the inventory screen?
+- Crafting 2×2 grid: top-left position?
+- Output slot (result): position?
+- Does pressing E (or the inventory key binding `ki.E`) open this screen?
+  What is the key binding field name on `ki` (GameSettings)?
+
+**Expected deliverable:** `Specs/GuiInventory_Spec.md`
+
+---
+
+## Raycast / Block Selection — MovingObjectPosition
+[STATUS:PROVIDED]
+**Needed for:** `Core/Engine.cs` — for block-break (left-click) and block-place (right-click)
+the engine needs to raycast from the player's eye position in the look direction and return
+the closest block face. `MovingObjectPosition` exists but the raycast call path is not wired.
+
+**Questions:**
+- What vanilla method casts the "object mouse over" ray? Obfuscated name in `Minecraft` or `EntityRenderer`?
+  (Suspected: `Minecraft.k()` calls `u.b(world, player)` or similar — confirm)
+- Max reach distance: 4.5 blocks (survival) / 5 blocks (creative)? Exact float value?
+- Is the ray cast from `entity.PosX/Y+eyeHeight/Z` in the yaw/pitch direction?
+  Exact direction vector formula from yaw/pitch?
+- The result is stored in `Minecraft.z` (obf) — type `MovingObjectPosition`?
+  How is block face (0–5) encoded in the result?
+- Does the raycast call `Block.collisionRayTrace` or a world-level method?
+
+**Expected deliverable:** `Specs/Raycast_Spec.md`
+
+---
+
+## Block Texture Rendering — Terrain Atlas UV Mapping
+[STATUS:PROVIDED]
+**Needed for:** `Core/Engine.cs` `BuildVoxelMeshes` and `LoadAssets` — currently only bridge
+stub tiles are extracted from the terrain atlas. Core world blocks (Block.BlocksList) use
+tile indices 0–255 from `terrain.png` but their textures are only registered if a matching
+bridge stub happens to reference the same index. Blocks like gravel, sand, water, lava,
+leaves, glass etc. are invisible in the world because their tile indices are never queued.
+
+Additionally, UV mapping inside the 16×16 terrain atlas needs to be verified:
+the atlas is a 256×256 PNG divided into 16×16 tiles (each tile = 16×16 px). The current
+`TerrainAtlas.ExtractAndRegister` extracts a single tile as its own texture. This is
+correct for individual block faces but we need to confirm the exact UV grid layout.
+
+**Questions:**
+- Exact terrain.png layout: 16×16 grid of 16×16-pixel tiles (indices 0..255 left-to-right,
+  top-to-bottom)? Any special cases (animated tiles, overlays)?
+- Which tile indices correspond to the most important 1.0 blocks?
+  (stone=1, grass_top=0, dirt=2, grass_side=3, … complete list for blocks 1–49)
+- Which blocks need biome tinting and which tint map do they use (grass/foliage)?
+  Specifically: grass top (tile 0) = grass tint, leaves (tile 52/53) = foliage tint,
+  grass side overlay = grass tint on the overlay portion only?
+- How should water (tile 205/206) and lava (tile 237/238) handle animated frames?
+  Are the first frame's tiles (205, 237) sufficient for a static rendering pass?
+- Do any blocks use a different tile for top vs side vs bottom at the Core layer
+  (not just the bridge stubs)? E.g. log, grass, piston, furnace?
+
+**Expected deliverable:** `Specs/TerrainAtlas_Spec.md`

@@ -289,6 +289,60 @@ public abstract class Entity
     }
 
     /// <summary>
+    /// Returns the entity's eye position at the given render partial tick (interpolated).
+    /// Spec: <c>ia.e(float partialTick)</c> — Raycast_Spec.md §Direction Vectors.
+    /// </summary>
+    public Vec3 GetEyePosition(float partialTick)
+    {
+        double x = PrevPosX + (PosX - PrevPosX) * partialTick;
+        double y = PrevPosY + (PosY - PrevPosY) * partialTick + GetEyeHeight();
+        double z = PrevPosZ + (PosZ - PrevPosZ) * partialTick;
+        return Vec3.GetFromPool(x, y, z);
+    }
+
+    /// <summary>
+    /// Eye height for GetEyePosition. Overridden by EntityPlayer (1.62F).
+    /// </summary>
+    public virtual double GetEyeHeight() => Height * 0.85;
+
+    /// <summary>
+    /// Returns the normalized look vector at the given partial tick.
+    /// Spec: <c>ia.f(float partialTick)</c> — Raycast_Spec.md §Direction Vectors.
+    ///
+    /// Formula:
+    ///   x = -sin(yaw)  × cos(pitch)
+    ///   y = -sin(pitch)
+    ///   z =  cos(yaw)  × cos(pitch)
+    /// </summary>
+    public Vec3 GetLookVector(float partialTick)
+    {
+        float yaw   = (PrevRotYaw   + (RotationYaw   - PrevRotYaw)   * partialTick) * (MathF.PI / 180f);
+        float pitch = (PrevRotPitch + (RotationPitch - PrevRotPitch) * partialTick) * (MathF.PI / 180f);
+        double cosP = Math.Cos(pitch);
+        return Vec3.GetFromPool(
+            -Math.Sin(yaw) * cosP,
+            -Math.Sin(pitch),
+             Math.Cos(yaw) * cosP);
+    }
+
+    /// <summary>
+    /// Applies mouse-look deltas to yaw and pitch.
+    /// Spec: <c>ia.c(float yawDelta, float pitchDelta)</c> — MouseLook_Spec.md §Turn Method.
+    ///
+    /// Formula:
+    ///   yaw   += yawDelta   × 0.15
+    ///   pitch -= pitchDelta × 0.15   (subtract = looking up when mouse moves up)
+    ///   pitch clamped to [−90, 90].
+    /// </summary>
+    public void Turn(float yawDelta, float pitchDelta)
+    {
+        RotationYaw   += yawDelta   * 0.15f;
+        RotationPitch -= pitchDelta * 0.15f;
+        if (RotationPitch < -90f) RotationPitch = -90f;
+        if (RotationPitch >  90f) RotationPitch =  90f;
+    }
+
+    /// <summary>
     /// Sets position and rotation, syncing last-tick position fields.
     /// Spec: <c>b(double x, double y, double z, float yaw, float pitch)</c>.
     /// </summary>
@@ -511,6 +565,16 @@ public abstract class Entity
 
     /// <summary>True if entity is currently on fire. Spec: <c>V()</c> → bool.</summary>
     public bool IsOnFire() => _fireTicks > 0 || GetFlagBit(0);
+
+    /// <summary>
+    /// Sprint flag — entity DataWatcher flag bit 3.
+    /// obf: <c>ia.X()</c> = isSprinting; <c>ia.f(3, bool)</c> = setSprinting.
+    /// </summary>
+    public bool IsSprinting
+    {
+        get => GetFlagBit(3);
+        set => SetFlagBit(3, value);
+    }
 
     /// <summary>True if entity is alive (not dead). Spec: <c>K()</c> → bool.</summary>
     public virtual bool IsEntityAlive() => !IsDead;

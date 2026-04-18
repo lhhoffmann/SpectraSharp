@@ -183,7 +183,7 @@ public sealed class BlockPiston : Block
             if (!IsPushable(id, world, nx, ny, nz, true)) return false;
 
             // Liquid → displace (remove and treat as space)
-            if (Block.BlocksList[id]?.BlockMaterial.IsLiquid() == true)
+            if (Block.BlocksList[id]?.BlockMaterial?.IsLiquid() == true)
             {
                 world.SetBlock(nx, ny, nz, 0);
                 return true;
@@ -220,7 +220,7 @@ public sealed class BlockPiston : Block
         if (Block.IsBlockContainer[blockId]) return false;         // BlockContainer (chest, jukebox, etc.)
         // Material type check: J==2 (portal-like, MaterialPushDestroys) — not pushable
         // J==1 (liquid) only allowed when checkSelf=true
-        if (!checkSelf && block.BlockMaterial.IsLiquid()) return false;
+        if (!checkSelf && block.BlockMaterial?.IsLiquid() == true) return false;
 
         return true;
     }

@@ -31,6 +31,8 @@ public class ChunkProviderGenerate : IChunkLoader
     private readonly long  _worldSeed;
     private readonly bool  _generateStructures; // t
 
+    private const int SeaLevel = 64;
+
     // Working array for the 5×17×5 density grid (425 entries)
     private double[]? _densityBuf;
 
@@ -246,6 +248,27 @@ public class ChunkProviderGenerate : IChunkLoader
             _mineshaft .Generate(_world, chunkX, chunkZ, _rand);
             villagePresent = _village.Generate(_world, chunkX, chunkZ, _rand);
             _stronghold.Generate(_world, chunkX, chunkZ, _rand);
+        }
+
+        // Water lakes: 1/4 chunks (WorldGenLakes_Spec.md)
+        if (_rand.NextInt(4) == 0)
+        {
+            int lx = originX + _rand.NextInt(16);
+            int ly = _rand.NextInt(wh);
+            int lz = originZ + _rand.NextInt(16);
+            new WorldGenLakes(8).Generate(_world, _rand, lx, ly, lz);
+        }
+
+        // Lava lakes: 1/8 chunks, doubly-biased-low Y (WorldGenLakes_Spec.md)
+        if (_rand.NextInt(8) == 0)
+        {
+            int lakeY = _rand.NextInt(_rand.NextInt(120) + 8);
+            if (lakeY < SeaLevel || _rand.NextInt(10) == 0)
+            {
+                int lx = originX + _rand.NextInt(16);
+                int lz = originZ + _rand.NextInt(16);
+                new WorldGenLakes(10).Generate(_world, _rand, lx, lakeY, lz);
+            }
         }
 
         // Dungeon spawner (spec §1 — suppressed when village is present in this chunk)

@@ -96,6 +96,19 @@ public abstract class EntityPlayer : LivingEntity
     /// <summary>obf: <c>cc</c> — player abilities (creative mode flags etc.).</summary>
     public readonly PlayerAbilities Abilities = new();
 
+    // ── Movement speed constants (spec: PlayerMovement_Spec §Speed Constants) ──
+
+    /// <summary>obf: <c>cg</c> — base walking speed. Set onto <c>nq.aI</c> each tick.</summary>
+    public float WalkSpeed = 0.1f;
+
+    /// <summary>obf: <c>ch</c> — base air acceleration. Set onto <c>nq.aJ</c> each tick.</summary>
+    public float AirSpeedBase = 0.02f;
+
+    // ── Sprint double-tap detection (spec: PlayerMovement_Spec §Sprint Activation) ─
+
+    /// <summary>Ticks remaining in the double-tap-forward sprint window (max 7).</summary>
+    public int SprintDoubleTapTimer;
+
     // ── Constructor (spec §4) ─────────────────────────────────────────────────
 
     protected EntityPlayer(World world) : base(world)
@@ -125,6 +138,9 @@ public abstract class EntityPlayer : LivingEntity
 
     /// <summary>obf: <c>f_()</c> — player max health is always 20 (10 hearts).</summary>
     public override int GetMaxHealth() => 20;
+
+    /// <summary>Player eye height = 1.62F (spec: EntityPlayer_Spec §Eye height).</summary>
+    public override double GetEyeHeight() => PlayerEyeHeight;
 
     // ── Respawn / reset (spec §5) ─────────────────────────────────────────────
 
@@ -224,10 +240,14 @@ public abstract class EntityPlayer : LivingEntity
     // ── Tick override ─────────────────────────────────────────────────────────
 
     /// <summary>
-    /// Player tick: calls base living tick, then decrements inventory animations.
+    /// Player tick: updates speed constants, calls base living tick, then decrements inventory animations.
     /// </summary>
     public override void Tick()
     {
+        // Sprint multiplier: cg * 0.3F additional = ×1.3 total (spec: PlayerMovement_Spec §Speed)
+        GroundSpeed = WalkSpeed + (IsSprinting ? WalkSpeed * 0.3f : 0f);
+        AirSpeed    = AirSpeedBase + (IsSprinting ? AirSpeedBase * 0.3f : 0f);
+
         base.Tick();
         Inventory.DecrementAnimations();
 

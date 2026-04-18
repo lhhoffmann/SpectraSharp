@@ -587,6 +587,62 @@ Obfuscated name (as found in `temp/decompiled/`) → MCP/human-readable name.
 | `zc` | `Library` | 14×11×15 (tall, c=false) or 14×6×15 (short, c=true); bookshelves + loot chest; max 2 per stronghold |
 | `ir` | `PortalRoom` | 11×8×16; sets `((aeh)parent).b=this`; End Portal Frame (ID 120); water pool; silverfish spawner (`ze`); max 1 per stronghold |
 
+## World Access / Sound / Particle Classes
+
+| Obfuscated | Human name | Notes |
+|---|---|---|
+| `bd` | `IWorldAccess` | Interface; 9 overloads of method `a` + `b(ia)`; listener for world events: block change, sound, particle, entity add/remove; implemented by `afv` |
+| `afv` | `WorldRenderer` / `RenderGlobal` | Implements `bd`; primary client-side renderer; chunk section list; WorldEvent dispatch handler `a(vi,int,int,int,int,int)`; events 1000–2004 |
+| `qv` | `WorldGenLakes` | Lake generator; extends `ig`; field `a`=fluid block ID; 4-7 ellipsoids in 16×16×8 space; bottom=fluid / top=air; grass→dirt post-processing |
+
+## Client / Rendering Classes
+
+| Obfuscated | Human name | Notes |
+|---|---|---|
+| `adt` | `EntityRenderer` | First-person view controller; fields r=Minecraft, c=ItemRenderer(`n`), B/C=4.0F FOV modifiers; LWJGL+GLU; manages projection matrix, view bob, hand rendering |
+| `n` | `ItemRenderer` | Hand/item renderer; fields a=Minecraft, b=held ItemStack, e=RenderBlocks(`acr`), f=sg; `a(nq,dk,int)` renders held item in first person |
+| `xe` | `GuiScreen` | GUI screen base; extends `ht`; fields l=Minecraft, m/n=width/height, o=List<ct> buttons; drawScreen, keyTyped (ESC closes), mouseClicked (plays "random.click") |
+| `ct` | `GuiButton` | GUI button; fields id/x/y/width/height/enabled/visible/displayString |
+| `qd` | `GuiIngame` | In-game HUD overlay; extends `ht`; renders hotbar, health, pumpkin head, chat; uses `ef` scale factor |
+| `mg` | `GuiContainer` | Abstract GUI container base; extends `xe`; fields b=176/c=166 (default W/H), d=Container, e/f=screenTopLeft; draws slots, held-item, tooltips |
+| `hw` | `GuiInventory` | Player inventory screen; extends `mg`; uses `/gui/inventory.png`; player model at (e+51,f+75) scale 30; active effects sidebar; opens `gd` container |
+| `zh` | `TextureManager` | NOT FontRenderer — texture atlas manager; manages GL texture binding and animated tile textures |
+
+## Dispenser / Projectile Dispatch
+
+| Obfuscated | Human name | Notes |
+|---|---|---|
+| `cu` | `BlockDispenser` | Dispenser block (ID 23); facing meta 2-5; dispatches arrow/snowball/egg/splash-potion as projectiles; falls back to EntityItem drop; fires worldEvent 2000 (smoke) on dispatch; drops inventory on break |
+| `bp` | `TileEntityDispenser` | Already listed under TileEntity Classes — `a(Random)` selects random non-empty slot |
+
+## Player / GameMode Classes
+
+| Obfuscated | Human name | Notes |
+|---|---|---|
+| `vi` | `EntityPlayer` | (Updated) fields: by=InventoryPlayer, bz=Container(open), L=1.62F eye height, cc=PlayerAbilities(`wq`) |
+| `wq` | `PlayerAbilities` | Player ability flags: a=invulnerable, b=flying, c=mayfly(can fly), d=instabuild(instant-break); NBT keys: invulnerable/flying/mayfly/instabuild |
+| `di` | `EntityPlayerSP` | Extends `vi` directly; extra fields: b=agn(MovementInput), c=Minecraft, d=sprint timer, e=sleep timer (600 when sleeping); dimension travel via `c(int)` (dim==1→end credits); block-break dispatches through Minecraft.c (ItemInWorldManager) |
+| `zb` | `EntityOtherPlayerMP` | Network player; extends `vi`; L=0.0F eye height, W=true noClip; position interpolation via `c` counter |
+| `aes` | `ItemInWorldManager` | Abstract base; field a=Minecraft; `a(x,y,z,face)`=break block (event 2001 + setAir + drops); `b(ry)`=create EntityPlayerSP; `c()`=reach 4.0F |
+| `dm` | `SurvivalItemInWorldManager` | Extends `aes`; fields c/d/e=target xyz (int, -1=none), f=blockDamage (0-1.0), g=prevDamage, h=soundCounter, i=breakCooldown(5); `c(x,y,z,face)` per-tick: f+=block.a(player), break at f>=1.0, sound every 4 ticks; `a(partial)`=update crack overlay |
+| `uq` | `CreativeItemInWorldManager` | Extends `aes`; `i()`=true; static `b(vi)`=set creative abilities; instant-break in `c()` |
+
+## Minecraft Main Loop Classes
+
+| Obfuscated | Human name | Notes |
+|---|---|---|
+| `Minecraft` (in `net.minecraft.client`) | `Minecraft` | Abstract singleton (`static a`); holds all game state fields; run()→x() game loop; `k()`=one 20Hz tick; `ahy` is the concrete subclass |
+| `ahy` | `MinecraftClient` | Concrete runnable Minecraft subclass; extends `Minecraft implements Runnable`; created on main thread |
+| `aij` | `Timer` | Game timer; constructor param=ticksPerSecond (20.0F); field `b`=elapsed ticks (int), `c`=renderPartialTicks (float 0-1); `a()` advances timer |
+| `ki` | `GameSettings` | Settings container; fields: A=soundEnabled, D=hideGUI, E=viewMode (0-2), F=debugOverlay, I=smoothCamera; holds KeyBinding array for all key actions |
+| `agn` | `MovementInput` | Keyboard-to-movement mapper; field on `di.b`; maps WASD+Shift+Sprint state to forwardMove/strafe floats; fields a=strafe, b=forward, c=sneak, d=jump, e=dive |
+| `hs` | `MouseHelper` | LWJGL mouse delta reader; fields a=getDX result, b=getDY result; `c()` reads Mouse.getDX/getDY; `a()` grabs mouse; held as `Minecraft.D` |
+| `ne` | `SmoothValue` | Exponential smoother; `a(current, factor)` = lerp toward current by factor; used in `adt` for smooth camera J/K accumulators |
+| `mv` | `ChunkProviderClient` | Client-side chunk provider; `d(cx, cz)`=centerOn (sets cache centre for chunk loading); used by `Minecraft.e()` spawn preloader and world load |
+| `ef` | `ScaledResolution` | Computes GUI scale factor from window size + GUI scale setting; `a()`=scaledWidth, `b()`=scaledHeight |
+| `ht` | `GuiScreenBase` | Base class for GUI rendering; `b(x,y,u,v,w,h)`=drawTexturedModalRect |
+| `abe` | `FontRenderer` | Bitmap font renderer; fields: A=GameSettings, p=TextureManager; `q=new abe(A,"/font/default.png",p)` in Minecraft ctor; `a(String,x,y,color)`=drawString; `b(String,x,y,color)`=drawStringWithShadow |
+
 ---
 
 *Add new mappings as classes are analyzed. Keep alphabetical by obfuscated name within each section.*

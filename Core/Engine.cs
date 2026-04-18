@@ -24,8 +24,6 @@ public sealed class Engine(AssetManager assets, TextureRegistry textures, Bridge
     private const double FixedDeltaTime = 1.0 / TicksPerSecond;
     private const double MaxAccumulator = 0.25;
 
-    // ── Scene offset for Core debug world (so it doesn't overlap bridge blocks) ─
-    private const float WorldOffsetZ = 8f;
 
     // Shared between threads — atomic reference swap via volatile
     private volatile WorldSnapshot _snapshot = WorldSnapshot.Empty;
@@ -44,7 +42,47 @@ public sealed class Engine(AssetManager assets, TextureRegistry textures, Bridge
     private WorldProvider?       _worldProvider;
     private int                  _surfaceY = 64; // updated after chunk (0,0) generates
     private readonly List<Entity> _entities = [];
-    private DebugMob?            _debugMob;
+
+    // ── Input (written by render thread, read by game thread) ────────────────
+
+    /// <summary>
+    /// Atomic snapshot of raw keyboard/mouse input captured each render frame.
+    /// The render thread creates a new instance and stores it here; the game thread
+    /// reads and applies it once per tick.
+    /// </summary>
+    private volatile InputSnapshot _inputSnapshot = new();
+
+    // ── MinecraftMain parity (spec: MinecraftMain_Spec.md) ────────────────────
+
+    /// <summary>Total game ticks elapsed. Replica of <c>aij.b</c> (ElapsedTicks).</summary>
+    public long ElapsedTicks { get; private set; }
+
+    /// <summary>
+    /// The local single-player instance. Replica of <c>Minecraft.h</c> (thePlayer / di).
+    /// Null until a world is loaded with a player.
+    /// </summary>
+    public EntityPlayerSP? Player { get; private set; }
+
+    /// <summary>
+    /// The currently open GUI screen. Null during active gameplay.
+    /// Replica of <c>Minecraft.s</c> (currentScreen).
+    /// </summary>
+    public object? CurrentScreen { get; set; }
+
+    /// <summary>
+    /// The active game mode manager. Replica of <c>Minecraft.c</c> (ItemInWorldManager).
+    /// </summary>
+    public ItemInWorldManager? GameMode { get; private set; }
+
+    /// <summary>
+    /// Last block/entity raycast result. Replica of <c>Minecraft.z</c> (objectMouseOver).
+    /// Updated each tick before input is processed.
+    /// Spec: Raycast_Spec.md.
+    /// </summary>
+    public MovingObjectPosition? ObjectMouseOver { get; private set; }
+
+    // ── Chunk keep-alive counter (spec: MinecraftMain_Spec §Game Tick §2) ─────
+    private int _chunkKeepAliveTick;
 
 
     // ── Entry point ───────────────────────────────────────────────────────────
@@ -54,13 +92,14 @@ public sealed class Engine(AssetManager assets, TextureRegistry textures, Bridge
         Raylib.SetConfigFlags(ConfigFlags.AlwaysRunWindow);
         Raylib.InitWindow(1280, 720, "SpectraEngine — Core Debug World");
         Raylib.SetTargetFPS(0);
+        Raylib.DisableCursor();
+        _mouseCaptured = true;
 
         SetWindowIcon();
         BlockRegistry.Initialize(); // must run before LoadAssets so Core block face tiles are known
         Items.ItemRegistry.Initialize(); // must run after BlockRegistry (tool arrays reference block singletons)
         LoadAssets();
         SetupMaterials();
-        SetupBridgeBlocks();
         SetupCoreWorld();
         BuildVoxelMeshes(); // must run AFTER SetupCoreWorld so chunk (0,0) is generated
         SetupCamera();
@@ -74,8 +113,17 @@ public sealed class Engine(AssetManager assets, TextureRegistry textures, Bridge
 
         Console.WriteLine("[Engine] Game thread started. Render thread: main.");
 
+        var _rtClock = Stopwatch.StartNew();
+        double _rtLastHb = 0;
         while (!Raylib.WindowShouldClose())
+        {
+            if (_rtClock.Elapsed.TotalSeconds - _rtLastHb >= 3.0)
+            {
+                _rtLastHb = _rtClock.Elapsed.TotalSeconds;
+                Console.WriteLine($"[RT] alive  t={_rtLastHb:F1}s");
+            }
             Render(_snapshot);
+        }
 
         _cts.Cancel();
         gameThread.Join(millisecondsTimeout: 500);
@@ -92,9 +140,15 @@ public sealed class Engine(AssetManager assets, TextureRegistry textures, Bridge
         Stopwatch clock = Stopwatch.StartNew();
         double accumulator = 0.0;
         double lastTime    = clock.Elapsed.TotalSeconds;
+        double lastHeartbeat = 0;
 
         while (!_cts.IsCancellationRequested)
         {
+            if (clock.Elapsed.TotalSeconds - lastHeartbeat >= 3.0)
+            {
+                lastHeartbeat = clock.Elapsed.TotalSeconds;
+                Console.WriteLine($"[GT] alive  tick={ElapsedTicks}  t={lastHeartbeat:F1}s");
+            }
             double now       = clock.Elapsed.TotalSeconds;
             double frameTime = now - lastTime;
             lastTime = now;
@@ -105,7 +159,12 @@ public sealed class Engine(AssetManager assets, TextureRegistry textures, Bridge
             bool ticked = false;
             while (accumulator >= FixedDeltaTime)
             {
-                FixedUpdate(FixedDeltaTime);
+                try { FixedUpdate(FixedDeltaTime); }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[Engine] FATAL: FixedUpdate threw — {ex.GetType().Name}: {ex.Message}\n{ex.StackTrace}");
+                    return;
+                }
                 accumulator -= FixedDeltaTime;
                 ticked = true;
             }
@@ -125,62 +184,145 @@ public sealed class Engine(AssetManager assets, TextureRegistry textures, Bridge
 
     private void FixedUpdate(double delta)
     {
+        ElapsedTicks++;
+        Vec3.ResetPool(); // reclaim pooled objects from the previous tick
+
+        // ── Apply input to player (from render thread snapshot) ───────────────
+        InputSnapshot inp = _inputSnapshot;
+        if (Player != null)
+        {
+            Player.MovementInput.ForwardSpeed = inp.Forward;
+            Player.MovementInput.StrafeSpeed  = inp.Strafe;
+            Player.MovementInput.IsSneaking   = inp.Sneak;
+
+            // Jump: fire once per key-press (set true, cleared in EntityPlayerSP.Tick)
+            if (inp.Jump) Player.MovementInput.IsJumping = true;
+
+            // Apply mouse-look via Entity.Turn (spec: MouseLook_Spec §Turn Method).
+            // Sensitivity formula: (sens*0.6+0.2)^3 * 8.0  — spec §Sensitivity Formula.
+            // Turn() internally multiplies by 0.15, so we pass the pre-scaled delta.
+            if (inp.MouseDX != 0f || inp.MouseDY != 0f)
+            {
+                float s   = MouseSensitivity * 0.6f + 0.2f;
+                float fac = s * s * s * 8.0f;
+                Player.Turn(inp.MouseDX * fac, -inp.MouseDY * fac * (InvertMouse ? -1f : 1f));
+                _accMouseDX = 0f;
+                _accMouseDY = 0f;
+            }
+        }
+
+        // ── Raycast (spec: Raycast_Spec §Reach Distances) ────────────────────
+        var _hangSw = Stopwatch.StartNew();
+        if (_world != null && Player != null && GameMode != null)
+        {
+            float reach = GameMode.GetReach();
+            Vec3 eye  = Player.GetEyePosition(1.0f);
+            Vec3 look = Player.GetLookVector(1.0f);
+            Vec3 end  = Vec3.GetFromPool(
+                eye.X + look.X * reach,
+                eye.Y + look.Y * reach,
+                eye.Z + look.Z * reach);
+            ObjectMouseOver = _world.RayTraceBlocks(eye, end);
+        }
+        if (_hangSw.ElapsedMilliseconds > 500)
+            Console.WriteLine($"[GT-HANG] RayTrace took {_hangSw.ElapsedMilliseconds}ms at tick {ElapsedTicks}");
+
         // ── Bridge stubs ─────────────────────────────────────────────────────
+        _hangSw.Restart();
         foreach (IBridgeStub stub in bridge.AllStubs)
             if (stub is BridgeStubBase b) b.OnTick(delta);
+        if (_hangSw.ElapsedMilliseconds > 500)
+            Console.WriteLine($"[GT-HANG] BridgeTick took {_hangSw.ElapsedMilliseconds}ms at tick {ElapsedTicks}");
 
         // ── Core world tick ──────────────────────────────────────────────────
+        _hangSw.Restart();
         _world?.MainTick();
+        if (_hangSw.ElapsedMilliseconds > 500)
+            Console.WriteLine($"[GT-HANG] MainTick took {_hangSw.ElapsedMilliseconds}ms at tick {ElapsedTicks}");
+
+        // ── Block interaction (left/right click) ─────────────────────────────
+        _hangSw.Restart();
+        if (GameMode != null && Player != null && ObjectMouseOver != null)
+        {
+            int bx = ObjectMouseOver.BlockX;
+            int by = ObjectMouseOver.BlockY;
+            int bz = ObjectMouseOver.BlockZ;
+            int face = ObjectMouseOver.FaceId;
+
+            if (inp.LeftPressed)
+                GameMode.OnBlockClicked(bx, by, bz, face);
+            if (inp.LeftReleased)
+                GameMode.ResetBlockRemoving();
+            if (inp.RightPressed && _world != null)
+                GameMode.UseItem(Player, _world, Player.Inventory.GetStackInSelectedSlot(), bx, by, bz, face);
+        }
+        else if (GameMode != null && inp.LeftReleased)
+            GameMode.ResetBlockRemoving();
+        if (_hangSw.ElapsedMilliseconds > 500)
+            Console.WriteLine($"[GT-HANG] BlockClick took {_hangSw.ElapsedMilliseconds}ms at tick {ElapsedTicks}");
+
+        // Clear latched click flags after game tick has consumed them
+        _accLeftPressed  = false;
+        _accLeftReleased = false;
+        _accRightPressed = false;
+
+        // ── Game-mode tick (block-break progress) ────────────────────────────
+        _hangSw.Restart();
+        GameMode?.UpdateBlockRemoving();
+        if (_hangSw.ElapsedMilliseconds > 500)
+            Console.WriteLine($"[GT-HANG] UpdateBlockRemoving took {_hangSw.ElapsedMilliseconds}ms at tick {ElapsedTicks}");
 
         // ── Entity ticks ─────────────────────────────────────────────────────
+        _hangSw.Restart();
         AxisAlignedBB.ResetPool();
         foreach (Entity entity in _entities)
         {
             if (!entity.IsDead) entity.Tick();
         }
+        if (_hangSw.ElapsedMilliseconds > 500)
+            Console.WriteLine($"[GT-HANG] EntityTick took {_hangSw.ElapsedMilliseconds}ms at tick {ElapsedTicks}");
 
-        // Debug mob damage intentionally disabled — entity physics not yet fully wired
+        // ── Chunk keep-alive every 30 ticks (spec: MinecraftMain_Spec §Game Tick §2) ─
+        if (_world != null && Player != null)
+        {
+            _chunkKeepAliveTick++;
+            if (_chunkKeepAliveTick >= 30)
+            {
+                _chunkKeepAliveTick = 0;
+                _hangSw.Restart();
+                _world.EnsureChunksAroundPlayer(Player);
+                if (_hangSw.ElapsedMilliseconds > 500)
+                    Console.WriteLine($"[GT-HANG] EnsureChunks took {_hangSw.ElapsedMilliseconds}ms at tick {ElapsedTicks}");
+            }
+        }
     }
+
+    // ── Mouse settings (spec: MouseLook_Spec §Sensitivity Formula) ───────────
+    // Default sensitivity = 0.5 → factor = 0.5^3 * 8 = 1.0 (natural feel)
+    private const float MouseSensitivity = 0.5f; // ki.c range [0, 1]
+    private const bool  InvertMouse      = false; // ki.d
 
     private WorldSnapshot BuildSnapshot()
     {
-        // ── Bridge blocks (line at Z=0) ───────────────────────────────────────
-        var blocks = new List<BlockRenderData>();
-        long totalTicks = 0;
-
-        foreach (IBridgeStub stub in bridge.AllStubs)
-        {
-            if (stub is BlockBase block)
-            {
-                blocks.Add(new BlockRenderData(
-                    block.Position,
-                    block.RenderColor,
-                    block.TextureKey,
-                    block.JavaClassName,
-                    block.TickCount));
-                totalTicks = Math.Max(totalTicks, block.TickCount);
-            }
-        }
-
-        // Terrain is a single pre-built mesh rendered directly in Render() — not in snapshot.
-
         // ── Entities ─────────────────────────────────────────────────────────
         var entities = new List<EntityRenderData>();
         foreach (Entity entity in _entities)
         {
             if (entity.IsDead) continue;
+            if (entity is EntityPlayerSP) continue;
+
             string label;
             Color  col;
 
             if (entity is EntityItem item)
             {
-                label = $"Item age={item.Age}";
-                col   = new Color(255, 220, 50, 255); // gold
+                label = $"Item";
+                col   = new Color(255, 220, 50, 255);
             }
             else if (entity is LivingEntity mob)
             {
-                label = $"Mob  HP={mob.GetHealth()}/{mob.GetMaxHealth()}";
-                col   = new Color(220, 80, 80, 255);  // red
+                label = $"HP={mob.GetHealth()}/{mob.GetMaxHealth()}";
+                col   = new Color(220, 80, 80, 255);
             }
             else
             {
@@ -189,70 +331,68 @@ public sealed class Engine(AssetManager assets, TextureRegistry textures, Bridge
             }
 
             entities.Add(new EntityRenderData(
-                new Vector3((float)entity.PosX, (float)entity.PosY, (float)entity.PosZ + WorldOffsetZ),
+                new Vector3((float)entity.PosX, (float)entity.PosY, (float)entity.PosZ),
                 col, label));
         }
 
         // ── World stats ───────────────────────────────────────────────────────
         long  worldTime        = _world?.WorldTime ?? 0;
         float brightnessSample = _worldProvider?.BrightnessTable[15] ?? 1.0f;
-        int   mobHp            = _debugMob is { IsDead: false } ? _debugMob.GetHealth()    : 0;
-        int   mobMax           = _debugMob?.GetMaxHealth() ?? 20;
         int   liveCount        = _entities.Count(e => !e.IsDead);
 
-        return new WorldSnapshot(blocks, entities, totalTicks,
-                                 worldTime, brightnessSample, mobHp, mobMax, liveCount);
-    }
+        // ── Player state ──────────────────────────────────────────────────────
+        bool    hasPlayer  = Player is { IsDead: false };
+        Vector3 playerPos  = hasPlayer
+            ? new Vector3((float)Player!.PosX, (float)Player.PosY, (float)Player.PosZ)
+            : Vector3.Zero;
 
-    // ── Scene setup ───────────────────────────────────────────────────────────
+        // ── MouseOver highlight ───────────────────────────────────────────────
+        bool    hasMouseOver  = ObjectMouseOver != null;
+        Vector3 mouseOverPos  = hasMouseOver
+            ? new Vector3(ObjectMouseOver!.BlockX, ObjectMouseOver.BlockY, ObjectMouseOver.BlockZ)
+            : Vector3.Zero;
 
-    private void SetupBridgeBlocks()
-    {
-        const float spacing = 2f;
-        int i = 0;
-        foreach (IBridgeStub stub in bridge.AllStubs)
-            if (stub is BlockBase block)
-                block.Position = new Vector3(i++ * spacing, 0f, 0f);
+        return new WorldSnapshot([], entities, 0,
+                                 worldTime, brightnessSample, 20, 20, liveCount,
+                                 hasPlayer, playerPos,
+                                 hasPlayer ? Player!.RotationYaw   : 0f,
+                                 hasPlayer ? Player!.RotationPitch : 0f,
+                                 hasPlayer ? Player!.GetHealth()   : 20,
+                                 hasPlayer ? Player!.GetMaxHealth(): 20,
+                                 hasPlayer ? Player!.FoodStats.FoodLevel : 20,
+                                 hasPlayer ? Player!.XpLevel         : 0,
+                                 hasMouseOver, mouseOverPos);
     }
 
     private void SetupCoreWorld()
     {
         const long seed = 42L;
+        const int  spawnRadius = 2; // chunks — preloads (2*2+1)² = 25 chunks
 
-        // Build world using ChunkProviderServer wrapping the procedural generator.
-        // Two-phase construction mirrors ChunkProviderGenerate.SetWorld: create the
-        // server before World exists, then wire them together via SetWorld.
         _worldProvider = new OverworldProvider();
         var generator  = new ChunkProviderGenerate(seed);
         var server     = new ChunkProviderServer(WorldSave.NullSaveHandler.Instance.GetChunkPersistence(_worldProvider), generator);
         _world         = new World(server, seed, false, _worldProvider);
         server.SetWorld(_world);
 
-        Console.WriteLine("[Engine] Generating terrain chunk (0, 0)...");
-        // Force chunk (0,0) to generate now so surface heights are available for mesh building
-        _ = _world.GetBlockId(0, 0, 0);
+        // Preload chunks around spawn so surface heights and mesh data are available
+        Console.WriteLine($"[Engine] Generating {(spawnRadius*2+1)*(spawnRadius*2+1)} spawn chunks...");
+        for (int cx = -spawnRadius; cx <= spawnRadius; cx++)
+        for (int cz = -spawnRadius; cz <= spawnRadius; cz++)
+            _ = _world.GetBlockId(cx * 16, 0, cz * 16);
 
-        Console.WriteLine($"[Engine] BrightnessTable[15] = {_worldProvider.BrightnessTable[15]:F4}");
-
-        // Find surface height at chunk centre (8, _, 8) for entity placement
+        // Place player at surface above world origin
         _surfaceY = FindSurfaceY(8, 8);
         Console.WriteLine($"[Engine] Surface at (8,8) = Y{_surfaceY}");
 
-        // Spawn 3 EntityItem floating just above the surface
-        for (int i = 0; i < 3; i++)
-        {
-            var stack = new ItemStack(1, 1); // stone block item
-            var item  = new EntityItem(_world, 4 + i * 4, _surfaceY + 3.0, 4 + i * 2, stack);
-            item.PickupDelay = 0;
-            _entities.Add(item);
-        }
+        Player   = new EntityPlayerSP(_world, this);
+        GameMode = new SurvivalItemInWorldManager(_world, Player);
+        Player.SetPosition(8.0, _surfaceY + 2.0, 8.0);
+        Player.PlayerName = "Player";
+        Player.SetHealth(20);
+        _entities.Add(Player);
 
-        // Spawn debug mob at surface
-        _debugMob = new DebugMob(_world);
-        _debugMob.SetPosition(8.0, _surfaceY + 1.0, 8.0);
-        _entities.Add(_debugMob);
-
-        Console.WriteLine($"[Engine] Core world ready. {_entities.Count} entities spawned.");
+        Console.WriteLine("[Engine] World ready.");
     }
 
     /// <summary>Returns the Y of the top non-air block at (x, z), or 0 if fully air.</summary>
@@ -266,18 +406,10 @@ public sealed class Engine(AssetManager assets, TextureRegistry textures, Bridge
 
     private void SetupCamera()
     {
-        // Look at the centre of the 16×16 terrain patch from above-behind.
-        // _surfaceY is the actual terrain surface height (typically 63-70 for seed 42).
-        float centerX  = 8f;
-        float centerZ  = WorldOffsetZ + 8f; // middle of the 16-block terrain patch
-        float sy       = _surfaceY;
-
         _camera = new Camera3D
         {
-            // Diagonal view: above and slightly behind the terrain patch
-            // so both the terrain surface and entity cubes are clearly visible
-            Position   = new Vector3(centerX, sy + 12f, WorldOffsetZ - 10f),
-            Target     = new Vector3(centerX, sy - 2f,  centerZ),
+            Position   = new Vector3(8f, _surfaceY + 2f, 8f),
+            Target     = new Vector3(9f, _surfaceY + 2f, 8f),
             Up         = Vector3.UnitY,
             FovY       = 70f,
             Projection = CameraProjection.Perspective
@@ -338,15 +470,15 @@ public sealed class Engine(AssetManager assets, TextureRegistry textures, Bridge
     {
         if (_world == null) return;
 
-        // Build block-ID → tile-per-face lookup from Core blocks
-        // (uses Block.GetTextureIndex which handles multi-face blocks like grass, log)
         var faceGroups = new Dictionary<string, (List<float> verts, List<float> uvs)>();
 
-        bool IsAirAt(int bx, int by, int bz)
+        bool IsAirAt(int wx, int wy, int wz)
         {
-            if (by < 0 || by >= World.WorldHeight) return true;
-            if (bx < 0 || bx >= 16 || bz < 0 || bz >= 16) return true;
-            return _world.GetBlockId(bx, by, bz) == 0;
+            if (wy < 0 || wy >= World.WorldHeight) return true;
+            // Do NOT call GetChunk — that would trigger generation for neighbors outside
+            // the loaded area. Treat unloaded chunks as transparent so border faces render.
+            if (!_world.IsChunkLoaded(wx >> 4, wz >> 4)) return true;
+            return _world.GetBlockId(wx, wy, wz) == 0;
         }
 
         void AddQuad(string key, float x0, float y0, float z0,
@@ -357,11 +489,9 @@ public sealed class Engine(AssetManager assets, TextureRegistry textures, Bridge
             if (!faceGroups.TryGetValue(key, out var g))
                 faceGroups[key] = g = (new List<float>(128), new List<float>(128));
             var (v, u) = g;
-            // Triangle 1: v0, v1, v2
             v.Add(x0); v.Add(y0); v.Add(z0); u.Add(0f); u.Add(0f);
             v.Add(x1); v.Add(y1); v.Add(z1); u.Add(1f); u.Add(0f);
             v.Add(x2); v.Add(y2); v.Add(z2); u.Add(1f); u.Add(1f);
-            // Triangle 2: v0, v2, v3
             v.Add(x0); v.Add(y0); v.Add(z0); u.Add(0f); u.Add(0f);
             v.Add(x2); v.Add(y2); v.Add(z2); u.Add(1f); u.Add(1f);
             v.Add(x3); v.Add(y3); v.Add(z3); u.Add(0f); u.Add(1f);
@@ -369,86 +499,66 @@ public sealed class Engine(AssetManager assets, TextureRegistry textures, Bridge
 
         int totalFaces = 0;
 
-        for (int bx = 0; bx < 16; bx++)
-        for (int bz = 0; bz < 16; bz++)
+        // Snapshot loaded chunks to avoid modification during iteration
+        var loadedChunks = _world.GetLoadedChunkCoords().ToList();
+
+        foreach (var (chunkX, chunkZ) in loadedChunks)
+        {
+            int startX = chunkX * 16;
+            int startZ = chunkZ * 16;
+
+        for (int lx = 0; lx < 16; lx++)
+        for (int lz = 0; lz < 16; lz++)
         for (int by = 0; by < World.WorldHeight; by++)
         {
-            int id = _world.GetBlockId(bx, by, bz);
+            int wx = startX + lx;
+            int wz = startZ + lz;
+            int id = _world.GetBlockId(wx, by, wz);
             if (id == 0) continue;
 
-            Block? blk = Block.BlocksList[id];
-            int tileTop    = blk?.GetTextureIndex(1) ?? (blk?.BlockIndexInTexture ?? 1);
-            int tileSide   = blk?.GetTextureIndex(2) ?? (blk?.BlockIndexInTexture ?? 1);
-            int tileBottom = blk?.GetTextureIndex(0) ?? (blk?.BlockIndexInTexture ?? 1);
+            Block? blk      = Block.BlocksList[id];
+            int    fallback = blk?.BlockIndexInTexture ?? 1;
+            int tileTop    = blk?.GetTextureIndex(1) ?? fallback;
+            int tileBottom = blk?.GetTextureIndex(0) ?? fallback;
+            int tileNorth  = blk?.GetTextureIndex(2) ?? fallback; // -Z
+            int tileSouth  = blk?.GetTextureIndex(3) ?? fallback; // +Z
+            int tileWest   = blk?.GetTextureIndex(4) ?? fallback; // -X
+            int tileEast   = blk?.GetTextureIndex(5) ?? fallback; // +X
 
-            float x = bx, y = by, z = bz + WorldOffsetZ;
+            float x = wx, y = by, z = wz;
 
-            // Top face (+Y): face=1, neighbour above
-            if (IsAirAt(bx, by + 1, bz))
+            if (IsAirAt(wx, by + 1, wz))
             {
                 string k = $"block_{tileTop}";
-                if (textures.TryGet(k) != null)
-                {
-                    AddQuad(k,  x,y+1,z,  x+1,y+1,z,  x+1,y+1,z+1,  x,y+1,z+1);
-                    totalFaces++;
-                }
+                if (textures.TryGet(k) != null) { AddQuad(k, x,y+1,z, x+1,y+1,z, x+1,y+1,z+1, x,y+1,z+1); totalFaces++; }
             }
-
-            // Bottom face (-Y): face=0, neighbour below
-            if (IsAirAt(bx, by - 1, bz))
+            if (IsAirAt(wx, by - 1, wz))
             {
                 string k = $"block_{tileBottom}";
-                if (textures.TryGet(k) != null)
-                {
-                    AddQuad(k,  x,y,z+1,  x+1,y,z+1,  x+1,y,z,  x,y,z);
-                    totalFaces++;
-                }
+                if (textures.TryGet(k) != null) { AddQuad(k, x,y,z+1, x+1,y,z+1, x+1,y,z, x,y,z); totalFaces++; }
             }
-
-            // North face (-Z): face=2, neighbour at z-1
-            if (IsAirAt(bx, by, bz - 1))
+            if (IsAirAt(wx, by, wz - 1))
             {
-                string k = $"block_{tileSide}";
-                if (textures.TryGet(k) != null)
-                {
-                    AddQuad(k,  x+1,y+1,z,  x,y+1,z,  x,y,z,  x+1,y,z);
-                    totalFaces++;
-                }
+                string k = $"block_{tileNorth}";
+                if (textures.TryGet(k) != null) { AddQuad(k, x+1,y+1,z, x,y+1,z, x,y,z, x+1,y,z); totalFaces++; }
             }
-
-            // South face (+Z): face=3, neighbour at z+1
-            if (IsAirAt(bx, by, bz + 1))
+            if (IsAirAt(wx, by, wz + 1))
             {
-                string k = $"block_{tileSide}";
-                if (textures.TryGet(k) != null)
-                {
-                    AddQuad(k,  x,y+1,z+1,  x+1,y+1,z+1,  x+1,y,z+1,  x,y,z+1);
-                    totalFaces++;
-                }
+                string k = $"block_{tileSouth}";
+                if (textures.TryGet(k) != null) { AddQuad(k, x,y+1,z+1, x+1,y+1,z+1, x+1,y,z+1, x,y,z+1); totalFaces++; }
             }
-
-            // West face (-X): face=4, neighbour at x-1
-            if (IsAirAt(bx - 1, by, bz))
+            if (IsAirAt(wx - 1, by, wz))
             {
-                string k = $"block_{tileSide}";
-                if (textures.TryGet(k) != null)
-                {
-                    AddQuad(k,  x,y+1,z,  x,y+1,z+1,  x,y,z+1,  x,y,z);
-                    totalFaces++;
-                }
+                string k = $"block_{tileWest}";
+                if (textures.TryGet(k) != null) { AddQuad(k, x,y+1,z, x,y+1,z+1, x,y,z+1, x,y,z); totalFaces++; }
             }
-
-            // East face (+X): face=5, neighbour at x+1
-            if (IsAirAt(bx + 1, by, bz))
+            if (IsAirAt(wx + 1, by, wz))
             {
-                string k = $"block_{tileSide}";
-                if (textures.TryGet(k) != null)
-                {
-                    AddQuad(k,  x+1,y+1,z+1,  x+1,y+1,z,  x+1,y,z,  x+1,y,z+1);
-                    totalFaces++;
-                }
+                string k = $"block_{tileEast}";
+                if (textures.TryGet(k) != null) { AddQuad(k, x+1,y+1,z+1, x+1,y+1,z, x+1,y,z, x+1,y,z+1); totalFaces++; }
             }
         }
+        } // end foreach chunk
 
         // Build one Mesh+Model per texture group
         foreach (var (key, (vertsL, uvsL)) in faceGroups)
@@ -545,6 +655,29 @@ public sealed class Engine(AssetManager assets, TextureRegistry textures, Bridge
             TryQueue(block.TextureIndexBottom, block.TextureKeyBottom, white);
         }
 
+        // ── Phase 1b: collect tiles from all Core blocks (Block.BlocksList) ──────
+        // Spec §6: tile 0 = grass top (grass tint), tile 52 = leaves (foliage tint).
+        // Tile 3 (grass side) is NOT tinted at load-time — applying tint to the
+        // whole tile turns the dirt portion green. Biome-tinted entries still win.
+        var grassTint   = new Raylib_cs.Color(72, 181,  24, 255);
+        var foliageTint = new Raylib_cs.Color(78, 164,   0, 255);
+
+        foreach (Block? blk in Block.BlocksList)
+        {
+            if (blk == null) continue;
+            for (int face = 0; face < 6; face++)
+            {
+                int tileIdx = blk.GetTextureIndex(face);
+                string key  = $"block_{tileIdx}";
+                var tint    = tileIdx ==  0 ? grassTint
+                            : tileIdx == 52 ? foliageTint
+                            : white;
+                if (!tileQueue.TryGetValue(key, out var existing)
+                    || (HasBiomeTint(tint) && !HasBiomeTint(existing.tint)))
+                    tileQueue[key] = (tileIdx, tint);
+            }
+        }
+
         // ── Phase 2: extract and upload each unique tile ───────────────────────
         foreach (var (key, (idx, tint)) in tileQueue)
         {
@@ -591,16 +724,19 @@ public sealed class Engine(AssetManager assets, TextureRegistry textures, Bridge
 
     private void Render(WorldSnapshot snap)
     {
+        // ── Poll input (render thread owns Raylib input API) ─────────────────
+        PollInput(snap);
+
+        // ── Update follow camera from player snapshot ─────────────────────────
+        if (snap.HasPlayer)
+            UpdateFirstPersonCamera(snap);
+
         Raylib.BeginDrawing();
         Raylib.ClearBackground(Color.SkyBlue);
 
         Raylib.BeginMode3D(_camera);
-        Raylib.DrawGrid(30, 1f);
 
-        foreach (BlockRenderData block in snap.Blocks)
-            DrawBlock(block);
-
-        // 3D voxel terrain — one draw call per tile texture
+        // Voxel terrain — one draw call per tile texture
         if (_voxelModels.Count > 0)
         {
             Rlgl.DisableBackfaceCulling();
@@ -609,21 +745,95 @@ public sealed class Engine(AssetManager assets, TextureRegistry textures, Bridge
             Rlgl.EnableBackfaceCulling();
         }
 
-
         foreach (EntityRenderData entity in snap.Entities)
             DrawEntity(entity);
 
-        // Label: bridge showcase
-        Raylib.DrawLine3D(new Vector3(-1f, 0.01f, 0f), new Vector3(16f, 0.01f, 0f), Color.Yellow);
-        // Label: core world border
-        Raylib.DrawLine3D(new Vector3(-1f, 0.01f, WorldOffsetZ), new Vector3(17f, 0.01f, WorldOffsetZ), Color.Green);
-        Raylib.DrawLine3D(new Vector3(-1f, 0.01f, WorldOffsetZ + 16f), new Vector3(17f, 0.01f, WorldOffsetZ + 16f), Color.Green);
+        // Block highlight wireframe
+        if (snap.HasMouseOver)
+        {
+            var c = snap.MouseOverPos + new Vector3(0.5f, 0.5f, 0.5f);
+            Raylib.DrawCubeWires(c, 1.002f, 1.002f, 1.002f, Color.Black);
+        }
 
         Raylib.EndMode3D();
 
         DrawHud(snap);
 
         Raylib.EndDrawing();
+    }
+
+    // ── Input polling (render thread) ─────────────────────────────────────────
+
+    private bool _mouseCaptured;
+    private float _accMouseDX, _accMouseDY;
+    private bool _accLeftPressed, _accLeftReleased, _accRightPressed;
+    private bool _leftWasDown;
+
+    private void PollInput(WorldSnapshot snap)
+    {
+        // Escape releases mouse capture (pause / menu)
+        if (Raylib.IsKeyPressed(KeyboardKey.Escape) && _mouseCaptured)
+        {
+            _mouseCaptured = false;
+            Raylib.EnableCursor();
+        }
+
+        // Tab toggles mouse capture (re-capture after menu)
+        if (Raylib.IsKeyPressed(KeyboardKey.Tab))
+        {
+            _mouseCaptured = !_mouseCaptured;
+            Raylib.DisableCursor();
+            if (!_mouseCaptured) Raylib.EnableCursor();
+        }
+
+        float fwd = 0f, strafe = 0f;
+        bool jump = false, sneak = false;
+
+        if (snap.HasPlayer)
+        {
+            if (Raylib.IsKeyDown(KeyboardKey.W)) fwd   += 1f;
+            if (Raylib.IsKeyDown(KeyboardKey.S)) fwd   -= 1f;
+            if (Raylib.IsKeyDown(KeyboardKey.A)) strafe += 1f;
+            if (Raylib.IsKeyDown(KeyboardKey.D)) strafe -= 1f;
+            if (Raylib.IsKeyPressed(KeyboardKey.Space)) jump = true;
+            if (Raylib.IsKeyDown(KeyboardKey.LeftShift)) sneak = true;
+        }
+
+        if (_mouseCaptured)
+        {
+            var delta = Raylib.GetMouseDelta();
+            _accMouseDX += delta.X;
+            _accMouseDY += delta.Y;
+        }
+
+        // Mouse buttons — latch pressed/released until game tick consumes them
+        bool leftDown = _mouseCaptured && Raylib.IsMouseButtonDown(MouseButton.Left);
+        if (leftDown && !_leftWasDown)  _accLeftPressed  = true;
+        if (!leftDown && _leftWasDown)  _accLeftReleased = true;
+        _leftWasDown = leftDown;
+        if (_mouseCaptured && Raylib.IsMouseButtonPressed(MouseButton.Right)) _accRightPressed = true;
+
+        _inputSnapshot = new InputSnapshot(fwd, strafe, jump, sneak, _accMouseDX, _accMouseDY,
+                                           leftDown, _accLeftPressed, _accLeftReleased, _accRightPressed);
+    }
+
+    private void UpdateFirstPersonCamera(WorldSnapshot snap)
+    {
+        float yawRad   = snap.PlayerYaw   * MathF.PI / 180f;
+        float pitchRad = snap.PlayerPitch * MathF.PI / 180f;
+
+        float eyeX = (float)snap.PlayerPos.X;
+        float eyeY = (float)snap.PlayerPos.Y + 1.62f;
+        float eyeZ = (float)snap.PlayerPos.Z;
+
+        // Look direction: (-sin(yaw)*cos(pitch), -sin(pitch), cos(yaw)*cos(pitch))
+        float cosPitch = MathF.Cos(pitchRad);
+        float lookX = -MathF.Sin(yawRad) * cosPitch;
+        float lookY = -MathF.Sin(pitchRad);
+        float lookZ =  MathF.Cos(yawRad) * cosPitch;
+
+        _camera.Position = new Vector3(eyeX, eyeY, eyeZ);
+        _camera.Target   = new Vector3(eyeX + lookX, eyeY + lookY, eyeZ + lookZ);
     }
 
     private void DrawBlock(BlockRenderData block)

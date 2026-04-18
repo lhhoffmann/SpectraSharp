@@ -38,8 +38,22 @@ public sealed record WorldSnapshot(
     float BrightnessSample,
     int   MobHealth,
     int   MobMaxHealth,
-    int   LiveEntityCount
+    int   LiveEntityCount,
+    // ── Player state for follow-camera ──────────────────────────────────────
+    bool    HasPlayer,
+    Vector3 PlayerPos,
+    float   PlayerYaw,
+    float   PlayerPitch,
+    int     PlayerHp,
+    int     PlayerMaxHp,
+    int     PlayerFood,
+    int     PlayerXpLevel,
+    // ── Block highlight (MouseOver) ─────────────────────────────────────────
+    bool    HasMouseOver,
+    Vector3 MouseOverPos
 )
 {
-    public static WorldSnapshot Empty { get; } = new([], [], 0, 0, 1.0f, 20, 20, 0);
+    public static WorldSnapshot Empty { get; } = new([], [], 0, 0, 1.0f, 20, 20, 0,
+        false, Vector3.Zero, 0f, 0f, 20, 20, 20, 0,
+        false, Vector3.Zero);
 }

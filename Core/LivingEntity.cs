@@ -447,8 +447,16 @@ public abstract class LivingEntity : Entity
     protected void Jump()
     {
         MotionY = 0.42;
-        // Jump Boost potion: stub (abg spec pending)
-        // Sprint boost: stub (isSprinting check pending)
+        // Jump Boost potion: effect level stub (adds (level+1)*0.1 to MotionY — spec §Jump)
+
+        // Sprint horizontal jump impulse (spec: PlayerMovement_Spec §Jump)
+        if (IsSprinting)
+        {
+            float yawRad = RotationYaw * (MathF.PI / 180f);
+            MotionX -= MathHelper.Sin(yawRad) * 0.2;
+            MotionZ += MathHelper.Cos(yawRad) * 0.2;
+        }
+
         VelocityChanged = true;
     }
 
@@ -464,8 +472,8 @@ public abstract class LivingEntity : Entity
         strafe  *= dist;
         float sinYaw = MathHelper.Sin(RotationYaw * MathF.PI / 180.0f);
         float cosYaw = MathHelper.Cos(RotationYaw * MathF.PI / 180.0f);
-        MotionX += forward * cosYaw - strafe * sinYaw;
-        MotionZ += forward * sinYaw + strafe * cosYaw;
+        MotionX += strafe * cosYaw - forward * sinYaw;
+        MotionZ += forward * cosYaw + strafe * sinYaw;
     }
 
     /// <summary>
@@ -648,7 +656,7 @@ public abstract class LivingEntity : Entity
     // ── Eye height (spec §15) ─────────────────────────────────────────────────
 
     /// <summary>obf: <c>E()</c> — getEyeHeight = Height * 0.85F.</summary>
-    public float GetEyeHeight() => Height * 0.85f;
+    public override double GetEyeHeight() => Height * 0.85;
 
     // ── Virtual surface (spec §15) ────────────────────────────────────────────
 

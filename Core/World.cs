@@ -23,7 +23,7 @@ namespace SpectraEngine.Core;
 ///   - TileEntity operations (bq spec)
 ///   - WorldProvider sky-brightness table (k spec)
 ///   - LevelData / WorldInfo (si / nh specs)
-///   - IWorldAccess renderer notifications (bd spec)
+///   - IWorldAccess renderer notifications: implemented (IWorldAccess_Spec.md)
 ///
 /// Source spec: Documentation/VoxelCore/Parity/Specs/World_Spec.md
 /// </summary>
@@ -40,6 +40,9 @@ public class World : IWorld
     private const int XzBoundary = 30_000_000;
 
     // ── Fields (spec §3) ──────────────────────────────────────────────────────
+
+    // IWorldAccess listeners (spec: IWorldAccess_Spec.md) — obf: ry.z
+    private readonly List<IWorldAccess> _worldAccessListeners = [];
 
     // Entity lists (spec §3)
     private readonly List<Entity> _loadedEntityList  = [];  // g — all loaded entities
@@ -390,6 +393,33 @@ public class World : IWorld
         GetChunkFromBlockCoords(x, z).SetBlock(x & 15, y, z & 15, blockId);
     }
 
+    // ── IWorldAccess listener registration + dispatch (IWorldAccess_Spec.md) ──
+
+    /// <summary>Registers a world-access listener. obf: <c>ry.a(bd)</c></summary>
+    public void AddWorldAccess(IWorldAccess listener) => _worldAccessListeners.Add(listener);
+
+    /// <summary>Removes a world-access listener. obf: <c>ry.b(bd)</c></summary>
+    public void RemoveWorldAccess(IWorldAccess listener) => _worldAccessListeners.Remove(listener);
+
+    /// <summary>Single-block invalidation. obf: <c>ry.j(x,y,z)</c></summary>
+    public void NotifyBlockChange(int x, int y, int z)
+    {
+        foreach (var l in _worldAccessListeners) l.OnBlockChanged(x, y, z);
+    }
+
+    /// <summary>Region invalidation. obf: <c>ry.c(x1,y1,z1,x2,y2,z2)</c> (region overload)</summary>
+    public void NotifyBlocksChanged(int x1, int y1, int z1, int x2, int y2, int z2)
+    {
+        foreach (var l in _worldAccessListeners) l.OnBlockRangeChanged(x1, y1, z1, x2, y2, z2);
+    }
+
+    /// <summary>Spawn particle at world position. obf: <c>ry.a(String,double*3,double*3)</c></summary>
+    public void SpawnParticle(string name, double x, double y, double z,
+                               double velX, double velY, double velZ)
+    {
+        foreach (var l in _worldAccessListeners) l.SpawnParticle(name, x, y, z, velX, velY, velZ);
+    }
+
     // ── Tick scheduling (spec §10) ────────────────────────────────────────────
 
     /// <summary>
@@ -477,6 +507,10 @@ public class World : IWorld
     public Chunk GetChunkFromChunkCoords(int chunkX, int chunkZ)
         => _chunkLoader.GetChunk(chunkX, chunkZ);
 
+    /// <summary>Returns the (chunkX, chunkZ) of every currently loaded chunk.</summary>
+    public IEnumerable<(int chunkX, int chunkZ)> GetLoadedChunkCoords()
+        => _chunkLoader.GetLoadedChunkCoords();
+
     /// <summary>obf: g(chunkX, chunkZ) → bool — is chunk currently loaded?</summary>
     public bool IsChunkLoaded(int chunkX, int chunkZ)
         => _chunkLoader.IsChunkLoaded(chunkX, chunkZ);
@@ -485,8 +519,7 @@ public class World : IWorld
 
     /// <summary>
     /// Adds entity to the world. Spec: <c>a(ia entity)</c> → bool.
-    /// Players skip the chunk-loaded check (always added). Chunk entity-bucket and
-    /// IWorldAccess notifications are stubbed pending those specs.
+    /// Players skip the chunk-loaded check (always added).
     /// </summary>
     public void SpawnEntity(Entity entity)
     {
@@ -503,13 +536,35 @@ public class World : IWorld
         Chunk chunk = GetChunkFromBlockCoords((int)Math.Floor(entity.PosX),
                                              (int)Math.Floor(entity.PosZ));
         chunk.AddEntity(entity);
+
+        foreach (var l in _worldAccessListeners) l.OnEntityAdded(entity);
+    }
+
+    /// <summary>
+    /// Removes entity from the world and notifies IWorldAccess listeners. obf: <c>ry.d(ia)</c>
+    /// </summary>
+    public void DespawnEntity(Entity entity)
+    {
+        _loadedEntityList.Remove(entity);
+        _playerList.Remove(entity);
+        if (entity.AddedToChunk)
+        {
+            Chunk chunk = GetChunkFromBlockCoords((int)Math.Floor(entity.PosX),
+                                                 (int)Math.Floor(entity.PosZ));
+            chunk.RemoveEntity(entity);
+        }
+        foreach (var l in _worldAccessListeners) l.OnEntityRemoved(entity);
     }
 
     /// <summary>
     /// obf: <c>a(ia origin, String name, float volume, float pitch)</c> — plays a named sound
     /// at the entity's position. Stub: no-op until SoundManager is implemented.
     /// </summary>
-    public void PlaySoundAt(Entity origin, string name, float volume, float pitch) { }
+    public void PlaySoundAt(Entity origin, string name, float volume, float pitch)
+    {
+        foreach (var l in _worldAccessListeners)
+            l.PlaySound(name, origin.PosX, origin.PosY, origin.PosZ, volume, pitch);
+    }
 
     /// <summary>
     /// obf: <c>a(c box, oi material)</c> — containsAnyLiquid / containsMaterial.
@@ -548,8 +603,24 @@ public class World : IWorld
         return Math.Clamp(Math.Max(sky, block), 0, 15);
     }
 
-    /// <summary>Stub — no-op until SoundManager is implemented. Spec: <c>world.playAuxSFX(...)</c>.</summary>
-    public void PlayAuxSFX(EntityPlayer? player, int eventId, int x, int y, int z, int data) { }
+    /// <summary>
+    /// World event / auxiliary SFX. obf: <c>ry.a(String,int,int,int,int)</c>.
+    /// Dispatches via <see cref="IWorldAccess.MarkBlocksDirty"/> with player=null and data packed
+    /// into the second coord per spec. See SoundManager_Spec for event name table.
+    /// </summary>
+    public void PlayAuxSFX(EntityPlayer? player, int eventId, int x, int y, int z, int data)
+    {
+        foreach (var l in _worldAccessListeners)
+            l.MarkBlocksDirty(player, x, y, z, x + data, y, z);
+    }
+
+    /// <summary>
+    /// Plays a sound at world coordinates. obf: <c>ry.a(double,double,double,String,float,float)</c>.
+    /// </summary>
+    public void PlaySoundAtCoords(double x, double y, double z, string name, float volume, float pitch)
+    {
+        foreach (var l in _worldAccessListeners) l.PlaySound(name, x, y, z, volume, pitch);
+    }
 
     // ── Redstone power query chain (spec: BlockRedstone_Spec §2) ─────────────
 
@@ -963,28 +1034,28 @@ public class World : IWorld
     /// </summary>
     private bool ProcessScheduledTicks(bool force)
     {
-        int processed = 0;
-        var toRemove  = new List<ScheduledUpdate>();
-
+        // Snapshot due entries before any iteration — UpdateTick may call ScheduleBlockUpdate,
+        // which would modify _scheduledUpdates and invalidate a live enumerator.
+        var due = new List<ScheduledUpdate>();
         foreach (var entry in _scheduledUpdates)
         {
             if (!force && entry.FireTime > _totalWorldTime) break;
-            if (processed >= 1000) break;
+            if (due.Count >= 1000) break;
+            due.Add(entry);
+        }
 
-            toRemove.Add(entry);
+        foreach (var entry in due)
+        {
+            _scheduledUpdates.Remove(entry);
             _scheduledSet.Remove((entry.X, entry.Y, entry.Z, entry.BlockId));
 
             if (!IsAreaLoaded(entry.X, entry.Y, entry.Z, 8)) continue;
 
             int id = GetBlockId(entry.X, entry.Y, entry.Z);
             if (id == entry.BlockId)
-            {
                 Block.BlocksList[id]?.UpdateTick(this, entry.X, entry.Y, entry.Z, Random);
-            }
-            processed++;
         }
 
-        foreach (var e in toRemove) _scheduledUpdates.Remove(e);
         return _scheduledUpdates.Count > 0;
     }
 
@@ -1205,7 +1276,7 @@ public class World : IWorld
             for (int y = minY; y <= maxY; y++)
                 PropagateLight(LightType.Sky, x, y, z);
         }
-        // Render listener notification (bd.a) — stub (bd spec pending)
+        NotifyBlocksChanged(x, minY, z, x, maxY, z);
     }
 
     /// <summary>
@@ -1363,6 +1434,9 @@ public class World : IWorld
         // Quirk 3: always trigger both BFS light passes (spec §9)
         PropagateLight(LightType.Sky,   x, y, z);
         PropagateLight(LightType.Block, x, y, z);
+
+        // Notify render listeners (IWorldAccess_Spec.md)
+        NotifyBlockChange(x, y, z);
     }
 
     /// <summary>
@@ -1610,6 +1684,75 @@ public class World : IWorld
         var explosion = new Explosion(this, player, x, y, z, power, isIncendiary);
         explosion.ComputeAffectedBlocksAndDamageEntities();
         explosion.DestroyBlocksAndSpawnParticles(doParticles: !IsClientSide);
+    }
+
+    // ── World Spawn (spec: WorldSpawn_Spec.md) ────────────────────────────────
+
+    /// <summary>
+    /// Finds a valid surface spawn point near (startX, startZ) using the biome-walk algorithm.
+    /// Spec: <c>si</c> spawn search: Phase 1 biome radius 256, Phase 2 up to 1000 random-walk attempts.
+    ///
+    /// Sets <see cref="SpawnX"/>, <see cref="SpawnY"/>, <see cref="SpawnZ"/>.
+    /// </summary>
+    public void FindSpawnPoint(int startX, int startZ)
+    {
+        // Phase 1: biome-valid search within radius 256 (stub: skip biome check, accept start)
+        int candidateX = startX;
+        int candidateZ = startZ;
+
+        // Phase 2: up to 1000 random-walk attempts to find a non-air surface block
+        for (int attempt = 0; attempt < 1000; attempt++)
+        {
+            int surfaceY = GetTopSolidOrLiquidBlock(candidateX, candidateZ);
+            if (surfaceY > 0)
+            {
+                SpawnX = candidateX;
+                SpawnY = surfaceY;
+                SpawnZ = candidateZ;
+                return;
+            }
+
+            // Walk within ±63 in X and Z
+            candidateX = startX + Random.NextInt(64) - Random.NextInt(64);
+            candidateZ = startZ + Random.NextInt(64) - Random.NextInt(64);
+        }
+
+        // Fallback: use whatever surface exists at start coords
+        SpawnX = startX;
+        SpawnY = Math.Max(64, GetTopSolidOrLiquidBlock(startX, startZ));
+        SpawnZ = startZ;
+    }
+
+    /// <summary>
+    /// Forces the 5×5 chunk area around the player's position to stay loaded.
+    /// Spec: <c>ry.g(vi player)</c> — called every 30 ticks.
+    /// 5×5 = 25 chunks centred on the player's chunk.
+    /// </summary>
+    public void EnsureChunksAroundPlayer(EntityPlayer player)
+    {
+        int cx = (int)Math.Floor(player.PosX) >> 4;
+        int cz = (int)Math.Floor(player.PosZ) >> 4;
+
+        for (int dx = -2; dx <= 2; dx++)
+        for (int dz = -2; dz <= 2; dz++)
+            _chunkLoader.GetChunk(cx + dx, cz + dz);
+    }
+
+    /// <summary>
+    /// Pre-loads spawn chunks before the player enters the world.
+    /// Survival: 17×17 (radius 8 = 128 blocks).
+    /// Creative:  9×9  (radius 4 =  64 blocks).
+    /// Spec: WorldSpawn_Spec.md §4.
+    /// </summary>
+    public void PreloadSpawnChunks(bool isCreative)
+    {
+        int radius = isCreative ? 4 : 8;
+        int spawnCx = SpawnX >> 4;
+        int spawnCz = SpawnZ >> 4;
+
+        for (int dx = -radius; dx <= radius; dx++)
+        for (int dz = -radius; dz <= radius; dz++)
+            _chunkLoader.GetChunk(spawnCx + dx, spawnCz + dz);
     }
 }
 

@@ -134,7 +134,7 @@ public sealed class ChunkProviderEnd : IChunkLoader
 
         // Trilinear interpolation: 3×33×3 → 16×128×16 (spec §3.3 Step 4)
         // Each grid cell covers 8 blocks in XZ and 4 blocks in Y.
-        int worldBitA = 7; // log2(128) - log2(16) ... actually just use flat index
+
         for (int gx = 0; gx < GridX - 1; gx++)
         for (int gz = 0; gz < GridZ - 1; gz++)
         for (int gy = 0; gy < gridY - 1; gy++)
@@ -215,8 +215,7 @@ public sealed class ChunkProviderEnd : IChunkLoader
             // double var18 = _bufG[xzIndex] / 8000.0;
             // ... normalisation ...
             // var18 = 0.0;  ← forced to zero in original
-            double var18 = 0.0;
-
+            // var18 forced to 0.0 in original — dead code per spec §3.2
             var16 += 0.5; // now in [0.5, 1.5]
 
             // Circular island shaping: grid coords are (gx+baseX, gz+baseZ)

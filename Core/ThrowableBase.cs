@@ -188,7 +188,7 @@ public abstract class ThrowableBase : Entity
 
     // ── Helpers ───────────────────────────────────────────────────────────────
 
-    protected double GetEyeHeight() => Owner?.GetEyeHeight() ?? 0.5;
+    public override double GetEyeHeight() => Owner?.GetEyeHeight() ?? 0.5;
 
     // ── NBT (spec §2.5) ──────────────────────────────────────────────────────
 

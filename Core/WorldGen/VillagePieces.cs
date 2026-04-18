@@ -597,11 +597,13 @@ public static class VillagePieceRegistry
 public sealed class VillageComponent : StructurePiece
 {
     public readonly int CentreX, CentreZ;
-    public readonly int Depth;
+    public new readonly int Depth;
     public readonly List<WeightedVillagePiece> PiecePool;
     public readonly Queue<StructurePiece> BuildingQueue = new();
     public readonly Queue<StructurePiece> RoadQueue     = new();
-    private WeightedVillagePiece? _lastPicked;
+#pragma warning disable CS0169
+    private WeightedVillagePiece? _lastPicked; // reserved for future weighted-rotation logic
+#pragma warning restore CS0169
 
     public VillageComponent(int centreX, int centreY, int centreZ, int depth, JavaRandom rng)
         : base(StructureBoundingBox.FromOrigin(centreX - 1, centreY, centreZ - 1, 2, 1, 2, 0), 0, depth)

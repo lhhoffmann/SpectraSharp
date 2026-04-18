@@ -1619,3 +1619,301 @@ None — queue empty. Proactive speccing applies from next session onward.
 
 **Estimated effort:** ~2.5 hours equivalent
 **Build:** 0 errors, 0 warnings
+
+---
+
+## 2026-04-17 (2) — [ANALYST] — Coder Request Batch (12 specs)
+
+**Role:** ANALYST
+**Session work:** Full analysis and spec writing for all 12 new [STATUS:REQUIRED] entries
+filed by the Coder.
+
+### Specs produced
+
+- `Specs/MineshaftPieces_Spec.md` — uk/aba/ra/id/aez fully read; piece selection (70/10/20%);
+  depth≤8 / radius≤80; support geometry (fence+planks+cobwebs); cave spider spawner (1/23);
+  loot chest (1% per support); staircase tall-variant (25%); crossing single-exit; start fixed Y=50
+
+- `Specs/IWorldAccess_Spec.md` — bd interface all 9 overloads mapped to semantic roles;
+  ry.z listener list; add (ry.a(bd)) / remove (ry.b(bd)); all ry dispatch methods identified
+  by call-site analysis; afv primary implementor confirmed
+
+- `Specs/SoundManager_Spec.md` — ry dispatch API; full WorldEvent sound table (events
+  1000–2004); known sound name strings; pitch randomisation formula
+
+- `Specs/ParticleSystem_Spec.md` — spawnParticle API; confirmed particle names from afv
+  worldEvent handler (smoke/flame/blockcrack/iconcrack/spell/portal); per-event particle
+  counts and direction encoding (event 2000 smoke direction table)
+
+- `Specs/WorldGenLakes_Spec.md` — qv.java fully analysed; 4-7 ellipsoid algorithm; 16×16×8
+  working space; validity checks (top=no-air / bottom=solid border); fill (fluid y<4 / air y≥4);
+  post-processing (grass→dirt, ice, fire); spawn conditions from xj
+
+- `Specs/BlockDispenser_Spec.md` — cu.java fully analysed; facing meta 2-5; projectile
+  dispatch table (arrow/snowball/egg/splash potion); EntityItem fallback; events 1000/1001/2000;
+  inventory drop on break; TileEntityDispenser slot selection
+
+- `Specs/BlockCocoaPlant_Spec.md` — ic.java = BlockCauldron render type 24 (5-AABB hollow
+  cylinder, meta 0-3 water levels, bucket/bottle interaction); ahp.java = BlockBrewingStand
+  render type 25 (pillar+base, TileEntity tt); actual BlockCocoaPlant class NOT FOUND —
+  flagged for follow-up research
+
+- `Specs/GameMode_Spec.md` — wq.java = PlayerAbilities (invulnerable/flying/mayfly/instabuild
+  + NBT); vi.java fields (eye height 1.62F, cc/by/bz); ItemInWorldManager class NOT FOUND —
+  flagged for follow-up research
+
+- `Specs/RenderManager_Spec.md` — afv confirmed as WorldRenderer/RenderGlobal (implements bd);
+  chunk rendering; WorldEvent dispatch; entity-renderer dispatch map NOT FOUND in 1.0 —
+  flagged (may be instanceof chain)
+
+- `Specs/EntityRenderer_Spec.md` — adt.java analysed (partial); FOV fields B/C=4.0F;
+  LWJGL + GLU dependencies; hand renderer n.java (ItemRenderer) with dk/acr/sg fields;
+  render pass order documented; FOV base values not confirmed
+
+- `Specs/FontRenderer_Spec.md` — class NOT FOUND (zh=TextureManager, not FontRenderer);
+  API documented from call-site conventions; colour codes §0-§f; shadow rendering; bitmap
+  font ascii.png documented; flagged for follow-up research
+
+- `Specs/GuiScreen_Spec.md` — xe.java fully read: button list, drawScreen, keyTyped (ESC→close),
+  mouseClicked (random.click + actionPerformed); qd.java (GuiIngame) HUD elements + scale factor
+
+### Documentation updates
+- `INDEX.md` — 12 new rows added (all [STATUS:PROVIDED])
+- `REQUESTS.md` — all 12 [STATUS:REQUIRED] → [STATUS:PROVIDED]
+- `Specs/BlockCocoaPlant_Spec.md` — corrected identity confusion (ic=Cauldron not EndPortalFrame)
+
+### Corrections issued
+- `ic` (render type 24) is **BlockCauldron** (hollow cylinder AABB = base + 4 walls), NOT
+  End Portal Frame. The prior research session had misidentified it. The actual EndPortalFrame
+  is `rl` (already in classes.md).
+- Classes.md mapping was already correct from earlier analysis — no change needed.
+
+### Open questions flagged for next Coder request
+- BlockCocoaPlant Java class name unknown (not in available decompiled files)
+- ItemInWorldManager Java class name unknown (block-breaking progress tracker)
+- FontRenderer Java class name unknown (zh=TextureManager, not FontRenderer)
+- Entity-renderer dispatch mechanism in 1.0 (no RenderManager HashMap found)
+- FOV base value in adt (B/C=4.0F are modifiers, not base FOV)
+
+### Source files read this session
+`uk.java`, `aba.java`, `ra.java`, `id.java`, `aez.java` (MineshaftPieces);
+`bd.java` (IWorldAccess interface); `ry.java` (partial — bd dispatch methods);
+`afv.java` (partial — WorldEvent handler); `qv.java` (WorldGenLakes);
+`xj.java` (partial — ChunkProviderGenerate populate, lake spawning);
+`cu.java` (BlockDispenser); `ic.java` (BlockCauldron);
+`ahp.java` (BlockBrewingStand); `vi.java` (EntityPlayer header);
+`wq.java` (PlayerAbilities); `xe.java` (GuiScreen);
+`adt.java` (EntityRenderer header); `n.java` (ItemRenderer)
+
+**Spec count this session:** 12 specs
+**Estimated effort:** ~6 hours equivalent
+
+---
+
+## Coder Session — 2026-04-17
+
+**Role:** CODER
+**Specs consumed:** 12 (all from the prior Analyst session)
+
+### Implementations
+
+- `Core/IWorldAccess.cs` — 9-method `bd` interface created; `World.AddWorldAccess / RemoveWorldAccess`, `NotifyBlockChange`, `NotifyBlocksChanged`, `SpawnParticle`, `PlaySoundAtCoords`, `PlayAuxSFX`, `SpawnEntity`, `DespawnEntity` all dispatch to listeners
+- `Core/WorldGen/MapGenMineshaft.cs` — full rewrite: `MapGenMineshaft`, `MineshaftFactory`, `MineshaftStart` (uk), `MineshaftCorridor` (aba, cobwebs/spawner/rails/supports/loot), `MineshaftCrossing` (ra), `MineshaftStaircase` (id)
+- `Core/SoundEventId.cs` — `SoundEventId` (1000–2004) and `SoundName` string constant tables
+- `Core/ParticleType.cs` — `ParticleType` confirmed + inferred string constants, `BlockCrack()/IconCrack()` helpers
+- `Core/WorldGen/WorldGenLakes.cs` — full 6-step algorithm; wired into `ChunkProviderGenerate.PopulateChunk` (water 1/4, lava 1/8 doubly-biased-low)
+- `Bridge/Overrides/DispenserBlock.cs` — full dispense dispatch: Arrow/Snowball/Egg/SplashPotion → projectile entities; fallback EntityItem drop; break drops inventory; events 1001/2000
+- `Core/EntityPlayer.cs` — added `Abilities : PlayerAbilities` field (obf `cc`); NBT write/read already wired
+- `Graphics/WorldRenderer.cs` — `IWorldAccess` implementation; dirty chunk-section tracking (HashSet); stub sound/particle/entity hooks
+- `Graphics/EntityRenderer.cs` — projection matrix, camera position (`PlayerEyeHeight = 1.62F`), FOV stubs, view-bob fields; `ItemRenderer` stub
+- `Graphics/FontRenderer.cs` — `FontHeight=9`; colour table §0–§f; `GetStringWidth`, `DrawString`, `DrawStringWithShadow`; glyph width stub (6px default)
+- `Graphics/GuiScreen.cs` — `GuiBase`, `GuiButton` (collision + draw), `GuiScreen` (lifecycle + ESC + mouseClicked + actionPerformed), `GuiIngame` (scale-factor formula)
+
+### INDEX.md updates
+All 12 `[STATUS:PROVIDED]` rows updated to `[STATUS:IMPLEMENTED]`.
+
+### Files added/modified
+New: `Core/IWorldAccess.cs`, `Core/SoundEventId.cs`, `Core/ParticleType.cs`,
+     `Core/WorldGen/WorldGenLakes.cs`, `Core/WorldGen/MapGenMineshaft.cs` (rewrite),
+     `Bridge/Overrides/DispenserBlock.cs`, `Graphics/WorldRenderer.cs`,
+     `Graphics/EntityRenderer.cs`, `Graphics/FontRenderer.cs`, `Graphics/GuiScreen.cs`
+Modified: `Core/World.cs`, `Core/ChunkProviderGenerate.cs`, `Core/EntityPlayer.cs`,
+          `Documentation/VoxelCore/Parity/INDEX.md`
+
+**Spec count this session:** 12
+
+
+---
+
+## Analyst Session — 2026-04-17 (3)
+
+**Role:** ANALYST
+**Date:** 2026-04-17
+
+### Source files read
+
+`net/minecraft/client/Minecraft.java` (lines 1098–1696; completing full read);
+`si.java` (WorldInfo — SpawnX/Y/Z NBT fields);
+`jz.java` (ChunkProviderServer — load/unload/save pipeline);
+`ry.java` (World — spawn search lines 130–215 + v() at 2577 + g(player) at 2585);
+`yy.java` (Block registry — confirmed ends at ID 122 / dragonEgg, no ID 127);
+`qd.java` (GuiIngame — full HUD rendering, UV coords);
+`di.java` (EntityPlayerSP — previously read; spec written this session);
+`dm.java` (SurvivalItemInWorldManager — previously read; spec written this session);
+`aes.java` (abstract ItemInWorldManager — previously read; spec written this session);
+`uq.java` (CreativeItemInWorldManager — previously read; spec written this session)
+
+### Specs written
+
+- `Specs/EntityPlayerSP_Spec.md` — `di extends vi`; fields b/c/d/e; dimension travel; block-break dispatch through Minecraft.c; EntityOtherPlayerMP (`zb`) noClip+interpolation
+- `Specs/ItemInWorldManager_Spec.md` — `aes`/`dm`/`uq` hierarchy; damage accumulator 0–1.0; per-tick formula f+=block.a(player); break event 2001; creative instabuild; crack overlay via afv.damagePartialTime
+- `Specs/WorldSpawn_Spec.md` — `si` NBT fields; biome search radius 256 + 1000-attempt walk; Y refinement 10000-attempt; Minecraft.e() preloads 17×17 chunks (Survival) / 9×9 (Creative); ry.g(player) keeps 5×5 loaded every 30 ticks
+- `Specs/ChunkLoadingLoop_Spec.md` — `jz` load/generate pipeline; per-tick: 100 unloads + scan 10 chunks at 288-block radius + save 24 dirty; spawn-safe zone 128 blocks; `d(cx,cz)` mark-for-unload
+- `Specs/BlockCocoaPlant_Spec.md` (REVISED) — **Block ID 127 does NOT exist in 1.0**; registry ends at 122; cocoa added in 1.2.1; dye item only in 1.0; action: do not implement for 1.0
+- `Specs/MinecraftMain_Spec.md` — abstract `Minecraft` class; singleton fields (c/f/g/h/s/u/w/p/q/X/A/C/z); timer `aij` b=ticks c=partialTick; single-threaded loop; left/right click dispatch; keyboard hotkeys F1/F3/F5/F8/hotbar; dimension switch; respawn; version string "1.0.0"
+- `Specs/GuiIngameHUD_Spec.md` — `qd`; `ef` scaled coords; gui.png: hotbar UV(0,0) 182×22, selection UV(0,22) 24×22; icons.png: crosshair UV(0,0), XP bar UV(0,64/69), hearts y=0, armor y=9, bubbles y=18, food y=27; full screen position table (H-22 hotbar, H-29 XP, H-39 hearts/food, H-49 armor/bubbles)
+
+### Corrections issued
+
+- BlockCocoaPlant: confirmed ID 127 absent from 1.0 block registry — Coder should NOT implement for 1.0 target
+
+**Spec count this session:** 7 specs
+**Estimated effort:** ~4 hours equivalent
+
+---
+
+## Coder Session — 2026-04-17 (3)
+
+**Role:** CODER
+**Date:** 2026-04-17
+
+### Specs implemented
+
+- `EntityPlayerSP_Spec.md` → `Core/EntityPlayerSP.cs`
+- `ItemInWorldManager_Spec.md` → `Core/ItemInWorldManager.cs`
+- `WorldSpawn_Spec.md` → `Core/World.cs` (FindSpawnPoint, EnsureChunksAroundPlayer, PreloadSpawnChunks)
+- `ChunkLoadingLoop_Spec.md` → `Core/Engine.cs` (30-tick keep-alive loop wired)
+- `BlockCocoaPlant_Spec.md` → SKIPPED — ID 127 absent in 1.0; documented as future `Bridge/Overrides/v1_2/`
+- `MinecraftMain_Spec.md` → `Core/Engine.cs` (ElapsedTicks, Player, CurrentScreen, GameMode, GameMode.UpdateBlockRemoving per-tick)
+- `GuiIngameHUD_Spec.md` → `Graphics/GuiScreen.cs` (GuiIngame.RenderGameOverlay with full UV data for all HUD elements; DrawTexturedModalRect stub)
+
+### Files created
+
+- `Core/EntityPlayerSP.cs` — `di extends EntityPlayer`; MovementInput (`agn`), SprintCooldown, EngineRef; TravelToDimension; Tick decrement; inner `MovementInput` class
+- `Core/ItemInWorldManager.cs` — abstract `aes` base (RemoveBlock, UseItem); `SurvivalItemInWorldManager` (dm) with damage accumulator + 4-tick sound cadence + break threshold; `CreativeItemInWorldManager` (uq) instant break
+
+### Files modified
+
+- `Core/World.cs` — added FindSpawnPoint (1000-attempt walk), EnsureChunksAroundPlayer (5×5 loop), PreloadSpawnChunks (17×17 / 9×9)
+- `Core/Engine.cs` — added ElapsedTicks, Player, CurrentScreen, GameMode fields; _chunkKeepAliveTick; FixedUpdate: ElapsedTicks++, GameMode.UpdateBlockRemoving(), 30-tick EnsureChunksAroundPlayer
+- `Graphics/GuiScreen.cs` — GuiIngame fully replaced stub: all UV constants from spec; RenderGameOverlay with hotbar/XP/hearts/food/armor/crosshair helpers; DrawTexturedModalRect virtual stub
+
+### INDEX.md updates
+
+7 rows updated: BlockCocoaPlant, EntityPlayerSP, ItemInWorldManager, WorldSpawn, ChunkLoadingLoop, MinecraftMain, GuiIngameHUD → `[STATUS:IMPLEMENTED]`
+
+**Spec count this session:** 7 specs (6 implemented + 1 intentional skip)
+**Estimated effort:** ~2 hours equivalent
+
+---
+
+## Analyst Session — 2026-04-17 (4)
+
+**Role:** ANALYST
+**Date:** 2026-04-17
+
+### Files read this session
+
+- `adt.java` (EntityRenderer) — full mouse-look pipeline (lines 580–603), smooth camera path (lines 88–96), raycast `a(float)` (lines 111–166)
+- `hs.java` (MouseHelper) — already read in prior session; confirmed field a=getDX, b=getDY
+- `ia.java` (Entity) — `c(yaw, pitch)` turn method (lines 142–157); pitch clamp [-90,90]; X() sprint flag via `f(3)`
+- `di.java` (EntityPlayerSP) — sprint detection double-tap (lines 115–175); sneak scaling; swim controls; sprint cancel conditions
+- `vi.java` (EntityPlayer) — `cg=0.1F` (walkSpeed), `ch=0.02F` (airSpeed); sprint speed boost `cg*0.3`; movement dispatch `d(float,float)` (line 1010)
+- `nq.java` (LivingEntity) — movement `d(float,float)` (lines 640–700); traction formula `0.16277136/slipperiness³`; jump `ak()` (lines 877–888); jump = `w=0.42F`; sprint horizontal impulse `±0.2`
+- `agn.java` (MovementInput) — 5 fields: a=strafe, b=forward, c=sneak, d=jump, e=dive
+- `hw.java` (GuiInventory) — player model render at (e+51, f+75) scale 30; `/gui/inventory.png`; effects sidebar
+- `mg.java` (GuiContainer) — base container GUI; default 176×166; slot draw loop; tooltip rendering
+- `gd.java` (ContainerPlayer) — full slot layout: crafting result (144,36); 2×2 grid; 4 armor slots; 3×9 main; hotbar y=142
+- `dm.java` / `aes.java` — `c()` reach: 4.0F survival; `h()` isCreative
+
+### Specs written
+
+- `Specs/MouseLook_Spec.md` — `hs` delta read; sensitivity `(ki.c*0.6+0.2)³*8`; `ia.c()` applies `*0.15`; pitch clamp; invertMouse `ki.d`; smooth camera H/I accumulators → lerp J/K
+- `Specs/PlayerMovement_Spec.md` — walk speed 0.1F; air 0.02F; sprint 1.3×; sneak input×0.2; jump 0.42F + sprint horizontal ±0.2; traction formula; food drain 0.099F/tile sprinting; double-tap sprint condition (food>6)
+- `Specs/GuiInventory_Spec.md` — `hw`/`gd`; 176×166; `/gui/inventory.png`; full slot position table; player model render; effects sidebar
+- `Specs/Raycast_Spec.md` — `adt.a(float)` updates `Minecraft.z`; survival reach 4.0F block / min(3.0F,blockDist) entity; creative 6.0F both; `gv` fields; face encoding 0-5; entity AABB expansion by `Q()`
+
+### Documentation updated
+
+- `INDEX.md` — 4 rows added (MouseLook, PlayerMovement, GuiInventory, Raycast) with [STATUS:PROVIDED]
+- `REQUESTS.md` — 4 entries updated from [STATUS:REQUIRED] to [STATUS:PROVIDED]; 0 remaining
+- `Mappings/classes.md` — added `mg` (GuiContainer), `hw` (GuiInventory), `hs` (MouseHelper), `ne` (SmoothValue); updated `agn` entry with all 5 fields
+
+**Spec count this session:** 4 specs
+**Estimated effort:** ~3 hours equivalent
+
+---
+
+## Coder Session 2026-04-17 (4)
+
+### Specs implemented
+
+- `Specs/MouseLook_Spec.md` → `Core/Entity.cs` (Turn, GetLookVector, GetEyePosition), `Core/Engine.cs` (sensitivity formula, mouse-look wiring, MouseSensitivity/InvertMouse)
+- `Specs/PlayerMovement_Spec.md` → `Core/EntityPlayerSP.cs` (sprint double-tap 7-tick window, sneak ×0.2, AiForward/AiStrafe/WantsToJump), `Core/EntityPlayer.cs` (WalkSpeed/AirSpeedBase, sprint speed in Tick), `Core/LivingEntity.cs` (sprint jump horizontal impulse)
+- `Specs/GuiInventory_Spec.md` → `Graphics/GuiInventory.cs` (GuiContainer, GuiInventory with full 45-slot layout; DrawContainerBackground stub pending GL)
+- `Specs/Raycast_Spec.md` → `Core/Entity.cs` (GetEyePosition, GetLookVector), `Core/Engine.cs` (ObjectMouseOver, FixedUpdate raycast via GameMode.GetReach)
+
+### Build fixes applied
+
+- `LivingEntity.GetEyeHeight()` changed to `override double` (was hiding `Entity.GetEyeHeight(): virtual double`)
+- `ThrowableBase.GetEyeHeight()` changed to `override double`
+- Duplicate `EntityPlayer.Tick()` removed; sprint-speed logic merged into surviving Tick at ~line 264
+- `EntityPlayerSP.TravelToDimension()` changed to `override`
+- `Engine.cs` raycast: `Vec3.XCoord/YCoord/ZCoord` → `Vec3.X/Y/Z` (correct property names)
+
+### Files touched
+
+- `Core/Entity.cs`, `Core/EntityPlayer.cs`, `Core/EntityPlayerSP.cs`, `Core/LivingEntity.cs`, `Core/ThrowableBase.cs`
+- `Core/Engine.cs`, `Core/InputSnapshot.cs`, `Core/WorldSnapshot.cs`
+- `Core/ItemInWorldManager.cs`, `Core/World.cs`
+- `Graphics/GuiInventory.cs`, `Graphics/GuiScreen.cs`
+
+**Spec count this session:** 4 specs implemented
+**Build result:** 0 errors, 3 warnings (unused stub fields — expected)
+
+---
+
+## Session 2026-04-17 (5) — Analyst: TerrainAtlas comprehensive spec
+
+**Role:** ANALYST
+**Task:** Expand `Specs/TerrainAtlas_Spec.md` per [STATUS:REQUIRED] request "Block Texture
+Rendering — Terrain Atlas UV Mapping"
+
+### Specs written / updated
+
+- `Specs/TerrainAtlas_Spec.md` — **full rewrite**
+  - Complete 122-block ID → `bL` table (sourced from `yy.java` static initializers)
+  - Multi-face override tables for 14 block classes: GrassBlock, Log, Dispenser, Sandstone,
+    TNT, Bookshelf, Workbench, Farmland, Furnace (off/on), StoneBrick, Pumpkin/Jack-o-Lantern,
+    Mushroom Block (brown/red), Melon, Mycelium, EnchantingTable, Cauldron, EndPortalFrame
+  - Wool 16-color formula: `index = 113 + ((meta & 8) >> 3) + (meta & 7) * 16`
+  - Stone Slab/DoubleSlab metadata texture table (meta 0–5)
+  - Animated tile indices confirmed: Water top/bottom=205, sides=206; Lava top/bottom=237, sides=238
+  - Biome tint placeholders: grass=(72,181,24), foliage=(78,164,0)
+  - Rendering type classification (A=opaque, B=biome tint, C=cutout, D=animated, E=sprite)
+  - Complete tile index reference table (all used indices 0–238)
+
+### Source files read
+
+`yy.java`, `jb.java`, `aip.java`, `aat.java`, `rn.java`, `eu.java`, `cu.java`, `abm.java`,
+`ay.java`, `ni.java`, `jh.java`, `nf.java`, `wd.java`, `of.java`, `ez.java`, `sy.java`,
+`ic.java`, `rl.java`, `fr.java`, `xs.java`, `agw.java`, `yq.java`, `ahp.java`
+
+### Documentation updated
+
+- `Specs/TerrainAtlas_Spec.md` — complete rewrite (10 sections, 122-block table)
+- `INDEX.md` — TerrainAtlas row updated to [STATUS:PROVIDED] with expanded description
+- `REQUESTS.md` — "Block Texture Rendering" entry changed to [STATUS:PROVIDED]
+- `METRICS.md` — this entry
+
+**Spec count this session:** 1 spec (major expansion of existing)

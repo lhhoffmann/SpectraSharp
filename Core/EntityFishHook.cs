@@ -181,7 +181,7 @@ public sealed class EntityFishHook : Entity
             (blockHit == null || hitDist < start.DistanceTo(blockHit.HitVec)))
         {
             // 0 damage — just attaches (spec §5.8)
-            hitEntity.AttackEntityFrom(DamageSource.Thrown(this, Owner), 0);
+            hitEntity.AttackEntityFrom(DamageSource.Thrown(this, Owner!), 0);
             HookedEntity = hitEntity;
         }
         else if (blockHit != null)

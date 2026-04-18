@@ -8,32 +8,18 @@ namespace SpectraEngine.Core.WorldGen;
 /// Placement algorithm (spec §2.1):
 ///   1. Per chunk: 1% base chance (nextInt(100) == 0)
 ///   2. Then: nextInt(80) &lt; max(|chunkX|, |chunkZ|) — increases with distance from origin
-///   Result: no mineshafts near 0,0; up to 1% at distance ≥ 80 chunks.
+///   Result: no mineshafts near 0,0; up to 1% at distance >= 80 chunks.
 ///
-/// Structure: corridor-based tunnel system with wooden supports, rails, cobwebs, torches,
-/// cave spider spawners, and chest wagons (loot table in spec §2.5).
+/// Piece types (MineshaftPieces_Spec.md):
+///   - uk  (MineshaftStart):     starting node; spawns corridor exits along walls
+///   - aba (MineshaftCorridor):  70% — 10/15/20 block tunnel with supports, rails, cobwebs
+///   - ra  (MineshaftCrossing):  10% — 3×8×8 junction with 1 forward exit
+///   - id  (MineshaftStaircase): 20% — 5×3×5 (75%) or 5×7×5 (25%) with 3 exits
 ///
-/// Piece types:
-///   - aba (MineshaftCorridor): primary piece; 10-30 long, 3 wide, 3 high
-///   - id  (MineshaftRoom): 20% chance; stub
-///   - ra  (MineshaftStairs): 10% chance; stub
-///
-/// Note: Full piece-by-piece geometry (aba/id/ra) is complex; aba is the primary piece.
-/// The other pieces (id/ra) are stubbed as dead ends pending a dedicated mineshaft piece spec.
-///
-/// Source spec: Documentation/VoxelCore/Parity/Specs/WorldGenStructures_Spec.md §2
+/// Source spec: Documentation/VoxelCore/Parity/Specs/MineshaftPieces_Spec.md
 /// </summary>
 public sealed class MapGenMineshaft
 {
-    // Block ID constants
-    private const int WoodPlanksId   = 5;
-    private const int WoodFenceId    = 85;
-    private const int RailId         = 66;
-    private const int CobwebId       = 30;
-    private const int TorchId        = 50;
-    private const int MobSpawnerId   = 52;
-    private const int ChestId        = 54;
-
     private long _worldSeed;
     private readonly JavaRandom _structureRng = new(0);
 
@@ -42,12 +28,8 @@ public sealed class MapGenMineshaft
 
     public void SetWorldSeed(long seed) => _worldSeed = seed;
 
-    // ── Generate (populate hook) (spec §1) ───────────────────────────────────
+    // ── Generate (populate hook) ──────────────────────────────────────────────
 
-    /// <summary>
-    /// Places mineshaft blocks in the given chunk column.
-    /// Checks a 3×3 neighbourhood of chunk origins for shafts that may overlap.
-    /// </summary>
     public void Generate(World world, int chunkX, int chunkZ, JavaRandom rng)
     {
         for (int sx = chunkX - 1; sx <= chunkX + 1; sx++)
@@ -56,7 +38,7 @@ public sealed class MapGenMineshaft
             long key = (long)sx << 32 | (uint)sz;
             if (!_cache.TryGetValue(key, out var pieces))
             {
-                pieces = TryGenerateMineshaft(world, sx, sz);
+                pieces = TryGenerateMineshaft(sx, sz);
                 _cache[key] = pieces;
             }
 
@@ -72,22 +54,22 @@ public sealed class MapGenMineshaft
         }
     }
 
-    // ── Placement check (spec §2.1) ───────────────────────────────────────────
+    // ── Placement check ───────────────────────────────────────────────────────
 
     private bool ShouldGenerateHere(int chunkX, int chunkZ)
     {
         long seed = (long)chunkX * 341873128712L ^ (long)chunkZ * 132897987541L ^ _worldSeed;
         _structureRng.SetSeed(seed);
 
-        if (_structureRng.NextInt(100) != 0) return false; // 1% base chance
+        if (_structureRng.NextInt(100) != 0) return false;
 
         int distFactor = Math.Max(Math.Abs(chunkX), Math.Abs(chunkZ));
         return _structureRng.NextInt(80) < distFactor;
     }
 
-    // ── Structure construction (spec §2.2) ────────────────────────────────────
+    // ── Structure construction ────────────────────────────────────────────────
 
-    private List<StructurePiece> TryGenerateMineshaft(World world, int chunkX, int chunkZ)
+    private List<StructurePiece> TryGenerateMineshaft(int chunkX, int chunkZ)
     {
         if (!ShouldGenerateHere(chunkX, chunkZ)) return [];
 
@@ -96,180 +78,322 @@ public sealed class MapGenMineshaft
         int orientation = _structureRng.NextInt(4);
 
         var pieces = new List<StructurePiece>();
-        var start = new MineshaftCorridor(originX, 50, originZ, orientation, 0, _structureRng);
+        var start  = new MineshaftStart(originX, 50, originZ, orientation, _structureRng);
         pieces.Add(start);
 
-        // Expand exits recursively up to depth 8, radius 80 (spec §2.3)
-        ExpandExits(pieces, start, originX, originZ, _structureRng, 1);
+        start.ExpandExits(pieces, originX, originZ, _structureRng, 1);
 
         return pieces;
     }
+}
 
-    private void ExpandExits(List<StructurePiece> pieces, MineshaftCorridor piece,
-                              int rootX, int rootZ, JavaRandom rng, int depth)
+// ── MineshaftPieceFactory (aez) helpers ──────────────────────────────────────
+
+internal static class MineshaftFactory
+{
+    private const int MaxDepth  = 8;
+    private const int MaxRadius = 80;
+
+    internal static StructurePiece? Create(
+        List<StructurePiece> pieces,
+        int x, int y, int z,
+        int orientation, int depth,
+        int rootX, int rootZ,
+        JavaRandom rng)
     {
-        if (depth > 8) return;
+        if (depth > MaxDepth) return null;
+        if (Math.Abs(x - rootX) > MaxRadius || Math.Abs(z - rootZ) > MaxRadius) return null;
 
-        foreach (var (ex, ey, ez, eOrientation) in piece.GetExits())
+        int choice = rng.NextInt(100);
+        StructurePiece next = choice switch
         {
-            // Radius guard (spec §2.3)
-            if (Math.Abs(ex - rootX) > 80 || Math.Abs(ez - rootZ) > 80) continue;
+            < 70 => new MineshaftCorridor(x, y, z, orientation, depth, rng),
+            < 80 => new MineshaftCrossing(x, y, z, orientation, depth),
+            _    => new MineshaftStaircase(x, y, z, orientation, depth, rng),
+        };
 
-            int choice = rng.NextInt(100);
-            StructurePiece? next = null;
+        // Overlap check
+        if (pieces.Any(p => p.BBox.Intersects(next.BBox))) return null;
 
-            if (choice >= 80)        // 20% room (stub — just a dead-end corridor)
-                next = new MineshaftCorridor(ex, ey, ez, eOrientation, depth, rng);
-            else if (choice >= 70)   // 10% staircase (stub — same as corridor)
-                next = new MineshaftCorridor(ex, ey, ez, eOrientation, depth, rng);
-            else                     // 70% corridor
-                next = new MineshaftCorridor(ex, ey, ez, eOrientation, depth, rng);
+        return next;
+    }
+}
 
-            if (next == null) continue;
+// ── MineshaftStart (uk) ───────────────────────────────────────────────────────
 
-            // Check bounding-box overlap (spec §2.3 — if chosen piece cannot fit)
-            bool overlaps = pieces.Any(p => p.BBox.Intersects(next.BBox));
-            if (overlaps) continue;
+/// <summary>
+/// Replica of <c>uk</c> (MineshaftStart) — root node; spawns corridor exits along walls.
+/// BBox: 7–12 wide, 4–9 high, 7–12 deep. Y start = 50. Spec §MineshaftStart.
+/// </summary>
+internal sealed class MineshaftStart : StructurePiece
+{
+    public MineshaftStart(int ox, int oy, int oz, int orientation, JavaRandom rng)
+        : base(CreateBBox(ox, oy, oz, rng), orientation, 0) { }
 
-            pieces.Add(next);
-            if (next is MineshaftCorridor corr)
-                ExpandExits(pieces, corr, rootX, rootZ, rng, depth + 1);
+    private static StructureBoundingBox CreateBBox(int ox, int oy, int oz, JavaRandom rng)
+    {
+        int w = 7 + rng.NextInt(6);
+        int h = 4 + rng.NextInt(6);
+        int d = 7 + rng.NextInt(6);
+        return new StructureBoundingBox(ox, oy, oz, ox + w - 1, oy + h - 1, oz + d - 1);
+    }
+
+    public void ExpandExits(List<StructurePiece> pieces, int rootX, int rootZ, JavaRandom rng, int depth)
+    {
+        // Iterate 4 walls, stepping along each
+        for (int wall = 0; wall < 4; wall++)
+        {
+            int step = rng.NextInt(BBox.SizeX);
+            while (step + 3 <= BBox.SizeX)
+            {
+                int ex, ey = BBox.MinY, ez;
+                int orientation;
+
+                switch (wall)
+                {
+                    case 0: ex = BBox.MinX + step; ez = BBox.MinZ - 1; orientation = 0; break;
+                    case 1: ex = BBox.MinX + step; ez = BBox.MaxZ + 1; orientation = 2; break;
+                    case 2: ex = BBox.MinX - 1;    ez = BBox.MinZ + step; orientation = 3; break;
+                    default: ex = BBox.MaxX + 1;   ez = BBox.MinZ + step; orientation = 1; break;
+                }
+
+                var next = MineshaftFactory.Create(pieces, ex, ey, ez, orientation, depth, rootX, rootZ, rng);
+                if (next != null)
+                {
+                    pieces.Add(next);
+                    if (next is MineshaftCorridor c) c.ExpandExits(pieces, rootX, rootZ, rng, depth + 1);
+                    else if (next is MineshaftStaircase s) s.ExpandExits(pieces, rootX, rootZ, rng, depth + 1);
+                }
+
+                step += rng.NextInt(BBox.SizeX);
+            }
         }
+    }
+
+    public override void Generate(World world, JavaRandom rng, StructureBoundingBox bounds)
+    {
+        ClearBox(world, bounds, 0, 0, 0, BBox.SizeX - 1, BBox.SizeY - 1, BBox.SizeZ - 1);
     }
 }
 
 // ── MineshaftCorridor (aba) ───────────────────────────────────────────────────
 
 /// <summary>
-/// Replica of <c>aba</c> — primary mineshaft corridor segment.
-/// Length: 10–30 blocks (2–6 segments × 5 per segment). Width: 3. Height: 3.
-/// Contains wooden fence supports, rails, cobwebs, torches, optional spawner.
-/// Source spec: WorldGenStructures_Spec §2.4
+/// Replica of <c>aba</c> — primary corridor segment. 3W × 3H × (10|15|20)L.
+/// Supports every 5 blocks; rails; cobwebs when flagged; optional spawner.
+/// Spec: MineshaftPieces_Spec.md §MineshaftCorridor.
 /// </summary>
 internal sealed class MineshaftCorridor : StructurePiece
 {
-    private readonly bool _isMain;         // a — 1/3 chance: special floor
-    private readonly bool _hasSpawner;     // b — 1/23 chance (when !isMain): cave spider spawner
-    private bool _spawnerPlaced;           // c
-
-    private static readonly List<(int weight, int[] items)> s_lootTable =
-    [
-        (10, [50, 1, 5]),   // torch    1-5
-        (5,  [66, 1, 3]),   // rails    1-3
-        (5,  [331, 4, 9]),  // redstone 4-9
-        (5,  [351, 4, 9]),  // lapis    4-9 (dye dam=4)
-        (3,  [288, 1, 2]),  // feather  1-2
-        (10, [66, 3, 8]),   // rails    3-8
-        (15, [297, 1, 3]),  // bread    1-3
-    ];
-
-    // Exits: list of (worldX, worldY, worldZ, orientation) for child pieces
-    private readonly List<(int, int, int, int)> _exits = [];
-
-    public IReadOnlyList<(int, int, int, int)> GetExits() => _exits;
+    private readonly bool _hasCobwebs;  // a — 1/3 chance
+    private readonly bool _hasSpawner;  // b — 1/23 if !hasCobwebs
+    private bool _spawnerPlaced;
 
     public MineshaftCorridor(int ox, int oy, int oz, int orientation, int depth, JavaRandom rng)
-        : base(CreateBoundingBox(ox, oy, oz, orientation, rng), orientation, depth)
+        : base(CreateBBox(ox, oy, oz, orientation, rng), orientation, depth)
     {
-        _isMain     = rng.NextInt(3) == 0;
-        _hasSpawner = !_isMain && rng.NextInt(23) == 0;
-
-        // Register exits (forward + optional left/right) at far end
-        int segCount = (BBox.SizeZ - 2) / 5; // approx
-        RegisterExits(ox, oy, oz, orientation, segCount);
+        _hasCobwebs = rng.NextInt(3) == 0;
+        _hasSpawner = !_hasCobwebs && rng.NextInt(23) == 0;
     }
 
-    private static StructureBoundingBox CreateBoundingBox(int ox, int oy, int oz, int orientation, JavaRandom rng)
+    private static StructureBoundingBox CreateBBox(int ox, int oy, int oz, int orientation, JavaRandom rng)
     {
-        int segments = rng.NextInt(5) + 2; // 2–6
-        int length   = segments * 5 + 2;   // 12–32
+        int length = (rng.NextInt(3) + 2) * 5; // 10, 15, or 20
         return StructureBoundingBox.Create(ox, oy, oz, -1, -1, 0, 3, 3, length, orientation);
     }
 
-    private void RegisterExits(int ox, int oy, int oz, int orientation, int segCount)
+    public void ExpandExits(List<StructurePiece> pieces, int rootX, int rootZ, JavaRandom rng, int depth)
     {
-        // Forward exit at far end
-        (int fwdX, int fwdZ) = StepForward(ox, oz, orientation, BBox.SizeZ - 1);
-        _exits.Add((fwdX, oy, fwdZ, orientation));
+        int len = BBox.SizeZ;
 
-        // Left / right exits (1/5 chance each, at each support along corridor — simplified to 1 each)
-        _exits.Add((ox, oy, oz, (orientation + 3) & 3));
-        _exits.Add((ox, oy, oz, (orientation + 1) & 3));
+        // Forward exit
+        TryAddExit(pieces, GetWorldX(1, len), BBox.MinY, GetWorldZ(1, len), Orientation, depth, rootX, rootZ, rng);
+        // Left exit
+        TryAddExit(pieces, GetWorldX(-1, len / 2), BBox.MinY, GetWorldZ(-1, len / 2), (Orientation + 3) & 3, depth, rootX, rootZ, rng);
+        // Right exit
+        TryAddExit(pieces, GetWorldX(3, len / 2), BBox.MinY, GetWorldZ(3, len / 2), (Orientation + 1) & 3, depth, rootX, rootZ, rng);
     }
 
-    private static (int, int) StepForward(int ox, int oz, int orientation, int steps)
-        => orientation switch
-        {
-            0 => (ox, oz + steps),
-            1 => (ox - steps, oz),
-            2 => (ox, oz - steps),
-            3 => (ox + steps, oz),
-            _ => (ox, oz + steps),
-        };
+    private static void TryAddExit(List<StructurePiece> pieces,
+        int x, int y, int z, int orientation, int depth,
+        int rootX, int rootZ, JavaRandom rng)
+    {
+        var next = MineshaftFactory.Create(pieces, x, y, z, orientation, depth, rootX, rootZ, rng);
+        if (next == null) return;
+        pieces.Add(next);
+        if (next is MineshaftCorridor c) c.ExpandExits(pieces, rootX, rootZ, rng, depth + 1);
+        else if (next is MineshaftStaircase s) s.ExpandExits(pieces, rootX, rootZ, rng, depth + 1);
+    }
 
     public override void Generate(World world, JavaRandom rng, StructureBoundingBox bounds)
     {
         if (!BBox.Intersects(bounds)) return;
 
-        int segCount = (BBox.SizeZ - 2) / 5;
+        // Carve tunnel
+        ClearBox(world, bounds, 0, 0, 0, 2, 2, BBox.SizeZ - 1);
 
-        // Per-segment layout (spec §2.4)
+        int segCount = BBox.SizeZ / 5;
+
         for (int seg = 0; seg < segCount; seg++)
         {
-            int var10 = 2 + seg * 5;
+            int p = 2 + seg * 5; // support position along length
 
-            // Fence posts (left + right)
-            PlaceBlock(world, 85, 0, 0, 0, var10, bounds); // left post bottom
-            PlaceBlock(world, 85, 0, 0, 1, var10, bounds); // left post top
-            PlaceBlock(world, 85, 0, 2, 0, var10, bounds); // right post bottom
-            PlaceBlock(world, 85, 0, 2, 1, var10, bounds); // right post top
+            // Fence posts at floor, left + right
+            PlaceBlock(world, 85, 0, 0, 0, p, bounds);
+            PlaceBlock(world, 85, 0, 0, 1, p, bounds);
+            PlaceBlock(world, 85, 0, 2, 0, p, bounds);
+            PlaceBlock(world, 85, 0, 2, 1, p, bounds);
 
-            // Ceiling planks (75% full, 25% sides only)
+            // Ceiling planks crossbeam
             if (rng.NextInt(4) != 0)
             {
-                PlaceBlock(world, 5, 0, 0, 2, var10, bounds);
-                PlaceBlock(world, 5, 0, 1, 2, var10, bounds);
-                PlaceBlock(world, 5, 0, 2, 2, var10, bounds);
+                PlaceBlock(world, 5, 0, 0, 2, p, bounds);
+                PlaceBlock(world, 5, 0, 1, 2, p, bounds);
+                PlaceBlock(world, 5, 0, 2, 2, p, bounds);
             }
             else
             {
-                PlaceBlock(world, 5, 0, 0, 2, var10, bounds);
-                PlaceBlock(world, 5, 0, 2, 2, var10, bounds);
+                PlaceBlock(world, 5, 0, 0, 2, p, bounds);
+                PlaceBlock(world, 5, 0, 2, 2, p, bounds);
             }
 
-            // Rails
-            PlaceBlock(world, 66, 0, 0, 0, var10, bounds);
-            PlaceBlock(world, 66, 0, 2, 0, var10, bounds);
+            // Cobwebs near crossbeam (only when _hasCobwebs flag set, spec §2.4)
+            if (_hasCobwebs)
+            {
+                if (rng.NextInt(10) == 0) PlaceBlock(world, 30, 0, 0, 2, p - 1, bounds);
+                if (rng.NextInt(10) == 0) PlaceBlock(world, 30, 0, 2, 2, p - 1, bounds);
+                if (rng.NextInt(10) == 0) PlaceBlock(world, 30, 0, 0, 2, p + 1, bounds);
+                if (rng.NextInt(10) == 0) PlaceBlock(world, 30, 0, 2, 2, p + 1, bounds);
+                if (rng.NextInt(20) == 0) PlaceBlock(world, 30, 0, 0, 2, p - 2, bounds);
+                if (rng.NextInt(20) == 0) PlaceBlock(world, 30, 0, 2, 2, p - 2, bounds);
+                if (rng.NextInt(20) == 0) PlaceBlock(world, 30, 0, 0, 2, p + 2, bounds);
+                if (rng.NextInt(20) == 0) PlaceBlock(world, 30, 0, 2, 2, p + 2, bounds);
+            }
 
-            // Cobwebs (spec §2.4 probabilities)
-            if (rng.NextInt(10) == 0) PlaceBlock(world, 30, 0, 0, 2, var10 - 1, bounds);
-            if (rng.NextInt(10) == 0) PlaceBlock(world, 30, 0, 2, 2, var10 - 1, bounds);
-            if (rng.NextInt(10) == 0) PlaceBlock(world, 30, 0, 0, 2, var10 + 1, bounds);
-            if (rng.NextInt(10) == 0) PlaceBlock(world, 30, 0, 2, 2, var10 + 1, bounds);
-            if (rng.NextInt(20) == 0) PlaceBlock(world, 30, 0, 0, 2, var10 - 2, bounds);
-            if (rng.NextInt(20) == 0) PlaceBlock(world, 30, 0, 2, 2, var10 - 2, bounds);
-            if (rng.NextInt(20) == 0) PlaceBlock(world, 30, 0, 0, 2, var10 + 2, bounds);
-            if (rng.NextInt(20) == 0) PlaceBlock(world, 30, 0, 2, 2, var10 + 2, bounds);
+            // Torches (5% chance per side)
+            if (rng.NextInt(20) == 0) PlaceBlock(world, 50, 0, 1, 2, p - 1, bounds);
+            if (rng.NextInt(20) == 0) PlaceBlock(world, 50, 0, 1, 2, p + 1, bounds);
 
-            // Torches (5% chance)
-            if (rng.NextInt(20) == 0) PlaceBlock(world, 50, 0, 1, 2, var10 - 1, bounds);
-            if (rng.NextInt(20) == 0) PlaceBlock(world, 50, 0, 1, 2, var10 + 1, bounds);
-
-            // Cave spider spawner (if flagged and not yet placed)
+            // Cave spider spawner (once)
             if (_hasSpawner && !_spawnerPlaced)
             {
-                int spawnZ = var10 - 1 + rng.NextInt(3);
+                int spawnZ = p - 1 + rng.NextInt(3);
                 int wx = GetWorldX(1, spawnZ);
                 int wy = GetWorldY(0);
                 int wz = GetWorldZ(1, spawnZ);
                 if (bounds.Contains(wx, wy, wz))
                 {
                     world.SetBlock(wx, wy, wz, 52);
-                    if (world.GetTileEntity(wx, wy, wz) is TileEntity.TileEntityMobSpawner spawner)
-                        spawner.EntityTypeId = "CaveSpider";
+                    if (world.GetTileEntity(wx, wy, wz) is TileEntity.TileEntityMobSpawner sp)
+                        sp.EntityTypeId = "CaveSpider";
                     _spawnerPlaced = true;
                 }
             }
+
+            // Loot chest (1% per support)
+            if (rng.NextInt(100) == 0)
+            {
+                int cx = GetWorldX(0, p - 1);
+                int cy = GetWorldY(0);
+                int cz = GetWorldZ(0, p - 1);
+                if (bounds.Contains(cx, cy, cz))
+                    world.SetBlock(cx, cy, cz, 54);
+            }
         }
+
+        // Rails along floor (70% chance per block)
+        for (int z = 0; z < BBox.SizeZ; z++)
+            if (rng.NextInt(10) < 7)
+                PlaceBlock(world, 66, 0, 1, 0, z, bounds);
+    }
+}
+
+// ── MineshaftCrossing (ra) ────────────────────────────────────────────────────
+
+/// <summary>
+/// Replica of <c>ra</c> — 4-way junction. 3W × 8H × 8D. 1 forward exit.
+/// Spec: MineshaftPieces_Spec.md §MineshaftCrossing.
+/// </summary>
+internal sealed class MineshaftCrossing : StructurePiece
+{
+    public MineshaftCrossing(int ox, int oy, int oz, int orientation, int depth)
+        : base(StructureBoundingBox.Create(ox, oy, oz, -1, -1, 0, 3, 8, 8, orientation), orientation, depth) { }
+
+    public override void Generate(World world, JavaRandom rng, StructureBoundingBox bounds)
+    {
+        if (!BBox.Intersects(bounds)) return;
+
+        // Carve interior air
+        ClearBox(world, bounds, 0, 0, 0, 2, 6, 7);
+
+        // Diagonal staircase fill: blocks from y=5 down to y=1 (spec §MineshaftCrossing)
+        for (int step = 0; step < 5; step++)
+        {
+            int ly = 5 - step;
+            int lz = step;
+            FillBox(world, bounds, 0, ly, lz, 2, 7, lz, 98, 98, false); // stone brick
+        }
+    }
+}
+
+// ── MineshaftStaircase (id) ───────────────────────────────────────────────────
+
+/// <summary>
+/// Replica of <c>id</c> — staircase junction. 5W × (3|7)H × 5D. 3 exits.
+/// Normal (75%): 5×3×5. Tall (25%): 5×7×5.
+/// Spec: MineshaftPieces_Spec.md §MineshaftStaircase.
+/// </summary>
+internal sealed class MineshaftStaircase : StructurePiece
+{
+    private readonly bool _isTall;
+
+    public MineshaftStaircase(int ox, int oy, int oz, int orientation, int depth, JavaRandom rng)
+        : base(CreateBBox(ox, oy, oz, orientation, rng, out bool tall), orientation, depth)
+    {
+        _isTall = tall;
+    }
+
+    private static StructureBoundingBox CreateBBox(
+        int ox, int oy, int oz, int orientation, JavaRandom rng, out bool tall)
+    {
+        tall = rng.NextInt(4) > 2; // 25% tall
+        int height = tall ? 7 : 3;
+        return StructureBoundingBox.Create(ox, oy, oz, -2, -1, 0, 5, height, 5, orientation);
+    }
+
+    public void ExpandExits(List<StructurePiece> pieces, int rootX, int rootZ, JavaRandom rng, int depth)
+    {
+        // Left, right, forward exits
+        for (int dir = -1; dir <= 1; dir++)
+        {
+            int orientation = (Orientation + dir + 4) & 3;
+            int ex = GetWorldX(2, BBox.SizeZ);
+            int ey = BBox.MinY;
+            int ez = GetWorldZ(2, BBox.SizeZ);
+
+            var next = MineshaftFactory.Create(pieces, ex, ey, ez, orientation, depth, rootX, rootZ, rng);
+            if (next == null) continue;
+            pieces.Add(next);
+            if (next is MineshaftCorridor c) c.ExpandExits(pieces, rootX, rootZ, rng, depth + 1);
+        }
+
+        // Tall variant: additional exits at y+4
+        if (_isTall)
+        {
+            var next = MineshaftFactory.Create(pieces,
+                GetWorldX(2, BBox.SizeZ), BBox.MinY + 4, GetWorldZ(2, BBox.SizeZ),
+                Orientation, depth, rootX, rootZ, rng);
+            if (next != null)
+            {
+                pieces.Add(next);
+                if (next is MineshaftCorridor c) c.ExpandExits(pieces, rootX, rootZ, rng, depth + 1);
+            }
+        }
+    }
+
+    public override void Generate(World world, JavaRandom rng, StructureBoundingBox bounds)
+    {
+        if (!BBox.Intersects(bounds)) return;
+        ClearBox(world, bounds, 0, 0, 0, 4, BBox.SizeY - 1, 4);
     }
 }
